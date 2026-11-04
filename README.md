@@ -95,6 +95,17 @@ docker run -p 3001:3001 game-lobby
 | `PORT` | `3001` | Cổng HTTP |
 | `CORS_ORIGIN` | `*` | Origin được phép khi client ở domain khác |
 | `CLIENT_DIST` | `client/dist` | Thư mục client đã build |
+| `APP_PASSWORD` | _(trống)_ | Mật khẩu để vào app (auth gate). Để trống = ai cũng vào được |
+| `TRUST_PROXY` | _(trống)_ | Đặt `1` khi chạy sau reverse proxy để giới hạn nhập sai mật khẩu theo IP thật |
+
+### Auth gate (mật khẩu vào app)
+Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật khẩu, nếu không sẽ bị từ chối. Người dùng thấy màn hình nhập mật khẩu, nhập đúng thì trình duyệt nhớ lại cho lần sau. Mỗi IP nhập sai quá 10 lần sẽ bị khóa 10 phút.
+- **Chạy local:** `APP_PASSWORD=bimat npm run dev`
+- **Docker:** `docker run -p 3001:3001 -e APP_PASSWORD=bimat game-lobby`
+- **Render:** nhập `APP_PASSWORD` trong tab Environment của service
+- **VPS (GitHub Actions):** thêm secret `APP_PASSWORD` (và tùy chọn variable `TRUST_PROXY=1` nếu có Nginx phía trước)
+
+Đổi mật khẩu thì khởi động lại server; người đang dùng sẽ phải nhập mật khẩu mới khi kết nối lại.
 
 ## Cấu trúc
 

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { socket, request, storage } from './socket.js';
+import { socket, request, storage, AUTH_ERRORS } from './socket.js';
 
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
@@ -16,6 +16,7 @@ export function AppProvider({ children }) {
   const [room, setRoom] = useState(null); // trạng thái phòng hiện tại
   const [toasts, setToasts] = useState([]);
   const [needName, setNeedName] = useState(!storage.name);
+  const [authError, setAuthError] = useState(null); // null = chưa bị chặn; chuỗi = cần nhập mật khẩu
   const receivedAt = useRef(0);
 
   const toast = useCallback((text, type = 'info') => {
@@ -48,9 +49,16 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const onConnect = () => {
       setConnected(true);
+      setAuthError(null);
       if (storage.name) hello().catch((e) => { toast(e.message, 'error'); setNeedName(true); });
     };
     const onDisconnect = () => setConnected(false);
+    // Middleware auth từ chối: socket.io không tự thử lại, phải nhập mật khẩu rồi connect lại
+    const onConnectError = (err) => {
+      if (!AUTH_ERRORS[err.message]) return;
+      if (err.message !== 'AUTH_LOCKED') storage.password = '';
+      setAuthError(err.message === 'AUTH_REQUIRED' && !storage.password ? 'AUTH_REQUIRED' : err.message);
+    };
     const onRooms = (list) => setRooms(list);
     const onState = (s) => {
       receivedAt.current = performance.now();
@@ -65,6 +73,7 @@ export function AppProvider({ children }) {
     const onLeft = () => { setRoom(null); location.hash = ''; };
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnectError);
     socket.on('lobby:rooms', onRooms);
     socket.on('room:state', onState);
     socket.on('room:closed', onClosed);
@@ -73,6 +82,7 @@ export function AppProvider({ children }) {
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnectError);
       socket.off('lobby:rooms', onRooms);
       socket.off('room:state', onState);
       socket.off('room:closed', onClosed);
@@ -104,9 +114,15 @@ export function AppProvider({ children }) {
 
   const act = useCallback((payload) => call('game:action', payload), [call]);
 
+  const login = useCallback((password) => {
+    storage.password = password;
+    setAuthError(null);
+    socket.connect();
+  }, []);
+
   const value = useMemo(() => ({
-    connected, user, setUser, rooms, room, toasts, toast, needName, setNeedName, hello, call, act,
-  }), [connected, user, rooms, room, toasts, toast, needName, hello, call, act]);
+    connected, user, setUser, rooms, room, toasts, toast, needName, setNeedName, hello, call, act, authError, login,
+  }), [connected, user, rooms, room, toasts, toast, needName, hello, call, act, authError, login]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -4,9 +4,10 @@ import { io } from 'socket.io-client';
 import assert from 'node:assert/strict';
 
 const URL = process.argv[2] || 'http://localhost:3001';
+const PASSWORD = process.env.APP_PASSWORD || '';
 
 function client(name) {
-  const s = io(URL, { transports: ['websocket'], forceNew: true });
+  const s = io(URL, { transports: ['websocket'], forceNew: true, auth: { password: PASSWORD } });
   const c = { s, name, state: null, user: null };
   s.on('room:state', (st) => { c.state = st; });
   c.req = (ev, p = {}) => new Promise((res, rej) => s.timeout(5000).emit(ev, p, (err, r) => (err ? rej(err) : r.ok ? res(r) : rej(new Error(`${name} ${ev}: ${r.error}`)))));
@@ -20,6 +21,19 @@ const until = async (fn, ms = 3000) => {
   while (Date.now() - t < ms) { if (fn()) return; await wait(20); }
   throw new Error('timeout chờ điều kiện');
 };
+
+// ---------- Auth gate ----------
+if (PASSWORD) {
+  const tryConnect = (auth) => new Promise((res) => {
+    const s = io(URL, { transports: ['websocket'], forceNew: true, reconnection: false, auth });
+    s.on('connect', () => { s.close(); res('ok'); });
+    s.on('connect_error', (e) => { s.close(); res(e.message); });
+  });
+  assert.equal(await tryConnect({}), 'AUTH_REQUIRED');
+  assert.equal(await tryConnect({ password: PASSWORD + 'x' }), 'AUTH_FAILED');
+  assert.equal(await tryConnect({ password: PASSWORD }), 'ok');
+  console.log('✔ Auth gate OK');
+}
 
 const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) => client(n).ready));
 
