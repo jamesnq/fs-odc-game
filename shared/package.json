@@ -1,0 +1,15 @@
+{
+  "name": "@game/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./cards": "./src/cards.js",
+    "./xiangqi": "./src/xiangqi.js",
+    "./poker": "./src/poker.js",
+    "./tala": "./src/tala.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

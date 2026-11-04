@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit test (luật chơi)
+        run: npm test
+      - name: Build client
+        run: npm run build
+      - name: Kiểm thử tích hợp (server + socket)
+        run: |
+          PORT=3001 node server/src/index.js &
+          npx --yes wait-on -t 20000 http://localhost:3001/health
+          npm run test:e2e -- http://localhost:3001
