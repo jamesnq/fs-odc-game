@@ -6,6 +6,7 @@ export const GAME_META = {
   tala: { name: 'Tá lả', icon: '🃏', desc: 'Phỏm 2–4 người, ăn – hạ – gửi – Ù' },
   poker: { name: 'Poker', icon: '♠️', desc: "Texas Hold'em No-Limit, 2–9 người" },
   xiangqi: { name: 'Cờ tướng', icon: '🀄', desc: '2 người, mỗi bên 8 phút, có chế độ xem' },
+  caro: { name: 'Cờ caro', icon: '⭕', desc: '2 người, 5 quân liên tiếp là thắng' },
 };
 
 export default function Lobby() {
@@ -87,6 +88,7 @@ export default function Lobby() {
 function describeOptions(r) {
   const o = r.options || {};
   if (r.game === 'xiangqi') return `${o.minutes} phút/bên`;
+  if (r.game === 'caro') return `${o.size}×${o.size} · ${o.minutes} phút/bên${o.blockTwoEnds ? ' · chặn 2 đầu' : ''}`;
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;
   return '';

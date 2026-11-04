@@ -6,6 +6,7 @@
   "exports": {
     "./cards": "./src/cards.js",
     "./xiangqi": "./src/xiangqi.js",
+    "./caro": "./src/caro.js",
     "./poker": "./src/poker.js",
     "./tala": "./src/tala.js"
   },

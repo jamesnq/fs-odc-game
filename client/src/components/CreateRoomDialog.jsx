@@ -5,12 +5,18 @@ import { GAME_META } from './Lobby.jsx';
 
 const DEFAULTS = {
   xiangqi: { minutes: 8 },
+  caro: { size: 15, minutes: 10, blockTwoEnds: true },
   poker: { bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30 },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
 };
 
 const FIELDS = {
   xiangqi: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
+  caro: [
+    ['size', 'Kích thước bàn (ô mỗi cạnh)', 10, 20],
+    ['minutes', 'Thời gian mỗi bên (phút)', 1, 60],
+    ['blockTwoEnds', 'Chặn hai đầu thì không tính thắng', 'bool'],
+  ],
   poker: [
     ['bigBlind', 'Big blind (small blind = ½)', 2, 100000],
     ['buyIn', 'Số chip mua vào', 20, 10000000],
@@ -53,7 +59,13 @@ export default function CreateRoomDialog({ game: initialGame, onClose }) {
         <label>Tên phòng</label>
         <input autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)}
           placeholder={`Bàn ${GAME_META[game].name} của ${user.name}`} />
-        {FIELDS[game].map(([key, label, min, max]) => (
+        {FIELDS[game].map(([key, label, min, max]) => min === 'bool' ? (
+          <label key={key} className="check">
+            <input type="checkbox" checked={!!opts[game][key]}
+              onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.checked } })} />
+            {label}
+          </label>
+        ) : (
           <div key={key}>
             <label>{label}</label>
             <input type="number" min={min} max={max} value={opts[game][key]}

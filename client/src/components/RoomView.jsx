@@ -5,9 +5,10 @@ import Modal from './Modal.jsx';
 import XiangqiGame from '../games/XiangqiGame.jsx';
 import PokerGame from '../games/PokerGame.jsx';
 import TalaGame from '../games/TalaGame.jsx';
+import CaroGame from '../games/CaroGame.jsx';
 import { useHotkeys } from '../hooks.js';
 
-const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame };
+const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame };
 
 export const SHORTCUTS = {
   poker: [
@@ -22,6 +23,7 @@ export const SHORTCUTS = {
     ['Esc', 'Bỏ chọn tất cả'], ['N', 'Bắt đầu ván mới'],
   ],
   xiangqi: [['Click', 'Chọn quân → chọn ô đích'], ['Esc', 'Bỏ chọn quân'], ['F', 'Lật bàn cờ']],
+  caro: [['Click', 'Đánh vào ô'], ['← ↑ → ↓', 'Di chuyển con trỏ trên bàn'], ['Enter / Space', 'Đánh vào ô có con trỏ'], ['Esc', 'Ẩn con trỏ']],
 };
 
 export default function RoomView() {

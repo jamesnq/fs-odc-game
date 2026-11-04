@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { XiangqiHandler } from './games/xiangqi.js';
 import { PokerHandler } from './games/poker.js';
 import { TalaHandler } from './games/tala.js';
+import { CaroHandler } from './games/caro.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -19,6 +20,7 @@ const GAMES = {
   xiangqi: { name: 'Cờ tướng', Handler: XiangqiHandler },
   poker: { name: 'Poker', Handler: PokerHandler },
   tala: { name: 'Tá lả', Handler: TalaHandler },
+  caro: { name: 'Cờ caro', Handler: CaroHandler },
 };
 
 const app = express();
