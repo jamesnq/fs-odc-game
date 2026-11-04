@@ -62,6 +62,43 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   console.log('✔ Cờ tướng OK');
 }
 
+// ---------- Cờ caro ----------
+{
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Caro test', game: 'caro', options: { size: 15, minutes: 5, blockTwoEnds: true } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => c.state?.members.length === 3);
+  await a.act({ type: 'ready' });
+  await b.act({ type: 'ready' });
+  await until(() => a.state.state.status === 'playing');
+  assert.equal(a.state.state.size, 15);
+  const x = a.state.state.myColor === 'x' ? a : b;
+  const o = x === a ? b : a;
+  await x.act({ type: 'move', cell: 7 * 15 + 7 });
+  await assert.rejects(x.act({ type: 'move', cell: 0 }), /lượt/);
+  await assert.rejects(o.act({ type: 'move', cell: 7 * 15 + 7 }), /đã có quân/);
+  await assert.rejects(o.act({ type: 'requestUndo' }), /Không có nước/); // O chưa đi
+  await x.act({ type: 'requestUndo' });
+  await o.act({ type: 'respond', accept: true });
+  await until(() => x.state.state.moves.length === 0 && x.state.state.turn === 'x');
+  for (let k = 0; k < 4; k++) {
+    await x.act({ type: 'move', cell: 7 * 15 + 3 + k });
+    await o.act({ type: 'move', cell: 9 * 15 + 3 + k });
+  }
+  await x.act({ type: 'move', cell: 7 * 15 + 7 });
+  await until(() => c.state.state.status === 'over');
+  assert.equal(c.state.state.result.winner, 'x');
+  assert.equal(c.state.state.result.line.length, 5);
+  await a.act({ type: 'rematch' });
+  await b.act({ type: 'rematch' });
+  await until(() => a.state.state.status === 'playing');
+  assert.equal(o.state.state.myColor, 'x', 'đổi lượt đi khi chơi lại');
+  await c.req('room:leave');
+  await a.req('room:delete', { roomId });
+  console.log('✔ Cờ caro OK');
+}
+
 // ---------- Poker ----------
 {
   a.state = b.state = c.state = null;

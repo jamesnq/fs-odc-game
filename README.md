@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Poker · Cờ tướng
+# 🎲 Sảnh Trò Chơi — Tá lả · Poker · Cờ tướng · Cờ caro
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -19,6 +19,13 @@
 - Đồng hồ **8 phút mỗi bên** (đổi được khi tạo bàn), hết giờ là thua
 - **Xin thua**, **cầu hòa**, **xin đi lại** (đối thủ phải đồng ý), **chơi lại** (tự đổi màu)
 - **Chế độ người xem**, biên bản nước đi theo ký hiệu Việt Nam (P2-5, M8.7…), lật bàn cờ
+
+**Cờ caro**
+- Bàn 15×15 (đổi được 10–20 khi tạo bàn), X đi trước, 5 quân liên tiếp (ngang / dọc / chéo) là thắng
+- Luật **chặn hai đầu** (bật / tắt khi tạo bàn): dãy bị quân đối thủ chặn cả hai đầu thì không tính; kín bàn là hòa
+- Đồng hồ **10 phút mỗi bên**, xin thua, cầu hòa, xin đi lại, chơi lại (đổi lượt đi trước), chế độ người xem
+- Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
+- **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
 
 **Poker (Texas Hold'em No-Limit)**
 - Dealer / SB / BB xoay vòng, luật heads-up, side pot, chia pot hòa, all-in không đủ mức raise không mở lại quyền raise (luật TDA)
@@ -94,6 +101,7 @@ docker run -p 3001:3001 game-lobby
 ```
 shared/src/       Luật chơi thuần JS (dùng cho cả server và client)
   xiangqi.js      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
+  caro.js         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
   poker.js        Chấm bài, ván cược, side pot
   tala.js         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
 shared/test/      Unit test (node --test)

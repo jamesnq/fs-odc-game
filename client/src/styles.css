@@ -107,6 +107,7 @@ input[type=range] { padding: 0; accent-color: var(--primary); }
 .game-card.g-tala { background: linear-gradient(135deg, #3b1d4a, #1d1832); }
 .game-card.g-poker { background: linear-gradient(135deg, #0f4a33, #13243a); }
 .game-card.g-xiangqi { background: linear-gradient(135deg, #5a2a12, #2a1c1a); }
+.game-card.g-caro { background: linear-gradient(135deg, #12405a, #1a1f2e); }
 .gc-icon { font-size: 40px; }
 .gc-body { flex: 1; }
 .gc-body p { margin: 4px 0; color: #c8d0e3; font-size: 13px; }
@@ -217,6 +218,29 @@ input[type=range] { padding: 0; accent-color: var(--primary); }
 .request.mine { background: #1e2a44; border-color: var(--line); flex-direction: row; justify-content: space-between; align-items: center; }
 .moves .move-list { max-height: 260px; overflow-y: auto; font-family: ui-monospace, Consolas, monospace; }
 .move-row { display: grid; grid-template-columns: 36px 1fr 1fr; padding: 2px 0; }
+
+/* ---------- Cờ caro ---------- */
+.caro-main { max-width: 680px; }
+.caro-board { width: 100%; height: auto; display: block; user-select: none; }
+.caro-bg { fill: #f3ead6; }
+.caro-label text { fill: #8a7a5c; font-size: 11px; font-family: ui-monospace, Consolas, monospace; }
+.caro-cell rect { fill: transparent; stroke: #c9b994; stroke-width: 1; }
+.caro-cell.active { cursor: pointer; }
+.caro-cell.active:hover rect { fill: rgba(59,130,246,.08); }
+.caro-cell.last rect { fill: rgba(250,204,21,.35); }
+.caro-cell.win rect { fill: rgba(34,197,94,.4); }
+.caro-mark line, .caro-mark circle { fill: none; stroke-width: 3.5; stroke-linecap: round; pointer-events: none; }
+.caro-mark.x line { stroke: #dc2626; }
+.caro-mark.o circle { stroke: #2563eb; }
+.caro-mark.ghost { opacity: .3; }
+.caro-cursor { fill: none; stroke: #7c3aed; stroke-width: 2.5; stroke-dasharray: 4 3; pointer-events: none; }
+.caro-chip { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #f3ead6; font-weight: 800; }
+.caro-chip.x { color: #dc2626; border: 2px solid #dc2626; }
+.caro-chip.o { color: #2563eb; border: 2px solid #2563eb; }
+.c-x { color: #f87171; }
+.c-o { color: #60a5fa; }
+label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+label.check input { width: auto; }
 
 /* ---------- Poker ---------- */
 .pk { display: flex; flex-direction: column; gap: 12px; }
