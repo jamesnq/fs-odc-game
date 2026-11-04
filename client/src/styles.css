@@ -332,3 +332,10 @@ label.check input { width: auto; }
   .card.lg { width: 48px; height: 68px; font-size: 16px; }
   .hint-dot { width: 48px; }
 }
+
+/* ---------- Auth gate ---------- */
+.gate { display: grid; place-items: center; min-height: 60vh; padding: 16px; }
+.gate-box { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; text-align: center; }
+.gate-box h2 { margin: 4px 0; }
+.gate-icon { font-size: 40px; }
+.gate-error { background: #3b1219; border: 1px solid var(--danger); color: #fecaca; padding: 8px; border-radius: 8px; font-size: 13px; }

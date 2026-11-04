@@ -3,7 +3,18 @@ import { io } from 'socket.io-client';
 // Khi client và server khác domain (vd: GitHub Pages + server riêng), đặt VITE_SERVER_URL lúc build.
 const URL = import.meta.env.VITE_SERVER_URL || undefined;
 
-export const socket = io(URL, { autoConnect: false, transports: ['websocket', 'polling'] });
+export const socket = io(URL, {
+  autoConnect: false,
+  transports: ['websocket', 'polling'],
+  // Mật khẩu vào app (auth gate) gửi kèm mỗi lần kết nối
+  auth: (cb) => cb({ password: storage.password }),
+});
+
+export const AUTH_ERRORS = {
+  AUTH_REQUIRED: 'Cần nhập mật khẩu để vào',
+  AUTH_FAILED: 'Sai mật khẩu',
+  AUTH_LOCKED: 'Nhập sai quá nhiều lần, hãy thử lại sau 10 phút',
+};
 
 /** Gửi sự kiện và chờ phản hồi; ném lỗi nếu server trả về lỗi. */
 export function request(event, payload = {}) {
@@ -20,6 +31,8 @@ export function request(event, payload = {}) {
 export const storage = {
   get token() { return localStorage.getItem('gl_token') || ''; },
   set token(v) { localStorage.setItem('gl_token', v); },
+  get password() { try { return localStorage.getItem('gl_pw') || ''; } catch { return ''; } },
+  set password(v) { try { v ? localStorage.setItem('gl_pw', v) : localStorage.removeItem('gl_pw'); } catch {} },
   get name() { return localStorage.getItem('gl_name') || ''; },
   set name(v) { localStorage.setItem('gl_name', v); },
 };

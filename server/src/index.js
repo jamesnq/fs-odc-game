@@ -15,6 +15,12 @@ const PORT = Number(process.env.PORT) || 3001;
 const CLIENT_DIST = process.env.CLIENT_DIST || path.resolve(__dirname, '../../client/dist');
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const RECONNECT_GRACE_MS = 60_000;
+// Mật khẩu vào app. Để trống = không yêu cầu mật khẩu.
+const APP_PASSWORD = process.env.APP_PASSWORD || '';
+// Đặt TRUST_PROXY=1 khi chạy sau reverse proxy (Render, Nginx…) để lấy IP thật từ X-Forwarded-For.
+const TRUST_PROXY = /^(1|true|yes)$/i.test(process.env.TRUST_PROXY || '');
+const AUTH_MAX_FAILS = 10;
+const AUTH_WINDOW_MS = 10 * 60_000;
 
 const GAMES = {
   xiangqi: { name: 'Cờ tướng', Handler: XiangqiHandler },
@@ -24,7 +30,7 @@ const GAMES = {
 };
 
 const app = express();
-app.get('/health', (_req, res) => res.json({ ok: true, rooms: rooms.size, users: users.size }));
+app.get('/health', (_req, res) => res.json(APP_PASSWORD ? { ok: true } : { ok: true, rooms: rooms.size, users: users.size }));
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST, { index: false, maxAge: '1h' }));
   app.get('*', (_req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
@@ -34,6 +40,40 @@ if (fs.existsSync(CLIENT_DIST)) {
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: CORS_ORIGIN } });
+
+// ---------- Auth gate: kiểm tra mật khẩu ngay khi kết nối socket ----------
+const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
+const PASSWORD_HASH = APP_PASSWORD ? sha(APP_PASSWORD) : null;
+const authFails = new Map(); // ip -> { count, until }
+
+function clientIp(socket) {
+  const xff = socket.handshake.headers['x-forwarded-for'];
+  if (TRUST_PROXY && xff) return String(xff).split(',')[0].trim();
+  return socket.handshake.address;
+}
+
+io.use((socket, next) => {
+  if (!PASSWORD_HASH) return next();
+  const ip = clientIp(socket);
+  const now = Date.now();
+  const rec = authFails.get(ip);
+  if (rec && rec.until < now) authFails.delete(ip);
+  else if (rec && rec.count >= AUTH_MAX_FAILS) return next(new Error('AUTH_LOCKED'));
+  const pw = socket.handshake.auth?.password;
+  if (typeof pw !== 'string' || !pw) return next(new Error('AUTH_REQUIRED'));
+  if (crypto.timingSafeEqual(sha(pw), PASSWORD_HASH)) {
+    authFails.delete(ip);
+    return next();
+  }
+  const r = authFails.get(ip) || { count: 0, until: now + AUTH_WINDOW_MS };
+  r.count++;
+  authFails.set(ip, r);
+  next(new Error(r.count >= AUTH_MAX_FAILS ? 'AUTH_LOCKED' : 'AUTH_FAILED'));
+});
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, r] of authFails) if (r.until < now) authFails.delete(ip);
+}, AUTH_WINDOW_MS).unref();
 
 /** @type {Map<string, {id:string, token:string, name:string, sockets:Set<string>, roomId:string|null, graceTimer:any}>} */
 const users = new Map(); // theo id
@@ -329,5 +369,6 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Game server: http://localhost:${PORT}`);
+  console.log(APP_PASSWORD ? 'Auth gate: BẬT (APP_PASSWORD)' : 'Auth gate: TẮT — đặt APP_PASSWORD để yêu cầu mật khẩu');
   if (fs.existsSync(CLIENT_DIST)) console.log(`Phục vụ client từ ${CLIENT_DIST}`);
 });
