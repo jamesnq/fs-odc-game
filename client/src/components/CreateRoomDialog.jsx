@@ -6,7 +6,7 @@ import { GAME_META } from './Lobby.jsx';
 const DEFAULTS = {
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true },
-  poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30 },
+  poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
 };
 
@@ -23,6 +23,7 @@ const FIELDS = {
     ['buyIn', 'Số chip mua vào', 20, 10000000],
     ['maxSeats', 'Số ghế', 2, 9],
     ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 120],
+    ['rabbitHunt', 'Cho xem rabbit hunt (lật bài chung còn lại khi ván kết thúc sớm)', 'bool'],
   ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],

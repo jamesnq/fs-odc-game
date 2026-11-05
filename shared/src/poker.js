@@ -453,6 +453,35 @@ export class PokerGame {
     this._archive(showdown);
   }
 
+  /**
+   * Rabbit hunt: ván kết thúc sớm (mọi người bỏ bài) thì lật các lá bài chung lẽ ra sẽ ra tiếp,
+   * đúng theo thứ tự chia thật (có đốt bài). Không ảnh hưởng kết quả.
+   */
+  canRabbit(id) {
+    const h = this.hand;
+    return !!h && h.street === 'done' && h.board.length < 5 && !h.rabbit
+      && Object.values(h.players).some((p) => p.id === id);
+  }
+
+  rabbitHunt(id) {
+    const h = this.hand;
+    if (!h || h.street !== 'done') throw new Error('Chỉ xem rabbit khi ván đã kết thúc');
+    if (h.board.length >= 5) throw new Error('Ván đã ra đủ 5 lá bài chung');
+    if (h.rabbit) throw new Error('Đã lật rabbit rồi');
+    if (!Object.values(h.players).some((p) => p.id === id)) throw new Error('Chỉ người chơi trong ván mới được xem rabbit');
+    const deck = h.deck.slice();
+    const cards = [];
+    while (h.board.length + cards.length < 5) {
+      deck.pop(); // đốt bài như khi chia thật
+      if (h.board.length + cards.length === 0) cards.push(deck.pop(), deck.pop(), deck.pop());
+      else cards.push(deck.pop());
+    }
+    h.rabbit = cards;
+    const entry = this.history.find((e) => e.no === h.no);
+    if (entry) entry.rabbit = cards.slice();
+    return cards;
+  }
+
   /** Lưu ván vừa kết thúc vào Hands log. Bài tẩy được lưu đủ, view sẽ lọc theo người xem. */
   _archive(showdown) {
     const h = this.hand;
@@ -474,6 +503,7 @@ export class PokerGame {
       shown: Object.fromEntries(Object.entries(r.shown).map(([s, v]) => [s, { hole: v.hole.slice(), hand: v.hand }])),
       pots: r.pots.map((pt) => ({ amount: pt.amount, winners: pt.winners.slice(), hand: pt.hand })),
       pot: Object.values(h.players).reduce((a, p) => a + p.total, 0),
+      rabbit: null,
     });
     if (this.history.length > this.historyMax) this.history.shift();
   }
@@ -530,9 +560,11 @@ export class PokerGame {
         toAct: h.toAct,
         pot: this.pot,
         result: h.result,
+        rabbit: h.rabbit || null,
         log: h.log.slice(-20),
       } : null,
       mySeat,
+      canRabbit: this.canRabbit(viewerId),
       options: mySeat >= 0 && h ? this.options(mySeat) : null,
     };
   }

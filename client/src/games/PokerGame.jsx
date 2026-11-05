@@ -17,6 +17,7 @@ export default function PokerGame({ room, state: s }) {
   const mySeat = s.mySeat;
   const base = mySeat >= 0 ? mySeat : 0;
   const o = s.options;
+  useHotkeys({ t: () => s.canRabbit && act({ type: 'rabbit' }) });
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, !!s.turnLeft);
   const nextIn = useCountdown(s.nextHandIn, room.receivedAt, !!s.nextHandIn);
 
@@ -37,11 +38,17 @@ export default function PokerGame({ room, state: s }) {
         <div className="pk-felt">
           <div className="pk-center">
             <div className="pk-board">
-              {[0, 1, 2, 3, 4].map((i) => (h?.board[i]
-                ? <Card key={i} card={h.board[i]} size="md" highlight={winCards.has(h.board[i])} />
-                : <div key={i} className="card-slot" />))}
+              {[0, 1, 2, 3, 4].map((i) => {
+                if (h?.board[i]) return <Card key={i} card={h.board[i]} size="md" highlight={winCards.has(h.board[i])} />;
+                const r = h?.rabbit?.[i - h.board.length];
+                return r
+                  ? <div key={i} className="rabbit-card" title="Rabbit hunt — bài lẽ ra sẽ ra"><Card card={r} size="md" /></div>
+                  : s.canRabbit
+                    ? <button key={i} className="card-slot rabbit-slot" title="Rabbit hunt (T): lật bài lẽ ra sẽ ra, không tính" onClick={() => act({ type: 'rabbit' })}>🐇</button>
+                    : <div key={i} className="card-slot" />;
+              })}
             </div>
-            {h && <div className="pk-pot">Pot: <b>{fmt(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span></div>}
+            {h && <div className="pk-pot">Pot: <b>{fmt(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
             {h?.result && (
               <div className="pk-result">
                 {h.result.pots.map((p, k) => (

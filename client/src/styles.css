@@ -404,3 +404,13 @@ label.check input { width: auto; }
 .pk-next-blinds { color: var(--gold); font-weight: 600; }
 .pk-blind-fields { gap: 12px; }
 .pk-blind-fields > div { flex: 1; }
+
+/* ---------- Poker: rabbit hunt ---------- */
+.rabbit-card { position: relative; opacity: .55; filter: saturate(.6); }
+.rabbit-card::after { content: '🐇'; position: absolute; top: -8px; right: -6px; font-size: 14px; }
+.hl-rabbit-cards .card { opacity: .6; }
+.rabbit-slot { display: grid; place-items: center; font-size: 22px; background: rgba(196,181,253,.12); border-color: #c4b5fd; cursor: pointer; animation: rabbitpulse 1.2s infinite alternate; }
+.rabbit-slot:hover { background: rgba(196,181,253,.3); }
+@keyframes rabbitpulse { to { box-shadow: 0 0 12px rgba(196,181,253,.6); } }
+.pk-rabbit-note { color: #c4b5fd; }
+.hl-rabbit { color: #c4b5fd; }

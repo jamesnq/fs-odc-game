@@ -202,6 +202,38 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   console.log('✔ Poker OK (Hands log, đổi blind)');
 }
 
+// ---------- Poker: rabbit hunt ----------
+{
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Rabbit test', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => a.state?.state.hand?.street === 'preflop' && b.state?.state.hand?.street === 'preflop', 5000);
+  const p = [a, b].find((x) => x.state.state.options);
+  await p.act({ type: 'act', action: 'fold' });
+  await until(() => a.state.state.canRabbit && c.state?.state.hand?.street === 'done');
+  assert.equal(c.state.state.canRabbit, false, 'người xem không được lật rabbit');
+  assert.equal(c.state.state.hand.rabbit, null, 'chưa lật thì không lộ bài');
+  await assert.rejects(c.act({ type: 'rabbit' }), /xem/);
+  await b.act({ type: 'rabbit' });
+  await until(() => c.state.state.hand.rabbit);
+  assert.equal(c.state.state.hand.rabbit.length, 5, 'bỏ bài preflop → lật đủ 5 lá');
+  await assert.rejects(a.act({ type: 'rabbit' }), /rồi/);
+  const { data } = await c.req('game:query', { type: 'handLog' });
+  assert.deepEqual(data[0].rabbit, c.state.state.hand.rabbit, 'Hands log ghi rabbit');
+  await a.req('room:delete', { roomId });
+  // Bàn tắt rabbit hunt
+  const { roomId: r2 } = await a.req('room:create', { name: 'No rabbit', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2, rabbitHunt: false } });
+  await b.req('room:join', { roomId: r2, mode: 'play' });
+  await until(() => a.state?.state.hand?.street === 'preflop' && a.state.state.hand && b.state?.state.hand?.street === 'preflop', 5000);
+  await [a, b].find((x) => x.state.state.options).act({ type: 'act', action: 'fold' });
+  await until(() => a.state.state.hand.street === 'done');
+  assert.equal(a.state.state.canRabbit, false);
+  await assert.rejects(a.act({ type: 'rabbit' }), /không cho/);
+  await a.req('room:delete', { roomId: r2 });
+  console.log('✔ Poker rabbit hunt OK');
+}
+
 // ---------- Nhiều server: sảnh và phòng tách biệt ----------
 if (OTHER_PASSWORD) {
   const x = await client('Xuân', OTHER_PASSWORD).ready;

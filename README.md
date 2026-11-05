@@ -38,6 +38,7 @@
 **Poker (Texas Hold'em No-Limit)**
 - Dealer / SB / BB xoay vòng, luật heads-up, side pot, chia pot hòa, all-in không đủ mức raise không mở lại quyền raise (luật TDA)
 - Đếm giờ mỗi lượt (hết giờ tự check / bỏ), nạp thêm chip, nghỉ ván
+- **Rabbit hunt:** ván kết thúc sớm vì mọi người bỏ bài thì người trong ván bấm ô 🐇 (hoặc phím `T`) để lật các lá bài chung *lẽ ra* sẽ ra — đúng thứ tự chia thật (có đốt bài), hiện mờ, không ảnh hưởng kết quả, cả bàn cùng thấy và được ghi vào Hands log. Bật/tắt khi tạo bàn
 - **Blind tùy chỉnh:** đặt riêng small blind và big blind khi tạo bàn; chủ phòng đổi blind ngay tại bàn (nút ✎ cạnh mức blind, có nút nhanh ×1,5 / ×2 / giảm ½). Đổi giữa ván thì áp dụng từ ván sau
 - **Hands log:** 50 ván gần nhất của bàn — stack đầu ván, D/SB/BB, từng hành động theo vòng (preflop / flop / turn / river), showdown, các pot và lời/lỗ của từng người; chuyển ván bằng `←/→`, sao chép ván dạng text. Chỉ thấy bài tẩy của mình và bài đã lật ở showdown, bài bỏ không bao giờ bị lộ
 - **Phím tắt:** `F` bỏ bài · `C` theo/check · `K` check · `B` cược · `R` tố · `A` all-in · `↑/↓` ±1 BB (`Shift` ±10 BB) · `1–4` mức ⅓, ½, ¾ pot, pot · `Enter` xác nhận · `H` mở Hands log

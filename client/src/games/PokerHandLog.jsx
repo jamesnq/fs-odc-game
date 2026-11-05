@@ -42,6 +42,7 @@ function handToText(e) {
     L.push(`*** ${label.toUpperCase()}${n ? ` [${e.board.slice(0, n).map(cardText).join(' ')}]` : ''} ***`);
     for (const a of acts) L.push(actionText(a, nameOf(e, a.seat)));
   }
+  if (e.rabbit) L.push(`*** RABBIT (không tính) [${e.rabbit.map(cardText).join(' ')}] ***`);
   if (e.showdown) {
     L.push('*** SHOWDOWN ***');
     for (const [seat, s] of Object.entries(e.shown)) L.push(`${nameOf(e, Number(seat))}: [${s.hole.map(cardText).join(' ')}] — ${s.hand}`);
@@ -106,7 +107,10 @@ export default function PokerHandLog({ s }) {
                 <button key={e.no} className="hl-row" onClick={() => setSel(i)}>
                   <span>#{e.no}</span>
                   <span className="muted">{fmtTime(e.endedAt)}</span>
-                  <span className="hl-board">{e.board.length ? e.board.map(cardText).join(' ') : <span className="muted">—</span>}</span>
+                  <span className="hl-board">
+                    {e.board.length ? e.board.map(cardText).join(' ') : !e.rabbit && <span className="muted">—</span>}
+                    {e.rabbit && <span className="hl-rabbit" title="Rabbit hunt"> 🐇{e.rabbit.map(cardText).join(' ')}</span>}
+                  </span>
                   <span>{winners.join(', ')}{e.showdown ? '' : <span className="muted small"> (không lật)</span>}</span>
                   <span className="num">{fmt(e.pot)}</span>
                   <span className={`num ${me ? (me.net > 0 ? 'pos' : me.net < 0 ? 'neg' : '') : 'muted'}`}>{me ? fmtNet(me.net) : '—'}</span>
@@ -182,6 +186,16 @@ function HandDetail({ e, onClose, onPrev, onNext, onCopy }) {
             </div>
           );
         })}
+
+        {e.rabbit && (
+          <div className="hl-street">
+            <div className="hl-street-head">
+              <b>🐇 Rabbit hunt</b>
+              <span className="hl-cards hl-rabbit-cards">{e.rabbit.map((c) => <Card key={c} card={c} size="sm" />)}</span>
+            </div>
+            <div className="muted small">Các lá bài chung lẽ ra sẽ ra nếu ván tiếp tục — không ảnh hưởng kết quả.</div>
+          </div>
+        )}
 
         {e.showdown && (
           <div className="hl-street">

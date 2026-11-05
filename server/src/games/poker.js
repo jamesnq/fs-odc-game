@@ -1,5 +1,8 @@
 import { PokerGame } from '@game/shared/poker';
 
+const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
+const cardText = (c) => (c[0] === 'T' ? '10' : c[0]) + SUIT[c[1]];
+
 const clampInt = (v, min, max, def) => {
   const n = Math.floor(Number(v));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
@@ -17,6 +20,7 @@ export class PokerHandler {
       buyIn: clampInt(options.buyIn, bigBlind * 10, bigBlind * 1000, bigBlind * 100),
       maxSeats: clampInt(options.maxSeats, 2, 9, 6),
       turnSeconds: clampInt(options.turnSeconds, 10, 120, 30),
+      rabbitHunt: options.rabbitHunt === undefined ? true : !!options.rabbitHunt && options.rabbitHunt !== 'false',
     };
     this.game = new PokerGame({ smallBlind: this.options.smallBlind, bigBlind: this.options.bigBlind, maxSeats: this.options.maxSeats });
     this.stacks = new Map(); // chip giữ lại khi đứng dậy
@@ -61,6 +65,14 @@ export class PokerHandler {
 
   action(id, a) {
     if (a.type === 'setBlinds') return this._setBlinds(id, a);
+    if (a.type === 'rabbit') {
+      if (!this.options.rabbitHunt) throw new Error('Bàn này không cho xem rabbit');
+      const cards = this.game.rabbitHunt(id);
+      const name = this.game.seats.find((x) => x && x.id === id)?.name
+        || Object.values(this.game.hand.players).find((p) => p.id === id)?.name || '?';
+      this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardText).join(' ')}`);
+      return;
+    }
     const seat = this.game.seatOf(id);
     if (seat < 0) throw new Error('Bạn đang ở chế độ xem');
     const s = this.game.seats[seat];
@@ -166,6 +178,7 @@ export class PokerHandler {
 
   view(viewerId) {
     const v = this.game.view(viewerId);
+    if (!this.options.rabbitHunt) v.canRabbit = false;
     const last = this.game.history[this.game.history.length - 1];
     return {
       ...v,

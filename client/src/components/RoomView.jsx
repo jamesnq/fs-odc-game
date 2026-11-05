@@ -15,7 +15,7 @@ export const SHORTCUTS = {
     ['F', 'Bỏ bài (Fold)'], ['C', 'Theo / Check (Call)'], ['K', 'Check'], ['B', 'Cược (Bet)'], ['R', 'Tố (Raise)'],
     ['A', 'All-in'], ['↑ / ↓', 'Tăng / giảm mức cược 1 BB'], ['Shift + ↑/↓', 'Tăng / giảm 10 BB'],
     ['1 / 2 / 3 / 4', 'Mức cược ⅓ pot / ½ pot / ¾ pot / pot'], ['Enter', 'Xác nhận cược/tố'],
-    ['H', 'Mở Hands log (ván vừa xong)'], ['← / →', 'Ván trước / ván sau trong Hands log'],
+    ['H', 'Mở Hands log (ván vừa xong)'], ['T', 'Rabbit hunt (khi ván kết thúc sớm)'], ['← / →', 'Ván trước / ván sau trong Hands log'],
   ],
   tala: [
     ['D / Space', 'Bốc bài (khi tới lượt bốc)'], ['E', 'Ăn bài'], ['← / →', 'Di chuyển giữa các lá'],
