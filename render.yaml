@@ -14,3 +14,5 @@ services:
         value: "1"
       - key: APP_PASSWORD   # mật khẩu vào app — nhập trên dashboard Render
         sync: false
+      - key: APP_SERVERS    # nhiều server, vd {"Bên A":"mk-A","Bên B":"mk-B"} — thay cho APP_PASSWORD
+        sync: false

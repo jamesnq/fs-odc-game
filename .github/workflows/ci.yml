@@ -21,6 +21,6 @@ jobs:
         run: npm run build
       - name: Kiểm thử tích hợp (server + socket)
         run: |
-          PORT=3001 APP_PASSWORD=ci-secret node server/src/index.js &
+          PORT=3001 APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
           npx --yes wait-on -t 20000 http://localhost:3001/health
-          APP_PASSWORD=ci-secret npm run test:e2e -- http://localhost:3001
+          APP_PASSWORD=ci-secret OTHER_PASSWORD=ci-secret-b npm run test:e2e -- http://localhost:3001

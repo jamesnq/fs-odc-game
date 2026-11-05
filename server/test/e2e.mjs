@@ -5,13 +5,15 @@ import assert from 'node:assert/strict';
 
 const URL = process.argv[2] || 'http://localhost:3001';
 const PASSWORD = process.env.APP_PASSWORD || '';
+// Mật khẩu của một server khác (khi chạy với APP_SERVERS) để kiểm tra các server tách biệt
+const OTHER_PASSWORD = process.env.OTHER_PASSWORD || '';
 
-function client(name) {
-  const s = io(URL, { transports: ['websocket'], forceNew: true, auth: { password: PASSWORD } });
+function client(name, password = PASSWORD) {
+  const s = io(URL, { transports: ['websocket'], forceNew: true, auth: { password } });
   const c = { s, name, state: null, user: null };
   s.on('room:state', (st) => { c.state = st; });
   c.req = (ev, p = {}) => new Promise((res, rej) => s.timeout(5000).emit(ev, p, (err, r) => (err ? rej(err) : r.ok ? res(r) : rej(new Error(`${name} ${ev}: ${r.error}`)))));
-  c.ready = new Promise((res) => s.on('connect', async () => { const r = await c.req('hello', { name }); c.user = r.user; res(c); }));
+  c.ready = new Promise((res) => s.on('connect', async () => { const r = await c.req('hello', { name }); c.user = r.user; c.token = r.token; res(c); }));
   c.act = (a) => c.req('game:action', a);
   return c;
 }
@@ -190,6 +192,30 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   }
   await a.req('room:delete', { roomId });
   console.log('✔ Poker OK (Hands log)');
+}
+
+// ---------- Nhiều server: sảnh và phòng tách biệt ----------
+if (OTHER_PASSWORD) {
+  const x = await client('Xuân', OTHER_PASSWORD).ready;
+  const hx = await x.req('hello', { token: x.token });
+  const ha = await a.req('hello', { token: a.token });
+  assert.equal(ha.user.id, a.user.id);
+  assert.notEqual(hx.server.id, ha.server.id, 'hai mật khẩu vào hai server khác nhau');
+  const { roomId: rx } = await x.req('room:create', { name: 'Phòng bên B', game: 'caro', options: {} });
+  const { roomId: ra } = await a.req('room:create', { name: 'Phòng bên A', game: 'caro', options: {} });
+  const listA = (await a.req('lobby:list')).rooms.map((r) => r.id);
+  const listX = (await x.req('lobby:list')).rooms.map((r) => r.id);
+  assert.ok(listA.includes(ra) && !listA.includes(rx), 'sảnh A không thấy phòng của B');
+  assert.ok(listX.includes(rx) && !listX.includes(ra), 'sảnh B không thấy phòng của A');
+  await assert.rejects(x.req('room:join', { roomId: ra, mode: 'watch' }), /không tồn tại/);
+  await assert.rejects(a.req('room:join', { roomId: rx, mode: 'watch' }), /không tồn tại/);
+  await a.req('room:delete', { roomId: ra });
+  await x.req('room:delete', { roomId: rx });
+  // Token của server A không dùng được ở server B → thành người dùng mới
+  const hx2 = await x.req('hello', { tokens: { [hx.server.id]: ha.token }, token: ha.token, name: 'Xuân' });
+  assert.notEqual(hx2.user.id, ha.user.id, 'không mượn được danh tính của server khác');
+  x.s.close();
+  console.log(`✔ Nhiều server OK (${ha.server.name} / ${hx.server.name})`);
 }
 
 // ---------- Tá lả ----------

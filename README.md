@@ -105,6 +105,7 @@ docker run -p 3001:3001 game-lobby
 | `CORS_ORIGIN` | `*` | Origin được phép khi client ở domain khác |
 | `CLIENT_DIST` | `client/dist` | Thư mục client đã build |
 | `APP_PASSWORD` | _(trống)_ | Mật khẩu để vào app (auth gate). Để trống = ai cũng vào được |
+| `APP_SERVERS` | _(trống)_ | Chia app thành nhiều server, mỗi server một mật khẩu (JSON). Có biến này thì `APP_PASSWORD` bị bỏ qua |
 | `TRUST_PROXY` | _(trống)_ | Đặt `1` khi chạy sau reverse proxy để giới hạn nhập sai mật khẩu theo IP thật |
 
 ### Auth gate (mật khẩu vào app)
@@ -115,6 +116,16 @@ Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật
 - **VPS (GitHub Actions):** thêm secret `APP_PASSWORD` (và tùy chọn variable `TRUST_PROXY=1` nếu có Nginx phía trước)
 
 Đổi mật khẩu thì khởi động lại server; người đang dùng sẽ phải nhập mật khẩu mới khi kết nối lại.
+
+### Nhiều server (mỗi server một mật khẩu)
+Đặt `APP_SERVERS` là JSON dạng `{"tên server": "mật khẩu"}`, ví dụ:
+```
+APP_SERVERS={"Bên A":"mat-khau-A","Bên B":"mat-khau-B"}
+```
+- Nhập mật khẩu nào thì vào server đó. Mỗi server có **sảnh, phòng chơi, người chơi riêng**: bên A không thấy và không vào được phòng của bên B.
+- Tên server hiện ở góc trên; nút **⇄ Đổi server** để nhập mật khẩu của server khác. Trình duyệt nhớ danh tính riêng cho từng server.
+- Danh sách server không hiện cho người chưa nhập mật khẩu. Tên và mật khẩu không được trùng nhau; cấu hình sai thì server báo lỗi và không khởi động (tránh vô tình mở app không mật khẩu).
+- Thêm / bớt server: sửa biến rồi deploy lại. Đổi tên server sẽ tạo server mới (người chơi phải đặt lại tên).
 
 ## Cấu trúc
 

@@ -393,3 +393,8 @@ label.check input { width: auto; }
 .hl-street ul { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
 .hl-act.fold { color: var(--muted); }
 .hl-act.bet, .hl-act.raise { color: var(--gold); }
+
+/* ---------- Nhiều server ---------- */
+.server-badge { margin-left: 10px; padding: 3px 10px; border-radius: 99px; background: #1e3a8a; border: 1px solid var(--primary); font-size: 13px; font-weight: 600; white-space: nowrap; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { .hide-sm { display: none; } }
+.topbar-right { margin-left: auto; }

@@ -31,6 +31,11 @@ export function request(event, payload = {}) {
 export const storage = {
   get token() { return localStorage.getItem('gl_token') || ''; },
   set token(v) { localStorage.setItem('gl_token', v); },
+  // Mỗi server một danh tính riêng: { [serverId]: token }
+  get tokens() { try { return JSON.parse(localStorage.getItem('gl_tokens') || '{}') || {}; } catch { return {}; } },
+  setServerToken(serverId, token) {
+    try { localStorage.setItem('gl_tokens', JSON.stringify({ ...this.tokens, [serverId]: token })); } catch {}
+  },
   get password() { try { return localStorage.getItem('gl_pw') || ''; } catch { return ''; } },
   set password(v) { try { v ? localStorage.setItem('gl_pw', v) : localStorage.removeItem('gl_pw'); } catch {} },
   get name() { return localStorage.getItem('gl_name') || ''; },

@@ -16,6 +16,7 @@ export function AppProvider({ children }) {
   const [room, setRoom] = useState(null); // trạng thái phòng hiện tại
   const [toasts, setToasts] = useState([]);
   const [needName, setNeedName] = useState(!storage.name);
+  const [server, setServer] = useState(null); // { id, name, gated } — server (sảnh) đang vào
   const [newVersion, setNewVersion] = useState(null); // phiên bản mới trên server, khác bản đang chạy
   const [authError, setAuthError] = useState(null); // null = chưa bị chặn; chuỗi = cần nhập mật khẩu
   const receivedAt = useRef(0);
@@ -27,8 +28,9 @@ export function AppProvider({ children }) {
   }, []);
 
   const hello = useCallback(async (name) => {
-    const res = await request('hello', { token: storage.token, name: name || storage.name });
-    storage.token = res.token;
+    const res = await request('hello', { token: storage.token, tokens: storage.tokens, name: name || storage.name });
+    storage.setServerToken(res.server.id, res.token);
+    setServer(res.server);
     storage.name = res.user.name;
     setUser(res.user);
     setRooms(res.rooms);
@@ -127,9 +129,22 @@ export function AppProvider({ children }) {
     socket.connect();
   }, []);
 
+  /** Rời server hiện tại để nhập mật khẩu của server khác. */
+  const switchServer = useCallback(async () => {
+    if (room) await request('room:leave').catch(() => {});
+    storage.password = '';
+    location.hash = '';
+    socket.disconnect();
+    setRoom(null);
+    setUser(null);
+    setRooms([]);
+    setServer(null);
+    setAuthError('AUTH_REQUIRED');
+  }, [room]);
+
   const value = useMemo(() => ({
-    connected, user, setUser, rooms, room, toasts, toast, needName, setNeedName, hello, call, act, authError, login, newVersion,
-  }), [newVersion, connected, user, rooms, room, toasts, toast, needName, hello, call, act, authError, login]);
+    connected, user, setUser, rooms, room, toasts, toast, needName, setNeedName, hello, call, act, authError, login, newVersion, server, switchServer,
+  }), [newVersion, server, switchServer, connected, user, rooms, room, toasts, toast, needName, hello, call, act, authError, login]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
