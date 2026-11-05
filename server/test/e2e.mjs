@@ -398,21 +398,22 @@ if (OTHER_PASSWORD) {
   const fi = order.findIndex((p) => p.user.id === d.state.state.game.currentId);
   assert.ok(fi >= 0, 'người đi đầu là một trong các người chơi');
   const [x, y, z] = [order[fi], order[(fi + 1) % 3], order[(fi + 2) % 3]];
-  await assert.rejects(y.act({ type: 'word', text: 'con mèo' }), /lượt/);
+  await assert.rejects(y.act({ type: 'word', text: 'đắng cay' }), /lượt/);
   await assert.rejects(x.act({ type: 'word', text: 'mèo' }), /2 chữ/);
   await assert.rejects(x.act({ type: 'word', text: 'con xyzq' }), /từ điển/);
-  await assert.rejects(d.act({ type: 'word', text: 'con mèo' }), /xem/);
-  await x.act({ type: 'word', text: 'Con Mèo' });
-  await until(() => d.state.state.game.required === 'mèo');
-  await assert.rejects(y.act({ type: 'word', text: 'con chó' }), /bắt đầu bằng "mèo"/);
-  await y.act({ type: 'word', text: 'mèo con' });
-  await assert.rejects(z.act({ type: 'word', text: 'con mèo' }), /đã được dùng/);
-  // Phản đối: x và z cùng phản đối "mèo con" → gỡ, lượt về y
+  await assert.rejects(x.act({ type: 'word', text: 'tành mui' }), /"tành mui" không có trong từ điển/);
+  await assert.rejects(d.act({ type: 'word', text: 'đắng cay' }), /xem/);
+  await x.act({ type: 'word', text: 'Đắng Cay' });
+  await until(() => d.state.state.game.required === 'cay');
+  await assert.rejects(y.act({ type: 'word', text: 'con chó' }), /bắt đầu bằng "cay"/);
+  await y.act({ type: 'word', text: 'cay đắng' });
+  await assert.rejects(z.act({ type: 'word', text: 'đắng cay' }), /đã được dùng/);
+  // Phản đối: x và z cùng phản đối "cay đắng" → gỡ, lượt về y
   await x.act({ type: 'object' });
   await z.act({ type: 'object' });
   await until(() => d.state.state.game.total === 1 && d.state.state.game.currentId === y.user.id);
-  await y.act({ type: 'word', text: 'mèo mướp' });
-  await z.act({ type: 'word', text: 'mướp đắng' });
+  await y.act({ type: 'word', text: 'cay cực' });
+  await z.act({ type: 'word', text: 'cực khổ' });
   // Chịu thua dần → người cuối thắng
   await x.act({ type: 'giveup' });
   await y.act({ type: 'giveup' });
@@ -420,6 +421,7 @@ if (OTHER_PASSWORD) {
   assert.equal(d.state.state.game.result.winner, z.user.id);
   assert.deepEqual(d.state.state.game.result.ranking, [z.user.id, y.user.id, x.user.id]);
   assert.equal(d.state.state.wins[0].id, z.user.id);
+  assert.deepEqual(d.state.state.history[0].words.map((w) => w.s.join(' ')), ['đắng cay', 'cay cực', 'cực khổ'], 'lịch sử lưu cả chuỗi từ của ván');
   await a.req('room:delete', { roomId });
   console.log('✔ Nối từ OK');
 }

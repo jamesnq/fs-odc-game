@@ -568,10 +568,6 @@ label.check input { width: auto; }
 .wc-input input { flex: 1; font-size: 20px; padding: 10px 12px; }
 .wc-prefix { font-size: 20px; font-weight: 700; color: var(--gold); padding: 8px 12px; border-radius: 8px; background: #3b2f0b; white-space: nowrap; }
 .wc-result .wc-big { color: var(--gold); }
-.wc-chain ol { margin: 0; padding-left: 36px; height: 180px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-.wc-chain li.mine .wc-chain-word { color: var(--gold); }
-.wc-chain-word { font-weight: 600; }
-.wc-chain > .muted.small { min-height: 180px; } /* chưa có từ: giữ cùng chiều cao với danh sách */
 .wc-rules ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .wc-word .small { display: block; margin-top: 10px; font-size: 13px; font-weight: 400; line-height: 1.4; }
 
@@ -859,3 +855,28 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .pk { align-items: center; }
 .pk > * { width: 100%; max-width: max(640px, calc((100dvh - 480px) * 2 + 120px)); }
 @media (max-width: 640px) { .pk > * { max-width: none; } }
+
+/* ---------- Nối từ: chuỗi từ nối liền + lịch sử theo ván ---------- */
+.wc-chain .sb-head { margin-bottom: 8px; }
+.wf-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+.wf-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.wf-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--pc); }
+.wf { list-style: none; margin: 0; padding: 2px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px 2px;
+  height: 180px; overflow-y: auto; scrollbar-width: thin; }
+.wf-item { display: inline-flex; align-items: center; gap: 6px; }
+.wf-arrow { color: var(--muted); flex: none; }
+.wf-n { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 14px; text-align: right; }
+.wf-word { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--pc); background: color-mix(in srgb, var(--pc) 14%, transparent); white-space: nowrap; }
+.wf-item.mine .wf-word { font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.wf-link { color: var(--gold); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.wf-empty { height: 180px; display: grid; place-items: center; border: 1px dashed var(--line-strong); border-radius: 10px; }
+.wf-history { height: 206px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
+.wf-history .wf-empty { height: 100%; }
+.wf-game { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--panel-2); }
+.wf-game summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style-position: inside; }
+.wf-meta { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+.wf-game[open] summary { margin-bottom: 8px; }
+.wf-game .wf { height: auto; max-height: 220px; }
+.wf-flag { color: var(--warn); margin-left: 4px; vertical-align: -2px; }
+.wf-flag-text { color: var(--warn); }
+.wf-flag-text svg { vertical-align: -2px; }

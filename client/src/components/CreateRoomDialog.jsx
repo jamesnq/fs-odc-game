@@ -6,7 +6,7 @@ import { GAME_META, GameIcon } from './Lobby.jsx';
 const DEFAULTS = {
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true },
-  wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true },
+  wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true, strict: true },
   poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
@@ -19,6 +19,7 @@ const FIELDS = {
     ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 60],
     ['lives', 'Số mạng mỗi người', 1, 3],
     ['dictionary', 'Kiểm tra từ điển (mỗi chữ phải là tiếng Việt)', 'bool'],
+    ['strict', 'Chặt: cả từ phải có trong từ điển (~48.000 từ). Tắt = thoáng, từ lạ chỉ bị gắn cờ', 'bool'],
   ],
   caro: [
     ['size', 'Kích thước bàn (ô mỗi cạnh)', 10, 20],

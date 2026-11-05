@@ -1,16 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { WordChainGame, makeSyllableChecker } from '@game/shared/wordchain';
+import { WordChainGame, makeSyllableChecker, makeWordChecker } from '@game/shared/wordchain';
 
 // Từ điển âm tiết tiếng Việt (xem server/src/data/README.md)
 const DICT_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/vi-syllables.txt');
 const isValidSyllable = makeSyllableChecker(fs.readFileSync(DICT_FILE, 'utf8').split('\n').filter(Boolean));
+// Từ điển từ ghép 2 chữ (~48.000 từ, xem server/src/data/README.md)
+const WORDS_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/vi-words.txt');
+const isKnownWord = makeWordChecker(fs.readFileSync(WORDS_FILE, 'utf8').split('\n').filter(Boolean));
 
 const clampInt = (v, min, max, def) => {
   const n = Math.floor(Number(v));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
 };
+const HISTORY_MAX = 10;
 const bool = (v, def) => (v === undefined ? def : !!v && v !== 'false');
 
 export class WordChainHandler {
@@ -21,6 +25,7 @@ export class WordChainHandler {
       turnSeconds: clampInt(options.turnSeconds, 10, 60, 20),
       lives: clampInt(options.lives, 1, 3, 1),
       dictionary: bool(options.dictionary, true),
+      strict: bool(options.strict, true), // từ phải có trong từ điển từ ghép
     };
     this.seats = []; // [{ id, name }] theo thứ tự lượt
     this.ready = new Set();
@@ -30,6 +35,7 @@ export class WordChainHandler {
     this.deadline = 0;
     this.gameNo = 0;
     this.wins = new Map(); // id -> { id, name, games, wins }
+    this.history = []; // các ván đã xong (mới nhất trước), tối đa HISTORY_MAX
   }
 
   get maxPlayers() { return this.options.maxSeats; }
@@ -121,6 +127,8 @@ export class WordChainHandler {
       first: Math.floor(Math.random() * this.seats.length),
       lives: this.options.lives,
       isValidSyllable: this.options.dictionary ? isValidSyllable : null,
+      isKnownWord,
+      strict: this.options.dictionary && this.options.strict,
     });
     this.status = 'playing';
     this.ready.clear();
@@ -165,6 +173,16 @@ export class WordChainHandler {
       this.wins.set(p.id, w);
     }
     const name = (id) => this.game.players.find((p) => p.id === id)?.name;
+    // Lưu lại cả chuỗi từ của ván để xem lại theo từng ván
+    this.history.unshift({
+      no: this.gameNo,
+      endedAt: Date.now(),
+      players: this.game.players.map(({ id, name: n }) => ({ id, name: n })),
+      winner,
+      ranking,
+      words: this.game.chain.map(({ syllables, by, known }) => ({ s: syllables, by, known })),
+    });
+    if (this.history.length > HISTORY_MAX) this.history.pop();
     this.room.system(`🏆 ${winner ? `${name(winner)} thắng` : 'Không ai thắng'} sau ${this.game.chain.length} từ. Xếp hạng: ${ranking.map(name).join(', ')}`);
   }
 
@@ -183,13 +201,14 @@ export class WordChainHandler {
         players: g.players.map(({ id, name, lives, out, words }) => ({ id, name, lives, out, words })),
         currentId: this.status === 'playing' ? g.current.id : null,
         required: g.required,
-        chain: g.chain.slice(-80).map(({ text, syllables, by, name, ts }) => ({ text, syllables, by, name, ts })),
+        chain: g.chain.slice(-80).map(({ text, syllables, by, name, ts, known }) => ({ text, syllables, by, name, ts, known })),
         total: g.chain.length,
         objections: [...g.objections],
         objectionsNeeded: g.last ? g.objectionsNeeded() : 0,
         result: g.result,
       },
       wins: [...this.wins.values()].sort((x, y) => y.wins - x.wins || x.games - y.games),
+      history: this.history,
     };
   }
 
