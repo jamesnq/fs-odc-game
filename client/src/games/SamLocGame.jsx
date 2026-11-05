@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { classify, beats, valueOf, COMBO_VI, SAM_RULES } from '@game/shared/samloc';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
+import CardTable from '../components/CardTable.jsx';
+import { Timer, Flame, Check } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
 
 const fmt = (n) => (n > 0 ? '+' : '') + Number(n || 0).toLocaleString('vi-VN');
@@ -76,7 +78,6 @@ function Table({ s, g, act, timeLeft }) {
   const me = inGame ? g.players[g.me] : null;
   const myTurn = inGame && g.phase === 'play' && g.turn === g.me;
   const n = g.players.length;
-  const others = Array.from({ length: n - (inGame ? 1 : 0) }, (_, k) => (inGame ? (g.me + 1 + k) % n : k));
 
   // ----- Bài trên tay & chọn bài -----
   const hand = me?.hand || [];
@@ -120,7 +121,7 @@ function Table({ s, g, act, timeLeft }) {
 
   const status = (p, i) => {
     const tags = [];
-    if (g.samBy === i) tags.push(<span key="sam" className="badge sam">🔥 Báo Sâm</span>);
+    if (g.samBy === i) tags.push(<span key="sam" className="badge sam"><Flame size={12} aria-hidden /> Báo Sâm</span>);
     if (!g.result && p.count === 1) tags.push(<span key="one" className="badge danger">Báo 1!</span>);
     if (g.phase === 'play' && p.passed) tags.push(<span key="pass" className="badge">Bỏ lượt</span>);
     if (g.phase === 'sam' && g.samDecided.includes(i) && g.samBy !== i) tags.push(<span key="no" className="badge">Không báo</span>);
@@ -129,64 +130,67 @@ function Table({ s, g, act, timeLeft }) {
     else if (seat && !seat.online) tags.push(<span key="off" className="badge warn">Mất kết nối</span>);
     return tags;
   };
-  const turnTimer = (i) => !g.result && ((g.phase === 'play' && g.turn === i) || (g.phase === 'sam' && !g.samDecided.includes(i)))
-    && <span className="tl-timer">⏱ {Math.ceil(timeLeft / 1000)}s</span>;
+  const isActive = (i) => !g.result && ((g.phase === 'play' && g.turn === i) || (g.phase === 'sam' && !g.samDecided.includes(i)));
+  const turnTimer = (i) => isActive(i) && <span className="tl-timer"><Timer size={13} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span>;
+
+  // Ghế quanh bàn: đối thủ thấy lưng bài (hết ván thì lật bài), ghế của mình chỉ hiện tên + trạng thái
+  const base = inGame ? g.me : 0;
+  const seats = g.players.map((p, i) => ({
+    key: p.id,
+    rel: (i - base + n) % n,
+    me: i === g.me,
+    active: isActive(i),
+    node: (
+      <div className={`sl-opp ${isActive(i) ? 'turn' : ''} ${g.lastPlay?.by === i ? 'last' : ''}`}>
+        <div className="tl-head">
+          <b className="seat-name">{p.name}</b>{i === g.me && <span className="seat-me">bạn</span>}
+          <span className="felt-muted small">{p.count} lá</span>
+          {turnTimer(i)}
+        </div>
+        <div className="row wrap sl-tags">{status(p, i)}</div>
+        {i !== g.me && (
+          <div className="tl-hand-back">
+            {p.hand ? p.hand.map((c) => <Card key={c} card={c} size="sm" />)
+              : <span className="card-fan" aria-label={`${p.count} lá`}>{Array.from({ length: p.count }).map((_, j) => <Card key={j} card="??" size="xs" />)}</span>}
+          </div>
+        )}
+      </div>
+    ),
+  }));
+
+  const center = (
+    <>
+      {g.phase === 'sam' && !g.result ? (
+        <div className="sl-sam">
+          <div className="sl-sam-title"><Flame size={20} aria-hidden /> Báo Sâm? <span className="tl-timer"><Timer size={14} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span></div>
+          <div className="felt-muted small">Đi trước và phải đánh hết bài mà không ai chặn được. Thành công +{SAM_RULES.sam}/nhà, bị chặn đền {SAM_RULES.sam}/nhà.</div>
+          {samPending ? (
+            <div className="row">
+              <button className="btn cta" onClick={() => doSam(true)}><kbd>Y</kbd> Báo Sâm</button>
+              <button className="btn" onClick={() => doSam(false)}><kbd>K</kbd> Không báo</button>
+            </div>
+          ) : <div className="felt-muted small">Đang chờ người khác quyết định…</div>}
+        </div>
+      ) : g.lastPlay ? (
+        <div className="sl-pile">
+          <div className="felt-muted small">{g.players[g.lastPlay.by].name} — {comboLabel(lastCombo)}</div>
+          <div className="sl-pile-cards">{g.lastPlay.cards.map((c) => <Card key={c} card={c} size="md" />)}</div>
+        </div>
+      ) : !g.result && (
+        <div className="sl-pile empty felt-muted">{g.turn >= 0 && <><b>{g.players[g.turn].name}</b> đi vòng mới</>}</div>
+      )}
+      {!g.result && g.phase === 'play' && (
+        <div className="tl-status" role="status" aria-live="polite">Lượt: <b>{g.players[g.turn].name}</b>{g.samBy >= 0 && <span className="felt-muted"> · {g.players[g.samBy].name} đang đi Sâm</span>}</div>
+      )}
+      <div className="tl-log">{g.log.slice(-3).map((l, i) => <div key={i} className="small felt-muted">{l}</div>)}</div>
+    </>
+  );
 
   return (
-    <div className="sl-table">
-      <div className="sl-others">
-        {others.map((i) => {
-          const p = g.players[i];
-          return (
-            <div key={p.id} className={`sl-opp ${g.phase === 'play' && g.turn === i ? 'turn' : ''} ${g.lastPlay?.by === i ? 'last' : ''}`}>
-              <div className="tl-head">
-                <b>{p.name}</b>
-                <span className="muted small">{p.count} lá</span>
-                {turnTimer(i)}
-              </div>
-              <div className="row wrap sl-tags">{status(p, i)}</div>
-              <div className="tl-hand-back">
-                {p.hand ? p.hand.map((c) => <Card key={c} card={c} size="sm" />)
-                  : Array.from({ length: p.count }).map((_, j) => <Card key={j} card="??" size="xs" />)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="sl-center">
-        {g.phase === 'sam' && !g.result ? (
-          <div className="sl-sam">
-            <div className="sl-sam-title">🔥 Báo Sâm? <span className="tl-timer">⏱ {Math.ceil(timeLeft / 1000)}s</span></div>
-            <div className="muted small">Báo Sâm: đi trước, phải đánh hết bài mà không ai chặn được. Thành công +{SAM_RULES.sam}/nhà, bị chặn đền {SAM_RULES.sam}/nhà.</div>
-            {samPending ? (
-              <div className="row">
-                <button className="btn warn" onClick={() => doSam(true)}><kbd>Y</kbd> Báo Sâm</button>
-                <button className="btn" onClick={() => doSam(false)}><kbd>K</kbd> Không báo</button>
-              </div>
-            ) : <div className="muted small">Đang chờ người khác quyết định…</div>}
-          </div>
-        ) : g.lastPlay ? (
-          <div className="sl-pile">
-            <div className="muted small">{g.players[g.lastPlay.by].name} — {comboLabel(lastCombo)}</div>
-            <div className="sl-pile-cards">{g.lastPlay.cards.map((c) => <Card key={c} card={c} size="md" />)}</div>
-          </div>
-        ) : !g.result && (
-          <div className="muted">{g.turn >= 0 && <><b>{g.players[g.turn].name}</b> đi vòng mới</>}</div>
-        )}
-        {!g.result && g.phase === 'play' && (
-          <div className="tl-status" role="status" aria-live="polite">Lượt: <b>{g.players[g.turn].name}</b>{g.samBy >= 0 && <span className="muted"> · {g.players[g.samBy].name} đang đi Sâm</span>}</div>
-        )}
-        <div className="tl-log">{g.log.slice(-3).map((l, i) => <div key={i} className="small muted">{l}</div>)}</div>
-      </div>
-
+    <div className="sl-board">
+      <CardTable seats={seats} center={center} className="ct-samloc" />
       {inGame && (
-        <div className={`sl-me ${myTurn ? 'turn' : ''}`}>
-          <div className="tl-head">
-            <b>{me.name} (bạn)</b> <span className="muted small">{me.count} lá</span>
-            {status(me, g.me)}
-            {turnTimer(g.me)}
-          </div>
+        <div className={`ct-hand-panel ${myTurn ? 'turn' : ''}`}>
           <div className="tl-hand">
             {hand.map((c, i) => (
               <Card key={c} card={c} size="lg" selected={selected.includes(c)} focused={i === cursor}
@@ -197,9 +201,10 @@ function Table({ s, g, act, timeLeft }) {
             <div className="row wrap tl-actions">
               {myTurn ? <span className="your-turn">Tới lượt bạn{g.lastPlay ? ': chặn hoặc bỏ lượt' : ': đi vòng mới'}</span>
                 : <span className="muted">{g.phase === 'sam' ? 'Đang chờ báo Sâm…' : 'Chờ tới lượt…'}</span>}
-              {selected.length > 0 && (
-                <span className={`sl-sel ${problem ? 'bad' : 'ok'}`}>{problem || `${comboLabel(combo)} ✓`}</span>
-              )}
+              {/* Luôn giữ chỗ cho nhãn bộ bài đang chọn → hàng nút không xô lệch */}
+              <span className={`sl-sel ${!selected.length ? 'off' : problem ? 'bad' : 'ok'}`} aria-live="polite">
+                {!selected.length ? 'Chọn lá để đánh' : problem || <><Check size={13} aria-hidden /> {comboLabel(combo)}</>}
+              </span>
               <button className="btn primary" disabled={!canPlay} onClick={doPlay}><kbd>Enter</kbd> Đánh</button>
               <button className="btn" disabled={!myTurn || !g.lastPlay} onClick={doPass}><kbd>P</kbd> Bỏ lượt</button>
               <button className="btn ghost sm" disabled={!selected.length} onClick={() => setSelected([])}><kbd>Esc</kbd> Bỏ chọn</button>

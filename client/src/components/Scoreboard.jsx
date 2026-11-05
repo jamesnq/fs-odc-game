@@ -1,12 +1,30 @@
 import { useState } from 'react';
 import { useApp } from '../store.jsx';
 
-const fmtPts = (n) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
+export const fmtPts = (n) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
 const fmtTime = (ts) => new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 /**
  * Bảng điểm cho game 2 người. `sides` = { r: { label, cls }, b: {...} } để hiển thị màu quân trong lịch sử.
  */
+/** Điểm của một người trong phòng (null nếu chưa có ván nào). */
+export const pointsOf = (score, id) => {
+  const r = score?.rows?.find((x) => x.id === id);
+  return r ? r.points : null;
+};
+
+/** Dòng tỉ số ngắn "An 2 – 1 Bình" cho hai ghế (theo thứ tự truyền vào). */
+export function ScoreLine({ score, a, b }) {
+  if (!a || !b || !score?.gameNo) return null;
+  return (
+    <div className="score-line" aria-label={`Tỉ số: ${a.name} ${fmtPts(pointsOf(score, a.id) ?? 0)}, ${b.name} ${fmtPts(pointsOf(score, b.id) ?? 0)}`}>
+      <span className="sl-name">{a.name}</span>
+      <b className="sl-pts">{fmtPts(pointsOf(score, a.id) ?? 0)} – {fmtPts(pointsOf(score, b.id) ?? 0)}</b>
+      <span className="sl-name">{b.name}</span>
+    </div>
+  );
+}
+
 export default function Scoreboard({ room, score, sides, playing }) {
   const { user, act } = useApp();
   const [tab, setTab] = useState('table');
