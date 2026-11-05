@@ -66,6 +66,11 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await black.act({ type: 'resign' });
   await until(() => a.state.state.status === 'over');
   assert.equal(a.state.state.result.winner, 'r');
+  const sc = c.state.state.score;
+  assert.equal(sc.gameNo, 1);
+  assert.equal(sc.rows[0].id, red.user.id, 'người thắng đứng đầu bảng điểm');
+  assert.deepEqual([sc.rows[0].wins, sc.rows[0].points, sc.rows[1].losses, sc.rows[1].points], [1, 1, 1, 0]);
+  await assert.rejects(b.act({ type: 'resetScore' }), /chủ phòng/);
   await a.act({ type: 'rematch' });
   await b.act({ type: 'rematch' });
   await until(() => a.state.state.status === 'playing');
@@ -108,6 +113,16 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await b.act({ type: 'rematch' });
   await until(() => a.state.state.status === 'playing');
   assert.equal(o.state.state.myColor, 'x', 'đổi lượt đi khi chơi lại');
+  await o.act({ type: 'offerDraw' });
+  await x.act({ type: 'respond', accept: true });
+  await until(() => c.state.state.status === 'over');
+  const sc = c.state.state.score;
+  const row = (u) => sc.rows.find((r) => r.id === u.user.id);
+  assert.deepEqual([row(x).wins, row(x).draws, row(x).points], [1, 1, 1.5], 'điểm cộng theo người, không theo màu');
+  assert.deepEqual([row(o).losses, row(o).draws, row(o).points], [1, 1, 0.5]);
+  assert.equal(sc.history.length, 2);
+  await a.act({ type: 'resetScore' });
+  await until(() => c.state.state.score.rows.length === 0);
   await c.req('room:leave');
   await a.req('room:delete', { roomId });
   console.log('✔ Cờ caro OK');

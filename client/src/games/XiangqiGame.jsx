@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { legalMovesFrom, colorOf, typeOf, PIECE_CHAR, rowOf, colOf, idx } from '@game/shared/xiangqi';
 import { useApp } from '../store.jsx';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
+import Scoreboard from '../components/Scoreboard.jsx';
 
 const CELL = 56;
 const PAD = 40;
@@ -150,6 +151,8 @@ export default function XiangqiGame({ room, state: s }) {
             <button className="btn ghost sm" onClick={() => setManualFlip((f) => !f)}>⇅ Lật bàn (F)</button>
           </div>
         </div>
+        <Scoreboard room={room} score={s.score} playing={s.status === 'playing'}
+          sides={{ r: { label: 'Đỏ', cls: 'c-r' }, b: { label: 'Đen', cls: 'c-b' } }} />
         <MoveList moves={s.moves} />
         <div className="muted small">Thời gian: {s.options.minutes} phút mỗi bên. Hết giờ là thua.</div>
       </div>

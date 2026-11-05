@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { colLabel } from '@game/shared/caro';
 import { useApp } from '../store.jsx';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
+import Scoreboard from '../components/Scoreboard.jsx';
 
 const CELL = 36;
 const PAD = 26;
@@ -141,6 +142,8 @@ export default function CaroGame({ room, state: s }) {
           )}
           {!my && <div className="muted small">Bạn đang xem. Ngồi vào ghế trống để chơi.</div>}
         </div>
+        <Scoreboard room={room} score={s.score} playing={s.status === 'playing'}
+          sides={{ x: { label: 'X', cls: 'c-x' }, o: { label: 'O', cls: 'c-o' } }} />
         <MoveList moves={s.moves} />
         <div className="muted small">
           Bàn {n}×{n} · 5 quân liên tiếp là thắng{s.options.blockTwoEnds ? ' · bị chặn hai đầu không tính' : ''} · {s.options.minutes} phút mỗi bên, hết giờ là thua. X đi trước.

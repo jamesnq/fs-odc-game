@@ -25,7 +25,14 @@
 - Luật **chặn hai đầu** (bật / tắt khi tạo bàn): dãy bị quân đối thủ chặn cả hai đầu thì không tính; kín bàn là hòa
 - Đồng hồ **10 phút mỗi bên**, xin thua, cầu hòa, xin đi lại, chơi lại (đổi lượt đi trước), chế độ người xem
 - Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
+- **Bảng điểm** cộng dồn qua các ván (xem bên dưới)
 - **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
+
+**Bảng điểm (Cờ tướng và Cờ caro)**
+- Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người
+- Bảng tỉ số (số ván / thắng / hòa / thua / điểm) và lịch sử 30 ván gần nhất (ai cầm quân gì, lý do thắng, số nước)
+- Sau mỗi ván, phòng chat báo tỉ số hiện tại; chủ phòng có thể **đặt lại bảng điểm** khi không có ván đang chơi
+- Bảng điểm gắn với phòng, xóa phòng hoặc khởi động lại server là mất
 
 **Poker (Texas Hold'em No-Limit)**
 - Dealer / SB / BB xoay vòng, luật heads-up, side pot, chia pot hòa, all-in không đủ mức raise không mở lại quyền raise (luật TDA)
