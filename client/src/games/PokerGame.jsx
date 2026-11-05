@@ -2,17 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
+import PokerHandLog from './PokerHandLog.jsx';
+import Modal from '../components/Modal.jsx';
 
 const STREET_VI = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
 const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
 
 export default function PokerGame({ room, state: s }) {
   const { act, call, user } = useApp();
+  const [editBlinds, setEditBlinds] = useState(false);
+  const isOwner = room.ownerId === user.id;
   const h = s.hand;
   const N = s.seats.length;
   const mySeat = s.mySeat;
   const base = mySeat >= 0 ? mySeat : 0;
   const o = s.options;
+  useHotkeys({ t: () => s.canRabbit && act({ type: 'rabbit' }) });
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, !!s.turnLeft);
   const nextIn = useCountdown(s.nextHandIn, room.receivedAt, !!s.nextHandIn);
 
@@ -33,11 +38,17 @@ export default function PokerGame({ room, state: s }) {
         <div className="pk-felt">
           <div className="pk-center">
             <div className="pk-board">
-              {[0, 1, 2, 3, 4].map((i) => (h?.board[i]
-                ? <Card key={i} card={h.board[i]} size="md" highlight={winCards.has(h.board[i])} />
-                : <div key={i} className="card-slot" />))}
+              {[0, 1, 2, 3, 4].map((i) => {
+                if (h?.board[i]) return <Card key={i} card={h.board[i]} size="md" highlight={winCards.has(h.board[i])} />;
+                const r = h?.rabbit?.[i - h.board.length];
+                return r
+                  ? <div key={i} className="rabbit-card" title="Rabbit hunt — bài lẽ ra sẽ ra"><Card card={r} size="md" /></div>
+                  : s.canRabbit
+                    ? <button key={i} className="card-slot rabbit-slot" title="Rabbit hunt (T): lật bài lẽ ra sẽ ra, không tính" onClick={() => act({ type: 'rabbit' })}>🐇</button>
+                    : <div key={i} className="card-slot" />;
+              })}
             </div>
-            {h && <div className="pk-pot">Pot: <b>{fmt(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span></div>}
+            {h && <div className="pk-pot">Pot: <b>{fmt(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
             {h?.result && (
               <div className="pk-result">
                 {h.result.pots.map((p, k) => (
@@ -50,7 +61,11 @@ export default function PokerGame({ room, state: s }) {
                 {nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
               </div>
             ) : null}
-            <div className="muted small">Blind {fmt(s.smallBlind)}/{fmt(s.bigBlind)}</div>
+            <div className="muted small">
+              Blind {fmt(s.smallBlind)}/{fmt(s.bigBlind)}
+              {isOwner && <button className="link pk-blind-edit" title="Đổi blind" onClick={() => setEditBlinds(true)}>✎</button>}
+            </div>
+            {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmt(s.nextBlinds.smallBlind)}/{fmt(s.nextBlinds.bigBlind)}</div>}
           </div>
 
           {s.seats.map((seat, i) => {
@@ -105,11 +120,12 @@ export default function PokerGame({ room, state: s }) {
       {mySeat < 0 && <div className="muted center small">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
       {h && (
         <details className="panel pk-log">
-          <summary>Lịch sử ván #{h.no}</summary>
+          <summary>Diễn biến ván #{h.no}</summary>
           {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
         </details>
       )}
-      {user && null}
+      <PokerHandLog s={s} />
+      {editBlinds && <BlindsDialog s={s} act={act} onClose={() => setEditBlinds(false)} />}
     </div>
   );
 }
@@ -181,5 +197,61 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Chủ phòng đổi small/big blind. Đang giữa ván thì áp dụng từ ván sau. */
+function BlindsDialog({ s, act, onClose }) {
+  const cur = s.nextBlinds || { smallBlind: s.smallBlind, bigBlind: s.bigBlind };
+  const [sb, setSb] = useState(cur.smallBlind);
+  const [bb, setBb] = useState(cur.bigBlind);
+  const [busy, setBusy] = useState(false);
+  const inHand = s.hand && s.hand.street !== 'done';
+  const sbN = Math.floor(Number(sb)), bbN = Math.floor(Number(bb));
+  const error = !(bbN >= 2) ? 'Big blind tối thiểu là 2'
+    : bbN > s.config.buyIn ? `Big blind không được lớn hơn buy-in (${fmt(s.config.buyIn)})`
+    : !(sbN >= 1) ? 'Small blind tối thiểu là 1'
+    : sbN > bbN ? 'Small blind không được lớn hơn big blind' : null;
+  const preset = (f) => { const b = Math.max(2, Math.round(cur.bigBlind * f)); setBb(b); setSb(Math.max(1, Math.floor(b / 2))); };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (error) return;
+    setBusy(true);
+    const res = await act({ type: 'setBlinds', smallBlind: sbN, bigBlind: bbN });
+    setBusy(false);
+    if (res) onClose();
+  };
+
+  return (
+    <Modal title="Đổi blind" onClose={onClose}>
+      <form className="form" onSubmit={submit}>
+        <div className="row pk-blind-fields">
+          <div>
+            <label>Small blind</label>
+            <input type="number" min={1} value={sb} autoFocus onChange={(e) => setSb(e.target.value)} />
+          </div>
+          <div>
+            <label>Big blind</label>
+            <input type="number" min={2} value={bb} onChange={(e) => setBb(e.target.value)} />
+          </div>
+        </div>
+        <div className="row wrap">
+          <button type="button" className="btn sm" onClick={() => setSb(Math.max(1, Math.floor(bbN / 2)))}>SB = ½ BB</button>
+          <button type="button" className="btn sm" onClick={() => preset(0.5)}>Giảm ½</button>
+          <button type="button" className="btn sm" onClick={() => preset(1.5)}>× 1,5</button>
+          <button type="button" className="btn sm" onClick={() => preset(2)}>× 2</button>
+        </div>
+        {error ? <div className="gate-error">{error}</div> : (
+          <div className="muted small">
+            {inHand ? 'Ván đang diễn ra: mức mới áp dụng từ ván sau.' : 'Áp dụng ngay cho ván tiếp theo.'} Raise tối thiểu bằng big blind.
+          </div>
+        )}
+        <div className="row end">
+          <button type="button" className="btn ghost" onClick={onClose}>Hủy</button>
+          <button className="btn primary" disabled={busy || !!error}>Lưu</button>
+        </div>
+      </form>
+    </Modal>
   );
 }

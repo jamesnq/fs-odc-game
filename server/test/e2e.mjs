@@ -5,13 +5,15 @@ import assert from 'node:assert/strict';
 
 const URL = process.argv[2] || 'http://localhost:3001';
 const PASSWORD = process.env.APP_PASSWORD || '';
+// Mật khẩu của một server khác (khi chạy với APP_SERVERS) để kiểm tra các server tách biệt
+const OTHER_PASSWORD = process.env.OTHER_PASSWORD || '';
 
-function client(name) {
-  const s = io(URL, { transports: ['websocket'], forceNew: true, auth: { password: PASSWORD } });
+function client(name, password = PASSWORD) {
+  const s = io(URL, { transports: ['websocket'], forceNew: true, auth: { password } });
   const c = { s, name, state: null, user: null };
   s.on('room:state', (st) => { c.state = st; });
   c.req = (ev, p = {}) => new Promise((res, rej) => s.timeout(5000).emit(ev, p, (err, r) => (err ? rej(err) : r.ok ? res(r) : rej(new Error(`${name} ${ev}: ${r.error}`)))));
-  c.ready = new Promise((res) => s.on('connect', async () => { const r = await c.req('hello', { name }); c.user = r.user; res(c); }));
+  c.ready = new Promise((res) => s.on('connect', async () => { const r = await c.req('hello', { name }); c.user = r.user; c.token = r.token; res(c); }));
   c.act = (a) => c.req('game:action', a);
   return c;
 }
@@ -145,10 +147,11 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
 // ---------- Poker ----------
 {
   a.state = b.state = c.state = null;
-  const { roomId } = await a.req('room:create', { name: 'Poker test', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 6 } });
+  const { roomId } = await a.req('room:create', { name: 'Poker test', game: 'poker', options: { smallBlind: 5, bigBlind: 20, buyIn: 1000, maxSeats: 6 } });
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'play' });
   await until(() => a.state?.state.hand?.street === 'preflop', 5000);
+  assert.deepEqual([a.state.state.smallBlind, a.state.state.bigBlind], [5, 20], 'small blind nhập riêng');
   const players = [a, b, c];
   let acted = 0;
   // Chơi vài hành động: ai tới lượt thì call
@@ -165,8 +168,94 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   // Người xem không thấy bài tẩy người khác
   const hidden = a.state.state.seats.filter((x) => x && x.id !== a.user.id).every((x) => !x.hole || x.hole.every((h) => h === '??') || a.state.state.hand.street === 'done');
   assert.ok(hidden, 'không lộ bài');
+  // Hands log: chơi tiếp cho hết ván (người đầu tiên tới lượt bỏ bài, còn lại theo/check)
+  let folded = false;
+  while (!a.state.state.handLogCount) {
+    await until(() => players.some((p) => p.state.state.options) || a.state.state.handLogCount, 8000);
+    if (a.state.state.handLogCount) break;
+    const p = players.find((x) => x.state.state.options);
+    await p.act({ type: 'act', action: folded ? 'call' : 'fold' }).catch(() => {});
+    folded = true;
+    await wait(30);
+  }
+  for (const p of players) {
+    const { data } = await p.req('game:query', { type: 'handLog' });
+    assert.equal(data.length, 1);
+    const e = data[0];
+    assert.equal(e.no, 1);
+    assert.equal(e.players.reduce((s, x) => s + x.net, 0), 0, 'tổng lời/lỗ bằng 0');
+    assert.ok(e.actions.length >= 3);
+    for (const x of e.players) {
+      const visible = x.id === p.user.id || !!e.shown[x.seat];
+      assert.equal(!!x.hole, visible, `${p.name} chỉ thấy bài của mình và bài đã lật`);
+    }
+    assert.ok(e.players.some((x) => x.folded && x.id !== p.user.id ? x.hole === null : true));
+  }
+  // Đổi blind: chỉ chủ phòng; giữa ván thì chờ ván sau
+  await assert.rejects(b.act({ type: 'setBlinds', smallBlind: 5, bigBlind: 10 }), /chủ phòng/);
+  await assert.rejects(a.act({ type: 'setBlinds', smallBlind: 40, bigBlind: 30 }), /Small blind/);
+  await a.act({ type: 'setBlinds', smallBlind: 15, bigBlind: 30 });
+  await until(() => c.state.state.bigBlind === 30 || c.state.state.nextBlinds?.bigBlind === 30);
+  await until(() => c.state.state.hand?.no === 2 && c.state.state.bigBlind === 30, 10000);
+  assert.equal(c.state.state.smallBlind, 15);
   await a.req('room:delete', { roomId });
-  console.log('✔ Poker OK');
+  console.log('✔ Poker OK (Hands log, đổi blind)');
+}
+
+// ---------- Poker: rabbit hunt ----------
+{
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Rabbit test', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => a.state?.state.hand?.street === 'preflop' && b.state?.state.hand?.street === 'preflop', 5000);
+  const p = [a, b].find((x) => x.state.state.options);
+  await p.act({ type: 'act', action: 'fold' });
+  await until(() => a.state.state.canRabbit && c.state?.state.hand?.street === 'done');
+  assert.equal(c.state.state.canRabbit, false, 'người xem không được lật rabbit');
+  assert.equal(c.state.state.hand.rabbit, null, 'chưa lật thì không lộ bài');
+  await assert.rejects(c.act({ type: 'rabbit' }), /xem/);
+  await b.act({ type: 'rabbit' });
+  await until(() => c.state.state.hand.rabbit);
+  assert.equal(c.state.state.hand.rabbit.length, 5, 'bỏ bài preflop → lật đủ 5 lá');
+  await assert.rejects(a.act({ type: 'rabbit' }), /rồi/);
+  const { data } = await c.req('game:query', { type: 'handLog' });
+  assert.deepEqual(data[0].rabbit, c.state.state.hand.rabbit, 'Hands log ghi rabbit');
+  await a.req('room:delete', { roomId });
+  // Bàn tắt rabbit hunt
+  const { roomId: r2 } = await a.req('room:create', { name: 'No rabbit', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2, rabbitHunt: false } });
+  await b.req('room:join', { roomId: r2, mode: 'play' });
+  await until(() => a.state?.state.hand?.street === 'preflop' && a.state.state.hand && b.state?.state.hand?.street === 'preflop', 5000);
+  await [a, b].find((x) => x.state.state.options).act({ type: 'act', action: 'fold' });
+  await until(() => a.state.state.hand.street === 'done');
+  assert.equal(a.state.state.canRabbit, false);
+  await assert.rejects(a.act({ type: 'rabbit' }), /không cho/);
+  await a.req('room:delete', { roomId: r2 });
+  console.log('✔ Poker rabbit hunt OK');
+}
+
+// ---------- Nhiều server: sảnh và phòng tách biệt ----------
+if (OTHER_PASSWORD) {
+  const x = await client('Xuân', OTHER_PASSWORD).ready;
+  const hx = await x.req('hello', { token: x.token });
+  const ha = await a.req('hello', { token: a.token });
+  assert.equal(ha.user.id, a.user.id);
+  assert.notEqual(hx.server.id, ha.server.id, 'hai mật khẩu vào hai server khác nhau');
+  const { roomId: rx } = await x.req('room:create', { name: 'Phòng bên B', game: 'caro', options: {} });
+  const { roomId: ra } = await a.req('room:create', { name: 'Phòng bên A', game: 'caro', options: {} });
+  const listA = (await a.req('lobby:list')).rooms.map((r) => r.id);
+  const listX = (await x.req('lobby:list')).rooms.map((r) => r.id);
+  assert.ok(listA.includes(ra) && !listA.includes(rx), 'sảnh A không thấy phòng của B');
+  assert.ok(listX.includes(rx) && !listX.includes(ra), 'sảnh B không thấy phòng của A');
+  await assert.rejects(x.req('room:join', { roomId: ra, mode: 'watch' }), /không tồn tại/);
+  await assert.rejects(a.req('room:join', { roomId: rx, mode: 'watch' }), /không tồn tại/);
+  await a.req('room:delete', { roomId: ra });
+  await x.req('room:delete', { roomId: rx });
+  // Token của server A không dùng được ở server B → thành người dùng mới
+  const hx2 = await x.req('hello', { tokens: { [hx.server.id]: ha.token }, token: ha.token, name: 'Xuân' });
+  assert.notEqual(hx2.user.id, ha.user.id, 'không mượn được danh tính của server khác');
+  x.s.close();
+  console.log(`✔ Nhiều server OK (${ha.server.name} / ${hx.server.name})`);
 }
 
 // ---------- Tá lả ----------

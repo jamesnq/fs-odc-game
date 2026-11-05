@@ -20,7 +20,7 @@ export default function PasswordGate() {
       <form className="gate-box form" onSubmit={submit}>
         <div className="gate-icon">🔒</div>
         <h2>Nhập mật khẩu</h2>
-        <p className="muted small">Sảnh trò chơi này được bảo vệ bằng mật khẩu.</p>
+        <p className="muted small">Nhập mật khẩu của server bạn muốn vào. Mỗi server có sảnh và phòng chơi riêng.</p>
         {authError !== 'AUTH_REQUIRED' && <div className="gate-error">{AUTH_ERRORS[authError]}</div>}
         <input type="password" autoFocus autoComplete="current-password" value={pw}
           onChange={(e) => setPw(e.target.value)} placeholder="Mật khẩu" disabled={busy && !authError} />

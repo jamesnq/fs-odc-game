@@ -1,5 +1,8 @@
 import { PokerGame } from '@game/shared/poker';
 
+const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
+const cardText = (c) => (c[0] === 'T' ? '10' : c[0]) + SUIT[c[1]];
+
 const clampInt = (v, min, max, def) => {
   const n = Math.floor(Number(v));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
@@ -9,12 +12,15 @@ export class PokerHandler {
   constructor(room, options) {
     this.room = room;
     const bigBlind = clampInt(options.bigBlind, 2, 100000, 20);
+    // Small blind nhập riêng (mặc định = ½ big blind), luôn trong khoảng 1..big blind
+    const smallBlind = clampInt(options.smallBlind, 1, bigBlind, Math.max(1, Math.floor(bigBlind / 2)));
     this.options = {
       bigBlind,
-      smallBlind: Math.max(1, Math.floor(bigBlind / 2)),
+      smallBlind,
       buyIn: clampInt(options.buyIn, bigBlind * 10, bigBlind * 1000, bigBlind * 100),
       maxSeats: clampInt(options.maxSeats, 2, 9, 6),
       turnSeconds: clampInt(options.turnSeconds, 10, 120, 30),
+      rabbitHunt: options.rabbitHunt === undefined ? true : !!options.rabbitHunt && options.rabbitHunt !== 'false',
     };
     this.game = new PokerGame({ smallBlind: this.options.smallBlind, bigBlind: this.options.bigBlind, maxSeats: this.options.maxSeats });
     this.stacks = new Map(); // chip giữ lại khi đứng dậy
@@ -58,6 +64,15 @@ export class PokerHandler {
   onLeave(id) { this.stand(id); }
 
   action(id, a) {
+    if (a.type === 'setBlinds') return this._setBlinds(id, a);
+    if (a.type === 'rabbit') {
+      if (!this.options.rabbitHunt) throw new Error('Bàn này không cho xem rabbit');
+      const cards = this.game.rabbitHunt(id);
+      const name = this.game.seats.find((x) => x && x.id === id)?.name
+        || Object.values(this.game.hand.players).find((p) => p.id === id)?.name || '?';
+      this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardText).join(' ')}`);
+      return;
+    }
     const seat = this.game.seatOf(id);
     if (seat < 0) throw new Error('Bạn đang ở chế độ xem');
     const s = this.game.seats[seat];
@@ -80,6 +95,22 @@ export class PokerHandler {
         throw new Error('Hành động không hợp lệ');
     }
     this._afterChange();
+  }
+
+  /** Chủ phòng đổi blind. Giữa ván thì áp dụng từ ván sau. */
+  _setBlinds(id, a) {
+    if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đổi blind');
+    const bb = Math.floor(Number(a.bigBlind));
+    const sb = Math.floor(Number(a.smallBlind));
+    if (!Number.isFinite(bb) || bb < 2 || bb > 100000) throw new Error('Big blind phải từ 2 đến 100.000');
+    if (!Number.isFinite(sb) || sb < 1 || sb > bb) throw new Error('Small blind phải từ 1 đến big blind');
+    if (bb > this.options.buyIn) throw new Error(`Big blind không được lớn hơn buy-in (${this.options.buyIn})`);
+    const now = this.game.setBlinds(sb, bb);
+    if (now) {
+      this.options.smallBlind = sb;
+      this.options.bigBlind = bb;
+    }
+    this.room.system(`Chủ phòng đổi blind thành ${sb}/${bb}${now ? '' : ' — áp dụng từ ván sau'}`);
   }
 
   _afterChange() {
@@ -131,16 +162,28 @@ export class PokerHandler {
       this.nextHandAt = 0;
       if (!this.game.inHand && this.game.canStart()) {
         this.game.startHand();
+        // Blind chờ (nếu có) vừa được áp dụng khi chia ván mới
+        this.options.smallBlind = this.game.smallBlind;
+        this.options.bigBlind = this.game.bigBlind;
         this._afterChange();
       }
       this.room.changed();
     }, delay);
   }
 
+  query(viewerId, q) {
+    if (q.type === 'handLog') return this.game.historyView(viewerId);
+    throw new Error('Truy vấn không hợp lệ');
+  }
+
   view(viewerId) {
     const v = this.game.view(viewerId);
+    if (!this.options.rabbitHunt) v.canRabbit = false;
+    const last = this.game.history[this.game.history.length - 1];
     return {
       ...v,
+      handLogCount: this.game.history.length,
+      handLogLast: last ? last.no : 0,
       config: this.options,
       turnLeft: this.deadline ? Math.max(0, this.deadline - Date.now()) : 0,
       turnTotal: this.options.turnSeconds * 1000,

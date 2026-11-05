@@ -8,7 +8,7 @@ import PasswordGate from './components/PasswordGate.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
 
 export default function App() {
-  const { connected, user, room, needName, authError } = useApp();
+  const { connected, user, room, needName, authError, server, switchServer } = useApp();
   const [renaming, setRenaming] = useState(false);
 
   return (
@@ -17,8 +17,15 @@ export default function App() {
         <a className="brand" href="#" onClick={(e) => { e.preventDefault(); if (room) location.hash = ''; }}>
           🎲 <span>Sảnh Trò Chơi</span>
         </a>
+        {server?.name && <span className="server-badge" title="Server đang vào">🏷 {server.name}</span>}
         <div className="topbar-right">
           <span className={`dot ${connected ? 'on' : 'off'}`} title={connected ? 'Đã kết nối' : 'Mất kết nối'} />
+          {user && server?.gated && (
+            <button className="btn ghost sm" title="Vào server khác bằng mật khẩu khác"
+              onClick={() => (!room || confirm('Rời phòng và đổi sang server khác?')) && switchServer()}>
+              ⇄ <span className="hide-sm">Đổi server</span>
+            </button>
+          )}
           {user && (
             <button className="btn ghost" onClick={() => setRenaming(true)} title="Đổi tên">
               👤 {user.name} ✎

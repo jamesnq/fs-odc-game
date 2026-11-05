@@ -361,3 +361,56 @@ label.check input { width: auto; }
   background: #1e3a8a; border: 1px solid var(--primary); border-radius: 12px; padding: 10px 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,.45); max-width: calc(100% - 32px);
 }
+
+/* ---------- Poker: Hands log ---------- */
+.pk-handlog summary { cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.pk-handlog summary kbd { margin-left: auto; }
+.hl-list { display: flex; flex-direction: column; margin-top: 8px; max-height: 320px; overflow-y: auto; }
+.hl-row {
+  display: grid; grid-template-columns: 52px 72px minmax(110px, 1.3fr) minmax(90px, 1fr) 72px 72px; gap: 8px; align-items: center;
+  padding: 6px 8px; border: 0; border-top: 1px solid var(--line); background: none; color: inherit; text-align: left; font: inherit; font-size: 13px; cursor: pointer;
+}
+.hl-row:hover { background: rgba(255,255,255,.04); }
+.hl-row.hl-head { cursor: default; border-top: 0; }
+.hl-row.hl-head:hover { background: none; }
+.hl-row .num, .hl-players .num { text-align: right; font-variant-numeric: tabular-nums; }
+.hl-board { font-family: ui-monospace, Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) {
+  .hl-row { grid-template-columns: 44px 1fr 64px 64px; }
+  .hl-row > :nth-child(2), .hl-row > :nth-child(3) { display: none; }
+  .hide-sm { display: none; }
+}
+.hl-detail { display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto; }
+.hl-meta { gap: 12px; }
+.hl-players { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hl-players th { color: var(--muted); font-weight: 500; font-size: 12px; text-align: left; padding: 4px; }
+.hl-players td { padding: 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+.hl-players tr.me td { background: rgba(59,130,246,.12); }
+.hl-badge { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px; background: #334155; font-size: 10px; font-weight: 700; }
+.hl-cards { display: inline-flex; gap: 3px; vertical-align: middle; }
+.hl-street { border-top: 1px solid var(--line); padding-top: 8px; }
+.hl-street-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.hl-street ul { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.hl-act.fold { color: var(--muted); }
+.hl-act.bet, .hl-act.raise { color: var(--gold); }
+
+/* ---------- Nhiều server ---------- */
+.server-badge { margin-left: 10px; padding: 3px 10px; border-radius: 99px; background: #1e3a8a; border: 1px solid var(--primary); font-size: 13px; font-weight: 600; white-space: nowrap; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { .hide-sm { display: none; } }
+.topbar-right { margin-left: auto; }
+
+/* ---------- Poker: đổi blind ---------- */
+.pk-blind-edit { margin-left: 6px; padding: 0 4px; cursor: pointer; }
+.pk-next-blinds { color: var(--gold); font-weight: 600; }
+.pk-blind-fields { gap: 12px; }
+.pk-blind-fields > div { flex: 1; }
+
+/* ---------- Poker: rabbit hunt ---------- */
+.rabbit-card { position: relative; opacity: .55; filter: saturate(.6); }
+.rabbit-card::after { content: '🐇'; position: absolute; top: -8px; right: -6px; font-size: 14px; }
+.hl-rabbit-cards .card { opacity: .6; }
+.rabbit-slot { display: grid; place-items: center; font-size: 22px; background: rgba(196,181,253,.12); border-color: #c4b5fd; cursor: pointer; animation: rabbitpulse 1.2s infinite alternate; }
+.rabbit-slot:hover { background: rgba(196,181,253,.3); }
+@keyframes rabbitpulse { to { box-shadow: 0 0 12px rgba(196,181,253,.6); } }
+.pk-rabbit-note { color: #c4b5fd; }
+.hl-rabbit { color: #c4b5fd; }

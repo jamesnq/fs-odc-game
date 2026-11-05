@@ -38,7 +38,10 @@
 **Poker (Texas Hold'em No-Limit)**
 - Dealer / SB / BB xoay vòng, luật heads-up, side pot, chia pot hòa, all-in không đủ mức raise không mở lại quyền raise (luật TDA)
 - Đếm giờ mỗi lượt (hết giờ tự check / bỏ), nạp thêm chip, nghỉ ván
-- **Phím tắt:** `F` bỏ bài · `C` theo/check · `K` check · `B` cược · `R` tố · `A` all-in · `↑/↓` ±1 BB (`Shift` ±10 BB) · `1–4` mức ⅓, ½, ¾ pot, pot · `Enter` xác nhận
+- **Rabbit hunt:** ván kết thúc sớm vì mọi người bỏ bài thì người trong ván bấm ô 🐇 (hoặc phím `T`) để lật các lá bài chung *lẽ ra* sẽ ra — đúng thứ tự chia thật (có đốt bài), hiện mờ, không ảnh hưởng kết quả, cả bàn cùng thấy và được ghi vào Hands log. Bật/tắt khi tạo bàn
+- **Blind tùy chỉnh:** đặt riêng small blind và big blind khi tạo bàn; chủ phòng đổi blind ngay tại bàn (nút ✎ cạnh mức blind, có nút nhanh ×1,5 / ×2 / giảm ½). Đổi giữa ván thì áp dụng từ ván sau
+- **Hands log:** 50 ván gần nhất của bàn — stack đầu ván, D/SB/BB, từng hành động theo vòng (preflop / flop / turn / river), showdown, các pot và lời/lỗ của từng người; chuyển ván bằng `←/→`, sao chép ván dạng text. Chỉ thấy bài tẩy của mình và bài đã lật ở showdown, bài bỏ không bao giờ bị lộ
+- **Phím tắt:** `F` bỏ bài · `C` theo/check · `K` check · `B` cược · `R` tố · `A` all-in · `↑/↓` ±1 BB (`Shift` ±10 BB) · `1–4` mức ⅓, ½, ¾ pot, pot · `Enter` xác nhận · `H` mở Hands log
 
 **Tá lả (Phỏm)**
 - Bốc / ăn / đánh, ăn phải tạo phỏm, lá đã ăn bị khóa, hai lá ăn không chung phỏm
@@ -104,6 +107,7 @@ docker run -p 3001:3001 game-lobby
 | `CORS_ORIGIN` | `*` | Origin được phép khi client ở domain khác |
 | `CLIENT_DIST` | `client/dist` | Thư mục client đã build |
 | `APP_PASSWORD` | _(trống)_ | Mật khẩu để vào app (auth gate). Để trống = ai cũng vào được |
+| `APP_SERVERS` | _(trống)_ | Chia app thành nhiều server, mỗi server một mật khẩu (JSON). Có biến này thì `APP_PASSWORD` bị bỏ qua |
 | `TRUST_PROXY` | _(trống)_ | Đặt `1` khi chạy sau reverse proxy để giới hạn nhập sai mật khẩu theo IP thật |
 
 ### Auth gate (mật khẩu vào app)
@@ -114,6 +118,16 @@ Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật
 - **VPS (GitHub Actions):** thêm secret `APP_PASSWORD` (và tùy chọn variable `TRUST_PROXY=1` nếu có Nginx phía trước)
 
 Đổi mật khẩu thì khởi động lại server; người đang dùng sẽ phải nhập mật khẩu mới khi kết nối lại.
+
+### Nhiều server (mỗi server một mật khẩu)
+Đặt `APP_SERVERS` là JSON dạng `{"tên server": "mật khẩu"}`, ví dụ:
+```
+APP_SERVERS={"Bên A":"mat-khau-A","Bên B":"mat-khau-B"}
+```
+- Nhập mật khẩu nào thì vào server đó. Mỗi server có **sảnh, phòng chơi, người chơi riêng**: bên A không thấy và không vào được phòng của bên B.
+- Tên server hiện ở góc trên; nút **⇄ Đổi server** để nhập mật khẩu của server khác. Trình duyệt nhớ danh tính riêng cho từng server.
+- Danh sách server không hiện cho người chưa nhập mật khẩu. Tên và mật khẩu không được trùng nhau; cấu hình sai thì server báo lỗi và không khởi động (tránh vô tình mở app không mật khẩu).
+- Thêm / bớt server: sửa biến rồi deploy lại. Đổi tên server sẽ tạo server mới (người chơi phải đặt lại tên).
 
 ## Cấu trúc
 

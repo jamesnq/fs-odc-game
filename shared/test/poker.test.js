@@ -98,3 +98,114 @@ test('mô phỏng ngẫu nhiên giữ bảo toàn chip', () => {
     }
   }
 });
+
+test('Hands log: ghi hành động, lời/lỗ và ẩn bài đã bỏ', () => {
+  const g = new PokerGame({ smallBlind: 10, bigBlind: 20, maxSeats: 3 });
+  g.sit(0, 'a', 'A', 1000);
+  g.sit(1, 'b', 'B', 1000);
+  g.sit(2, 'c', 'C', 1000);
+  g.startHand();
+  // Ai tới lượt: lần lượt raise, rồi các người còn lại bỏ bài
+  const who = () => g.seats[g.hand.toAct].id;
+  const raiser = who();
+  g.act(raiser, 'raise', 60);
+  g.act(who(), 'fold');
+  g.act(who(), 'fold');
+  assert.equal(g.inHand, false);
+  assert.equal(g.history.length, 1);
+  const e = g.history[0];
+  assert.equal(e.no, 1);
+  assert.equal(e.showdown, false);
+  assert.deepEqual(e.actions.map((x) => x.type), ['sb', 'bb', 'raise', 'fold', 'fold']);
+  assert.equal(e.actions[2].to, 60);
+  assert.equal(e.players.reduce((s, p) => s + p.net, 0), 0, 'tổng lời/lỗ = 0');
+  assert.ok(e.players.find((p) => p.id === raiser).net > 0);
+
+  // Người xem chỉ thấy bài của mình; không có showdown nên không lộ bài ai khác
+  const v = g.historyView('b')[0];
+  for (const p of v.players) {
+    if (p.id === 'b') assert.equal(p.hole.length, 2);
+    else assert.equal(p.hole, null);
+  }
+  assert.ok(g.historyView('zzz')[0].players.every((p) => p.hole === null), 'người ngoài không thấy bài nào');
+});
+
+test('Hands log: showdown lộ bài người lật, giới hạn số ván', () => {
+  const g = new PokerGame({ smallBlind: 1, bigBlind: 2, maxSeats: 2 });
+  g.historyMax = 3;
+  g.sit(0, 'a', 'A', 100000);
+  g.sit(1, 'b', 'B', 100000);
+  for (let k = 0; k < 5; k++) {
+    g.startHand();
+    while (g.inHand) g.act(g.seats[g.hand.toAct].id, 'call'); // check/call tới showdown
+  }
+  assert.equal(g.history.length, 3);
+  assert.deepEqual(g.historyView('a').map((e) => e.no), [5, 4, 3], 'mới nhất trước');
+  const e = g.historyView('zzz')[0];
+  assert.equal(e.showdown, true);
+  assert.equal(e.board.length, 5);
+  assert.ok(e.players.every((p) => p.hole && p.hole.length === 2), 'showdown: thấy bài cả hai');
+  assert.deepEqual([...new Set(e.actions.map((x) => x.street))], ['preflop', 'flop', 'turn', 'river']);
+});
+
+test('Đổi blind: áp dụng ngay khi chưa chơi, chờ ván sau khi đang chơi', () => {
+  const g = new PokerGame({ smallBlind: 10, bigBlind: 20, maxSeats: 2 });
+  assert.equal(g.setBlinds(5, 15), true);
+  assert.deepEqual([g.smallBlind, g.bigBlind], [5, 15]);
+  assert.throws(() => g.setBlinds(30, 20), /lớn hơn/);
+  assert.throws(() => g.setBlinds(0, 20), /không hợp lệ/);
+  g.sit(0, 'a', 'A', 1000);
+  g.sit(1, 'b', 'B', 1000);
+  g.startHand();
+  const posted = () => Object.values(g.hand.players).map((p) => p.bet).sort((x, y) => x - y);
+  assert.deepEqual(posted(), [5, 15]);
+  assert.equal(g.setBlinds(25, 50), false, 'đang giữa ván thì chờ');
+  assert.deepEqual([g.smallBlind, g.bigBlind], [5, 15], 'ván hiện tại giữ blind cũ');
+  assert.deepEqual(g.nextBlinds, { smallBlind: 25, bigBlind: 50 });
+  g.act(g.seats[g.hand.toAct].id, 'fold');
+  assert.equal(g.history[0].bigBlind, 15, 'Hands log ghi blind của ván đó');
+  g.startHand();
+  assert.deepEqual(posted(), [25, 50]);
+  assert.equal(g.nextBlinds, null);
+  assert.equal(g.options(g.hand.toAct).minTo, 100, 'raise tối thiểu theo big blind mới');
+});
+
+test('Rabbit hunt: lật đúng các lá lẽ ra sẽ chia (có đốt bài)', () => {
+  const play = (foldAt) => {
+    const g = new PokerGame({ smallBlind: 1, bigBlind: 2, maxSeats: 2 });
+    g.sit(0, 'a', 'A', 1000);
+    g.sit(1, 'b', 'B', 1000);
+    g.startHand();
+    const deckBefore = g.hand.deck.slice();
+    // check/call tới vòng foldAt rồi bỏ bài
+    while (g.inHand && g.hand.street !== foldAt) g.act(g.seats[g.hand.toAct].id, 'call');
+    const board = g.hand.board.slice();
+    if (g.inHand) g.act(g.seats[g.hand.toAct].id, 'fold');
+    return { g, deckBefore, board };
+  };
+
+  // Bỏ bài preflop: rabbit = flop + turn + river theo đúng thứ tự chia (burn, 3, burn, 1, burn, 1)
+  const { g, deckBefore } = play('preflop');
+  assert.equal(g.canRabbit('zzz'), false, 'người ngoài ván không được xem');
+  assert.equal(g.canRabbit('a'), true);
+  assert.equal(g.view('a').hand.rabbit, null, 'chưa lật thì không gửi bài');
+  const d = deckBefore.slice();
+  const expect = [];
+  d.pop(); expect.push(d.pop(), d.pop(), d.pop()); d.pop(); expect.push(d.pop()); d.pop(); expect.push(d.pop());
+  assert.deepEqual(g.rabbitHunt('b'), expect);
+  assert.deepEqual(g.view('zzz').hand.rabbit, expect, 'đã lật thì mọi người cùng thấy');
+  assert.deepEqual(g.history[0].rabbit, expect, 'Hands log ghi rabbit');
+  assert.throws(() => g.rabbitHunt('a'), /rồi/);
+  assert.equal(g.canRabbit('a'), false);
+
+  // Bỏ bài ở turn: chỉ còn lá river
+  const t = play('turn');
+  assert.equal(t.board.length, 4);
+  assert.equal(t.g.rabbitHunt('a').length, 1);
+
+  // Ra đủ 5 lá (showdown) thì không có rabbit
+  const s = play('none');
+  assert.equal(s.g.canRabbit('a'), false);
+  assert.throws(() => s.g.rabbitHunt('a'), /đủ 5 lá/);
+  assert.throws(() => new PokerGame().rabbitHunt('a'), /kết thúc/);
+});
