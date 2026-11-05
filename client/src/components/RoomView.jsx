@@ -138,6 +138,7 @@ export default function RoomView() {
             </div>
             {room.state?.fair && <FairnessBadge roomId={room.id} fair={room.state.fair} />}
             {copied && <div className="room-flash" role="status"><Check size={14} aria-hidden /> Đã chép link phòng</div>}
+            {panel !== 'chat' && <ChatPeek chat={room.chat} me={user.id} onOpen={() => setPanel('chat')} />}
           </div>
           {panel && <div className="rp-scrim" onClick={() => setPanel(null)} aria-hidden />}
           <aside className={`room-panel ${panel ? 'open' : ''}`} aria-label="Ngăn thông tin" inert={panel ? undefined : ''}>
@@ -156,7 +157,6 @@ export default function RoomView() {
               <div className="rp-pane" hidden={panel !== 'people'}><Members room={room} isOwner={isOwner} /></div>
             </div>
           </aside>
-          {panel !== 'chat' && <ChatPeek chat={room.chat} me={user.id} onOpen={() => setPanel('chat')} />}
         </div>
         {help && (
           <Modal title="Phím tắt" onClose={() => setHelp(false)}>
