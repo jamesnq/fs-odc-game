@@ -9,6 +9,7 @@ import { XiangqiHandler } from './games/xiangqi.js';
 import { PokerHandler } from './games/poker.js';
 import { TalaHandler } from './games/tala.js';
 import { CaroHandler } from './games/caro.js';
+import { SamLocHandler } from './games/samloc.js';
 import { WordChainHandler } from './games/wordchain.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,7 @@ const GAMES = {
   poker: { name: 'Poker', Handler: PokerHandler },
   tala: { name: 'Tá lả', Handler: TalaHandler },
   caro: { name: 'Cờ caro', Handler: CaroHandler },
+  samloc: { name: 'Sâm lốc', Handler: SamLocHandler },
   wordchain: { name: 'Nối từ', Handler: WordChainHandler },
 };
 

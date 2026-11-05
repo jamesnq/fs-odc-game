@@ -9,6 +9,7 @@ const DEFAULTS = {
   wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true },
   poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
+  samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
 };
 
 const FIELDS = {
@@ -31,6 +32,11 @@ const FIELDS = {
     ['maxSeats', 'Số ghế', 2, 9],
     ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 120],
     ['rabbitHunt', 'Cho xem rabbit hunt (lật bài chung còn lại khi ván kết thúc sớm)', 'bool'],
+  ],
+  samloc: [
+    ['maxSeats', 'Số người chơi tối đa', 2, 5],
+    ['unit', 'Mức cược / đơn vị', 1, 1000000],
+    ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 120],
   ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],

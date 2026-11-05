@@ -258,6 +258,51 @@ if (OTHER_PASSWORD) {
   console.log(`✔ Nhiều server OK (${ha.server.name} / ${hx.server.name})`);
 }
 
+// ---------- Sâm lốc ----------
+{
+  a.state = b.state = c.state = d.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Sâm test', game: 'samloc', options: { maxSeats: 3, unit: 10 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'play' });
+  await d.req('room:join', { roomId, mode: 'watch' });
+  await until(() => d.state?.state.seats.filter(Boolean).length === 3);
+  await assert.rejects(d.act({ type: 'start' }), /xem/);
+  await a.act({ type: 'start' });
+  await until(() => [a, b, c, d].every((p) => p.state?.state.game));
+  const players = [a, b, c];
+  const g0 = d.state.state.game;
+  assert.ok(g0.players.every((p) => p.hand === null) || g0.result, 'người xem không thấy bài');
+  if (!g0.result) {
+    assert.equal(a.state.state.game.players[a.state.state.game.me].hand.length, 10);
+    for (const p of players) await p.act({ type: 'sam', yes: false }).catch(() => {});
+    await until(() => d.state.state.game.phase !== 'sam');
+    // Đánh tới khi có người hết bài: đi đầu thì thử lá nhỏ nhất hợp lệ, không thì bỏ lượt
+    for (let guard = 0; guard < 200 && !d.state.state.game.result; guard++) {
+      const turn = d.state.state.game.turn;
+      const p = players.find((x) => x.state.state.game.me === turn);
+      await until(() => p.state.state.game.turn === turn && p.state.state.game.phase === 'play' || d.state.state.game.result);
+      if (d.state.state.game.result) break;
+      const pg = p.state.state.game;
+      const hand = pg.players[pg.me].hand;
+      if (pg.lastPlay) await p.act({ type: 'pass' });
+      else {
+        let ok = false;
+        for (const card of hand) { try { await p.act({ type: 'play', cards: [card] }); ok = true; break; } catch { /* báo 1 */ } }
+        assert.ok(ok, 'phải đánh được 1 lá');
+      }
+      await until(() => d.state.state.game.turn !== turn || d.state.state.game.result);
+    }
+  }
+  await until(() => d.state.state.game.result);
+  const r = d.state.state.game.result;
+  assert.equal(r.scores.reduce((x, y) => x + y, 0), 0, 'tổng thắng thua bằng 0');
+  assert.ok(d.state.state.game.players.every((p) => Array.isArray(p.hand)), 'hết ván lật bài');
+  const totals = d.state.state.seats.filter(Boolean).map((x) => x.total);
+  assert.equal(totals.reduce((x, y) => x + y, 0), 0);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Sâm lốc OK —', r.text);
+}
+
 // ---------- Nối từ ----------
 {
   a.state = b.state = c.state = d.state = null;
