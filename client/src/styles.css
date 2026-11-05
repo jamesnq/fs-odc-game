@@ -1202,14 +1202,11 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 
 /* Tin nhắn mới hiện thoáng qua: góc dưới-trái, nằm trên cả ngăn bên đang mở (không bị che, không che tab) */
 .room-body > .chat-peek { top: auto; right: auto; bottom: 12px; left: 12px; z-index: 35; }
-/* Tab ngăn bên trên màn hẹp: tab đang chọn hiện chữ + đệm đầy đủ, tab khác chỉ biểu tượng */
+/* Tab ngăn bên: tab đang chọn hiện chữ với đệm đầy đủ, các tab khác chỉ biểu tượng (có chú thích khi rê chuột)
+   → không bao giờ bị cắt chữ, ở mọi bề rộng ngăn */
 .rp-tab { overflow: hidden; }
 .rp-label { overflow: hidden; text-overflow: ellipsis; }
-.rp-tab.active { padding: 0 12px; }
-@media (max-width: 520px) {
-  .rp-tab:not(.active) { flex: 0 0 44px; padding: 0; }
-  .rp-tab:not(.active) .rp-label { display: none; }
-  .rp-tab.active { flex: 1 1 auto; }
-  .rp-tab:not(.active) { position: relative; }
-  .rp-tab:not(.active) .unread { position: absolute; top: 2px; right: 2px; }
-}
+.rp-tab.active { flex: 1 1 auto; padding: 0 14px; }
+.rp-tab:not(.active) { flex: 0 0 44px; padding: 0; position: relative; }
+.rp-tab:not(.active) .rp-label { display: none; }
+.rp-tab:not(.active) .unread { position: absolute; top: 2px; right: 2px; }
