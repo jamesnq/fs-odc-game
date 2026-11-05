@@ -99,7 +99,10 @@ export default function RoomView() {
                   {room.name}
                   {me?.role === 'spectator' && <span className="badge watching"><Eye size={12} aria-hidden /> Đang xem</span>}
                 </h2>
-                <TurnPill info={turn} sub={`${GAME_META[room.game].name} · #${room.id}`} />
+                <div className="room-sub-row">
+                  <TurnPill info={turn} sub={`${GAME_META[room.game].name} · #${room.id}`} />
+                  {room.state?.fair && <FairnessBadge roomId={room.id} fair={room.state.fair} />}
+                </div>
               </div>
             )}
           </div>
@@ -136,7 +139,6 @@ export default function RoomView() {
             <div className="game-fit">
               <Game room={room} state={room.state} />
             </div>
-            {room.state?.fair && <FairnessBadge roomId={room.id} fair={room.state.fair} />}
             {copied && <div className="room-flash" role="status"><Check size={14} aria-hidden /> Đã chép link phòng</div>}
             {panel !== 'chat' && <ChatPeek chat={room.chat} me={user.id} onOpen={() => setPanel('chat')} />}
           </div>

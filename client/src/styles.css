@@ -885,7 +885,6 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
   animation: areaglow 1.6s var(--ease-out) infinite alternate;
 }
 @keyframes areaglow { from { opacity: .55; } to { opacity: 1; } }
-.game-area > .fair-badge { position: absolute; top: 6px; left: 6px; margin: 0; z-index: 3; }
 .room-flash { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 26; display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 99px; background: var(--primary); color: #fff; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,.4); animation: fadein .15s; }
 
@@ -1009,10 +1008,11 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .spin { animation: spin 1s linear infinite; }
 
 /* ---------- Poker: bàn + thanh hành động vừa vùng chơi ---------- */
-.game-fit > .pk > * { max-width: min(100%, max(520px, calc((100cqh - 330px) * 2 + 144px))); }
+.game-fit > .pk > * { max-width: min(100%, max(520px, calc((100cqh - 274px) * 2 + 144px))); }
 .pk { gap: 8px; }
 .pk-actions { padding: 10px; gap: 8px; }
 .pk-center .btn { margin-top: 4px; }
+.pk-center { top: 44%; gap: 4px; }
 
 /* ---------- Tá lả / Sâm lốc: bàn co theo chiều cao vùng chơi ---------- */
 .ct-felt, .ct-felt.n2 { min-height: 280px; }
@@ -1060,7 +1060,6 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 
 /* ---------- Điện thoại: bàn bài Tá lả / Sâm lốc gọn trong một màn ---------- */
 @media (max-width: 640px) {
-  .game-area > .fair-badge { font-size: 0; gap: 0; padding: 0; width: 32px; height: 32px; min-height: 0; justify-content: center; top: 4px; left: 4px; }
   .ct { padding: 0; }
   .ct-felt, .ct-felt.n2 { max-width: none; min-height: 0; padding: 8px; gap: 6px; border-width: 6px; border-radius: 20px; }
   .ct-center { min-height: 0; padding: 2px 0; gap: 4px; }
@@ -1144,3 +1143,13 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
   .sl-sam > .felt-muted.small:nth-child(2) { display: none; }
   .sl-sam { padding: 6px 10px; gap: 4px; }
 }
+
+/* Huy hiệu xáo bài: biểu tượng khiên nhỏ cạnh nhãn báo lượt ở đầu phòng — không đè lên bàn chơi
+   (chữ đầy đủ vẫn có cho trình đọc màn hình + chú thích khi rê chuột; bấm để xem cách kiểm chứng) */
+.room-sub-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.room-sub-row > .turn-pill, .room-sub-row > .room-sub { min-width: 0; }
+.room-sub-row .fair-badge { flex: none; width: 24px; height: 24px; min-height: 0; margin: 2px 0 0; padding: 0; gap: 0; justify-content: center; border-radius: 50%; }
+.room-sub-row .fair-badge .fb-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.room-sub-row .fair-badge.pos { color: var(--ok); border-color: rgba(34,197,94,.5); }
+.room-sub-row .fair-badge.neg { color: #fca5a5; border-color: rgba(239,68,68,.6); }
+@media (pointer: coarse) { .room-sub-row .fair-badge { width: 28px; height: 28px; } }
