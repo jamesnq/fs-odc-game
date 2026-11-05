@@ -14,7 +14,7 @@ export default function App() {
   const ready = phase === 'ready' && user;
 
   return (
-    <div className="app">
+    <div className={`app ${ready && room ? 'in-room' : ''}`}>
       <header className="topbar">
         <a className="brand" href="#" onClick={(e) => { e.preventDefault(); if (room) location.hash = ''; }}>
           <span className="brand-logo" aria-hidden><Dices size={20} /></span>

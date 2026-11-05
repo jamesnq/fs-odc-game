@@ -254,7 +254,6 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
 .inline-form { display: flex; gap: 6px; align-items: center; }
 .inline-form input { width: 240px; }
 .room-body { display: grid; grid-template-columns: 1fr 280px; gap: 14px; align-items: start; }
-.sidebar { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 70px; }
 .members ul { list-style: none; padding: 0; margin: 0 0 10px; }
 .members li { display: flex; align-items: center; gap: 2px; padding: 3px 0; }
 .members li.offline { opacity: .55; }
@@ -263,7 +262,6 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
 .chat-box .sys { color: var(--muted); font-size: 12px; font-style: italic; }
 @media (max-width: 1000px) {
   .room-body { grid-template-columns: 1fr; }
-  .sidebar { position: static; }
 }
 
 /* ---------- Cards ---------- */
@@ -706,7 +704,6 @@ button, a, [role=tab], input, label { touch-action: manipulation; -webkit-tap-hi
   .onboard { min-height: 0; }
   .onboard-card { min-height: 0; padding: 16px; }
   .onboard-logo { display: none; }
-  .sidebar { position: static; }
 }
 
 input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,.2); }
@@ -809,25 +806,6 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .score-line .sl-pts { font-size: 20px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .score-line .sl-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---------- Thanh báo lượt (mọi trò) ---------- */
-.turn-banner {
-  position: sticky; top: calc(var(--topbar-h) + 6px); z-index: 15;
-  display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 6px 14px; border-radius: 12px;
-  border: 1px solid var(--line); background: var(--panel); box-shadow: 0 6px 16px rgba(0,0,0,.3);
-  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), color .2s var(--ease-out);
-}
-.turn-banner .tb-text { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; }
-.turn-banner.idle { color: var(--muted); box-shadow: none; background: transparent; border-style: dashed; }
-.turn-banner.other { color: var(--text); }
-.turn-banner.mine {
-  background: var(--color-accent); border-color: #f59e0b; color: var(--color-on-accent);
-  box-shadow: 0 8px 22px rgba(217,119,6,.4); animation: turnpulse 1.4s var(--ease-out) infinite;
-}
-.turn-banner.mine .tb-text { font-size: 17px; letter-spacing: .01em; }
-@keyframes turnpulse { 50% { box-shadow: 0 8px 22px rgba(217,119,6,.4), 0 0 0 5px rgba(245,158,11,.25); } }
-.tb-avatar { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700;
-  background: linear-gradient(135deg, #22c55e, #0ea5e9); color: #04121f; }
-@media (max-height: 500px) and (orientation: landscape) { .turn-banner { top: 4px; } }
 @keyframes checkpulse { to { stroke-width: 7; } }
 
 /* Bàn bài: giữ chỗ cho nội dung thay đổi theo lượt */
@@ -880,3 +858,198 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .wf-flag { color: var(--warn); margin-left: 4px; vertical-align: -2px; }
 .wf-flag-text { color: var(--warn); }
 .wf-flag-text svg { vertical-align: -2px; }
+
+/* ===================================================================
+   Phòng chơi vừa một màn hình (không cuộn trang)
+   - Đầu phòng 1 hàng: tên phòng + báo lượt dạng viên thuốc nhỏ ngay dưới tên
+   - Vùng chơi chiếm hết phần còn lại; bàn cờ/bàn bài co theo kích thước vùng chơi (container query)
+   - Thông tin phụ / chat / người chơi nằm trong ngăn bên, bấm nút mới hiện (màn rộng: mở sẵn cạnh bàn)
+   =================================================================== */
+.app.in-room { height: 100dvh; min-height: 0; overflow: hidden; }
+.app.in-room .main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 16px max(10px, env(safe-area-inset-bottom)); }
+.room { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.room-head { flex: none; min-height: 48px; }
+.room-name h2 { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.room-name h2 .badge { flex: none; margin-left: 0; font-size: 11px; }
+.room-body { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; align-items: stretch; }
+.game-area {
+  flex: 1; min-width: 0; min-height: 0; position: relative; display: flex; flex-direction: column;
+  overflow: auto; overscroll-behavior: contain; container-type: size; border-radius: 16px; scrollbar-width: thin;
+}
+/* margin auto: nằm giữa khi vừa, vẫn cuộn được (không bị cắt mép trên) nếu màn quá thấp */
+.game-fit { margin: auto 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+.game-fit > * { width: 100%; }
+.game-area.my-turn::after {
+  content: ''; position: absolute; inset: 0; border-radius: 16px; pointer-events: none; z-index: 6;
+  box-shadow: inset 0 0 0 2px rgba(245,158,11,.75), inset 0 0 36px rgba(245,158,11,.12);
+  animation: areaglow 1.6s var(--ease-out) infinite alternate;
+}
+@keyframes areaglow { from { opacity: .55; } to { opacity: 1; } }
+.game-area > .fair-badge { position: absolute; top: 6px; left: 6px; margin: 0; z-index: 3; }
+.room-flash { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 26; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 99px; background: var(--primary); color: #fff; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,.4); animation: fadein .15s; }
+
+/* Báo lượt gọn dưới tên phòng */
+.turn-pill { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%; height: 22px; margin-top: 2px;
+  padding: 0 10px; border-radius: 99px; font-size: 12.5px; line-height: 1; white-space: nowrap; overflow: hidden; }
+.turn-pill .tp-text { overflow: hidden; text-overflow: ellipsis; }
+.turn-pill.other { background: var(--panel-2); border: 1px solid var(--line-strong); color: var(--text); }
+.turn-pill.mine { background: var(--color-accent); color: var(--color-on-accent); font-weight: 600; animation: pillpulse 1.4s var(--ease-out) infinite; }
+@keyframes pillpulse { 50% { box-shadow: 0 0 0 4px rgba(245,158,11,.3); } }
+.tb-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--primary-hi); box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+
+/* Nút mở ngăn + huy hiệu tin chưa đọc */
+.rp-toggle { position: relative; }
+.rp-toggle.on { background: var(--primary-soft); border-color: rgba(34,197,94,.4); color: #bbf7d0; }
+.unread { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; line-height: 1; box-shadow: 0 0 0 2px var(--bg); }
+.rp-tab .unread { position: static; box-shadow: none; margin-left: 2px; }
+.hide-xl { display: none; }
+@media (min-width: 1440px) { .hide-xl { display: inline; } }
+@media (max-width: 899px) { .hide-md { display: none; } }
+.show-sm { display: none; }
+@media (max-width: 640px) { .show-sm { display: revert; } .menu button.show-sm { display: flex; } }
+
+/* Menu "thêm" */
+.menu-wrap { position: relative; }
+.menu-scrim { position: fixed; inset: 0; z-index: 39; }
+.menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; min-width: 230px; display: flex; flex-direction: column; padding: 6px;
+  background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.5); animation: fadein .12s; }
+.menu button { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: rgba(255,255,255,.07); }
+.menu button.danger { color: #fca5a5; }
+.menu button kbd { margin-left: auto; }
+
+/* Ngăn bên: Thông tin / Trò chuyện / Người chơi */
+.room-panel { display: none; flex-direction: column; min-height: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.room-panel.open { display: flex; }
+.rp-tabs { flex: none; display: flex; align-items: center; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); }
+.rp-tab { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 8px; border: 0; border-radius: 9px;
+  background: none; color: var(--muted); font-size: 13px; cursor: pointer; white-space: nowrap; }
+.rp-tab:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.rp-tab.active { color: var(--text); background: var(--panel-2); font-weight: 600; }
+.rp-close { flex: none; }
+.rp-tab svg { flex: none; }
+.rp-body { flex: 1; min-height: 0; position: relative; }
+.rp-pane { position: absolute; inset: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
+.rp-pane[hidden] { display: none; }
+.rp-pane:has(> .chat) { overflow: hidden; }
+.rp-info > .panel { background: var(--panel-2); box-shadow: none; }
+.rp-info:empty::before { content: 'Chưa có thông tin cho ván này'; color: var(--muted); font-size: 13px; }
+.rp-scrim { display: none; }
+@media (min-width: 1200px) { .room-panel { width: 340px; flex: none; } }
+@media (max-width: 1199px) {
+  .room-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; width: min(380px, 100%); box-shadow: -16px 0 40px rgba(0,0,0,.5); animation: panelin .18s var(--ease-out); }
+  .rp-scrim { display: block; position: absolute; inset: 0; z-index: 29; border-radius: 16px; background: rgba(3,6,15,.5); animation: fadein .15s; }
+}
+@keyframes panelin { from { transform: translateX(24px); opacity: 0; } }
+
+/* Chat trong ngăn: cao hết ngăn, tin mới nhất ở dưới cùng */
+.chat { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.chat-box { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: 6px; font-size: 14px; scrollbar-width: thin; }
+.chat-box .msg { overflow-wrap: anywhere; }
+.chat-box .msg.mine b { color: var(--primary-hi); }
+.chat-empty { margin: auto; }
+.owner-crown { color: var(--gold); margin-left: 4px; flex: none; }
+.members h4 { margin: 0 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+
+/* Tin nhắn mới hiện thoáng qua khi ngăn chat đóng */
+.chat-peek { position: absolute; top: 8px; right: 8px; z-index: 25; max-width: min(340px, calc(100% - 16px)); display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(34,197,94,.45); background: #13203a; color: var(--text); text-align: left; font: inherit;
+  box-shadow: 0 12px 28px rgba(0,0,0,.5); cursor: pointer; animation: peekin .2s var(--ease-out); }
+.chat-peek svg { flex: none; margin-top: 2px; color: var(--primary-hi); }
+.cp-text { font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+@keyframes peekin { from { opacity: 0; transform: translateY(-6px); } }
+
+/* Hộp xác nhận trong app */
+.confirm-body { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 18px; line-height: 1.5; }
+.confirm-icon { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(245,158,11,.15); color: var(--gold); }
+.confirm-icon.danger { background: rgba(220,38,38,.18); color: #fca5a5; }
+
+/* ---------- Cờ tướng / Caro: một cột bàn cờ co theo vùng chơi ---------- */
+.bg { display: flex; justify-content: center; }
+.bg-col { display: flex; flex-direction: column; gap: 6px; flex: none; min-width: 0; }
+.bg-col.xq-main { width: min(100cqw, 900px, max(250px, calc((100cqh - 156px) * 548 / 604))); max-width: none; }
+.bg-col.caro-main { width: min(100cqw, 900px, max(250px, calc(100cqh - 156px))); max-width: none; }
+.bg-board { position: relative; }
+.bg .xq-player { min-height: 40px; padding: 4px 8px 4px 6px; gap: 8px; }
+.bg .xq-chip, .bg .caro-chip { width: 28px; height: 28px; flex: none; font-size: 14px; }
+.bg .pname { flex-wrap: nowrap; min-width: 0; overflow: hidden; white-space: nowrap; }
+.bg .pname > :first-child { overflow: hidden; text-overflow: ellipsis; }
+.bg .clock { font-size: 17px; padding: 2px 8px; flex: none; }
+.board-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; min-height: 44px; }
+.ba-note { padding: 0 6px; }
+.ba-icon { width: 44px; padding: 0; justify-content: center; }
+
+/* Hộp nổi trên bàn: yêu cầu cần đồng ý / kết quả ván */
+.tl, .sl, .wc { position: relative; }
+.board-overlay { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 12px; border-radius: 16px;
+  background: rgba(3,6,15,.55); backdrop-filter: blur(2px); animation: fadein .15s; }
+.bo-card { width: min(380px, 100%); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 18px; border-radius: 16px; text-align: center; background: var(--panel); border: 1px solid var(--line-strong); box-shadow: 0 20px 50px rgba(0,0,0,.55); }
+.board-overlay.req .bo-card { border-color: var(--warn); box-shadow: 0 0 0 4px rgba(245,158,11,.22), 0 20px 50px rgba(0,0,0,.55); animation: reqin .25s var(--ease-out); }
+@keyframes reqin { from { transform: scale(.94); opacity: 0; } }
+.board-overlay.result .bo-card { width: min(600px, 100%); }
+.bo-icon { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(245,158,11,.16); color: var(--gold); }
+.bo-title { font-size: 19px; font-weight: 700; line-height: 1.3; }
+.bo-tag { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 99px; background: var(--gold); color: #000; }
+.bo-detail { color: var(--muted); font-size: 14px; }
+.bo-actions { display: flex; gap: 8px; width: 100%; margin-top: 6px; }
+.bo-actions .btn { flex: 1; min-height: 46px; justify-content: center; }
+.bo-peek { margin: 4px 0 0; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; }
+.bo-card .tl-result { width: 100%; }
+.bo-card .result-table { min-width: 0; width: 100%; }
+.board-strip { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 4; display: inline-flex; align-items: center; gap: 8px;
+  max-width: calc(100% - 16px); padding: 6px 12px; border-radius: 99px; white-space: nowrap; overflow: hidden; font: inherit; font-size: 13px; color: var(--text);
+  background: rgba(15,23,42,.92); border: 1px solid var(--line-strong); box-shadow: 0 8px 20px rgba(0,0,0,.4); }
+.board-strip > span { overflow: hidden; text-overflow: ellipsis; }
+.board-strip.check { background: var(--danger); border-color: #fca5a5; color: #fff; font-weight: 700; top: auto; bottom: 8px; animation: pulse 1s infinite; }
+.board-strip.result { cursor: pointer; color: var(--gold); }
+.board-strip .btn.sm { min-height: 30px; padding: 0 10px; }
+.spin { animation: spin 1s linear infinite; }
+
+/* ---------- Poker: bàn + thanh hành động vừa vùng chơi ---------- */
+.game-fit > .pk > * { max-width: min(100%, max(520px, calc((100cqh - 330px) * 2 + 144px))); }
+.pk { gap: 8px; }
+.pk-actions { padding: 10px; gap: 8px; }
+.pk-center .btn { margin-top: 4px; }
+
+/* ---------- Tá lả / Sâm lốc: bàn co theo chiều cao vùng chơi ---------- */
+.ct-felt, .ct-felt.n2 { min-height: 320px; }
+.ct-felt { max-width: max(560px, calc((100cqh - 310px) * 16 / 9)); }
+.ct-felt.n2 { max-width: max(600px, calc((100cqh - 310px) * 2)); }
+.ct { padding: 40px 32px 48px; }
+.tl-board, .sl-board { gap: 8px; }
+
+/* ---------- Nối từ ---------- */
+.wc-stage { min-height: 0; padding: 18px 16px; }
+.wc-main { gap: 10px; }
+
+/* ---------- Điện thoại: chỉ bàn chơi, mọi thứ khác bấm nút mới hiện ---------- */
+@media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  .app.in-room .topbar { display: none; }
+  .app.in-room .main { padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
+  .app.in-room .toasts { top: calc(56px + env(safe-area-inset-top)); }
+  .room { gap: 6px; }
+  .room-head { min-height: 44px; }
+  .game-area, .board-overlay, .game-area.my-turn::after { border-radius: 12px; }
+  .room-panel { width: 100%; border-radius: 12px; }
+}
+@media (max-width: 640px) {
+  .bg-col.xq-main { width: min(100cqw, max(240px, calc((100cqh - 146px) * 548 / 604))); }
+  .bg-col.caro-main { width: min(100cqw, max(240px, calc(100cqh - 146px))); }
+  .bg-col { gap: 4px; }
+  .bg .xq-player { min-height: 36px; }
+  .bg .clock { font-size: 15px; }
+  .board-actions { gap: 4px; }
+  .board-actions .btn { padding: 0 10px; font-size: 13px; gap: 4px; }
+  .ba-icon { width: 40px; }
+  .bo-title { font-size: 17px; }
+  /* Poker: bàn thấp lại theo vùng chơi, thanh hành động gọn */
+  .pk-table { padding: 40px 4px 48px; }
+  .pk-felt { aspect-ratio: auto; height: clamp(260px, calc(100cqh - 330px), 520px); }
+  .pk-actions { padding: 8px; gap: 6px; }
+  .pk-actions .pk-turn { display: none; }
+  .pk-actions .btn { padding: 0 10px; font-size: 13px; }
+  .wc-stage { padding: 14px 10px; }
+}
