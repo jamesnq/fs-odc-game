@@ -4,6 +4,7 @@ import CreateRoomDialog from './CreateRoomDialog.jsx';
 
 export const GAME_META = {
   tala: { name: 'Tá lả', icon: '🃏', desc: 'Phỏm 2–4 người, ăn – hạ – gửi – Ù' },
+  samloc: { name: 'Sâm lốc', icon: '🎴', desc: '2–5 người, 10 lá, báo Sâm – chặt heo' },
   poker: { name: 'Poker', icon: '♠️', desc: "Texas Hold'em No-Limit, 2–9 người" },
   xiangqi: { name: 'Cờ tướng', icon: '🀄', desc: '2 người, mỗi bên 8 phút, có chế độ xem' },
   caro: { name: 'Cờ caro', icon: '⭕', desc: '2 người, 5 quân liên tiếp là thắng' },
@@ -90,6 +91,7 @@ function describeOptions(r) {
   if (r.game === 'xiangqi') return `${o.minutes} phút/bên`;
   if (r.game === 'caro') return `${o.size}×${o.size} · ${o.minutes} phút/bên${o.blockTwoEnds ? ' · chặn 2 đầu' : ''}`;
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
+  if (r.game === 'samloc') return `Cược ${o.unit}/đơn vị · ${o.turnSeconds} giây/lượt`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;
   return '';
 }

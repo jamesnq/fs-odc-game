@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Poker · Cờ tướng · Cờ caro
+# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -34,6 +34,14 @@
 - Bảng tỉ số (số ván / thắng / hòa / thua / điểm) và lịch sử 30 ván gần nhất (ai cầm quân gì, lý do thắng, số nước)
 - Sau mỗi ván, phòng chat báo tỉ số hiện tại; chủ phòng có thể **đặt lại bảng điểm** khi không có ván đang chơi
 - Bảng điểm gắn với phòng, xóa phòng hoặc khởi động lại server là mất
+
+**Sâm lốc** (2–5 người)
+- Mỗi người 10 lá; 3 < … < K < A < 2 (heo), **không xét chất**. Rác, đôi, sám, tứ quý, sảnh (A-2-3… hoặc …Q-K-A, không vòng K-A-2)
+- Chặn bằng bộ cùng loại, cùng số lá, cao hơn; **tứ quý chặt heo**; đã bỏ lượt thì nghỉ hết vòng
+- **Báo Sâm** đầu ván (10 giây), **báo 1** (người sau còn 1 lá thì đánh rác phải đánh lá lớn nhất — tự kiểm tra), **tới trắng** (tứ quý heo, sảnh rồng, 5 đôi, 3 sám, đồng màu)
+- Tính tiền: 1/lá còn lại, cóng 20, thối heo +5/con, chặt heo 10, Sâm / tới trắng 20 mỗi nhà — chỉnh trong `SAM_RULES` ở [shared/src/samloc.js](shared/src/samloc.js)
+- Chọn bài là biết ngay bộ gì và có chặn được không; máy đánh hộ khi hết giờ / rời bàn; cộng dồn điểm qua các ván
+- **Phím tắt:** `←/→` di chuyển · `Space`/`↑` chọn · `Enter` đánh · `P` bỏ lượt · `Esc` bỏ chọn · `Y`/`K` báo Sâm / không · `N` ván mới
 
 **Poker (Texas Hold'em No-Limit)**
 - Dealer / SB / BB xoay vòng, luật heads-up, side pot, chia pot hòa, all-in không đủ mức raise không mở lại quyền raise (luật TDA)
@@ -136,6 +144,7 @@ shared/src/       Luật chơi thuần JS (dùng cho cả server và client)
   xiangqi.js      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
   caro.js         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
   poker.js        Chấm bài, ván cược, side pot
+  samloc.js       Sâm lốc: phân loại bộ, chặn, báo Sâm, báo 1, tới trắng, tính tiền
   tala.js         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
 shared/test/      Unit test (node --test)
 server/src/       Express + Socket.IO, quản lý user, phòng, đồng hồ

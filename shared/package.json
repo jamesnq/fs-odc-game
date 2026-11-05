@@ -7,6 +7,7 @@
     "./cards": "./src/cards.js",
     "./xiangqi": "./src/xiangqi.js",
     "./caro": "./src/caro.js",
+    "./samloc": "./src/samloc.js",
     "./poker": "./src/poker.js",
     "./tala": "./src/tala.js"
   },
