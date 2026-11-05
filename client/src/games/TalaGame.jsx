@@ -174,7 +174,8 @@ function Table({ s, g, act, timeLeft, inGame }) {
             {seat?.left && <span className="badge warn">Đã rời</span>}
             {seat && !seat.online && !seat.left && <span className="badge warn">Mất kết nối</span>}
             <span className={`tl-score ${p.score >= 0 ? 'pos' : 'neg'}`}>{fmt(p.score)}</span>
-            {isTurn && <span className="tl-timer"><Timer size={13} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span>}
+            {/* Đồng hồ luôn giữ chỗ (ẩn khi không tới lượt) → dòng tên không đổi chiều cao */}
+            <span className={`tl-timer ${isTurn ? '' : 'off'}`} aria-hidden={!isTurn}><Timer size={13} aria-hidden /> {isTurn ? Math.ceil(timeLeft / 1000) : 0}s</span>
           </div>
           {!isMe && (
             <div className="tl-hand-back">

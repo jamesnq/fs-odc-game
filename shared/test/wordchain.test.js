@@ -77,3 +77,11 @@ test('phản đối: quá nửa số người còn lại thì gỡ từ và tr�
   h.submit('a', 'con mèo');
   assert.equal(h.object('b'), true);
 });
+
+test('chọn người ra từ đầu tiên', () => {
+  assert.equal(new WordChainGame(P, { first: 2 }).current.id, 'c');
+  assert.equal(new WordChainGame(P, { first: 9 }).current.id, 'a', 'chỉ số sai thì về người đầu');
+  const g = new WordChainGame(P, { first: 1 });
+  g.submit('b', 'con mèo');
+  assert.equal(g.current.id, 'c', 'sau đó đi tiếp theo vòng');
+});

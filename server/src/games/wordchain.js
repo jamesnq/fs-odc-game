@@ -116,7 +116,9 @@ export class WordChainHandler {
   }
 
   _start() {
+    // Mỗi ván chọn ngẫu nhiên người ra từ đầu tiên
     this.game = new WordChainGame(this.seats, {
+      first: Math.floor(Math.random() * this.seats.length),
       lives: this.options.lives,
       isValidSyllable: this.options.dictionary ? isValidSyllable : null,
     });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Flag, RotateCcw, ThumbsDown } from 'lucide-react';
+import { Check, Flag, RotateCcw, ThumbsDown, Timer } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import { useCountdown } from '../hooks.js';
 
@@ -52,9 +52,9 @@ export default function WordChainGame({ room, state: s }) {
                 </div>
               ) : (
                 <div className="wc-turn">
-                  {myTurn ? <b className="your-turn">Tới lượt bạn!</b> : <>Lượt của <b>{nameOf(g.currentId)}</b></>}
-                  {g.required ? <> — bắt đầu bằng <b className="wc-req">{g.required}</b></> : <> — ra từ đầu tiên</>}
-                  <span className={`wc-time ${timeLeft < 5000 ? 'low' : ''}`}>⏱ {Math.ceil(timeLeft / 1000)}s</span>
+                  {/* Ai tới lượt đã hiện ở thanh báo lượt phía trên → ở đây chỉ nói cần nối gì */}
+                  {g.required ? <>Bắt đầu bằng <b className="wc-req">{g.required}</b></> : <>{myTurn ? 'Bạn' : nameOf(g.currentId)} ra từ đầu tiên</>}
+                  <span className={`wc-time ${timeLeft < 5000 ? 'low' : ''}`}><Timer size={14} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span>
                   <div className="timebar"><div style={{ width: `${(timeLeft / s.turnTotal) * 100}%` }} /></div>
                 </div>
               )}

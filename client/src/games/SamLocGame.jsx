@@ -131,7 +131,10 @@ function Table({ s, g, act, timeLeft }) {
     return tags;
   };
   const isActive = (i) => !g.result && ((g.phase === 'play' && g.turn === i) || (g.phase === 'sam' && !g.samDecided.includes(i)));
-  const turnTimer = (i) => isActive(i) && <span className="tl-timer"><Timer size={13} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span>;
+  // Đồng hồ luôn giữ chỗ (ẩn khi không tới lượt) → dòng tên không đổi chiều cao
+  const turnTimer = (i) => (
+    <span className={`tl-timer ${isActive(i) ? '' : 'off'}`} aria-hidden={!isActive(i)}><Timer size={13} aria-hidden /> {isActive(i) ? Math.ceil(timeLeft / 1000) : 0}s</span>
+  );
 
   // Ghế quanh bàn: đối thủ thấy lưng bài (hết ván thì lật bài), ghế của mình chỉ hiện tên + trạng thái
   const base = inGame ? g.me : 0;
