@@ -1051,9 +1051,34 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
   .bo-title { font-size: 17px; }
   /* Poker: bàn thấp lại theo vùng chơi, thanh hành động gọn */
   .pk-table { padding: 40px 4px 48px; }
-  .pk-felt { aspect-ratio: auto; height: clamp(260px, calc(100cqh - 330px), 520px); }
+  .pk-felt { aspect-ratio: auto; height: clamp(220px, calc(100cqh - 340px), 520px); }
   .pk-actions { padding: 8px; gap: 6px; }
   .pk-actions .pk-turn { display: none; }
   .pk-actions .btn { padding: 0 10px; font-size: 13px; }
   .wc-stage { padding: 14px 10px; }
+}
+
+/* ---------- Điện thoại: bàn bài Tá lả / Sâm lốc gọn trong một màn ---------- */
+@media (max-width: 640px) {
+  .game-area > .fair-badge { font-size: 0; gap: 0; padding: 0; width: 32px; height: 32px; min-height: 0; justify-content: center; top: 4px; left: 4px; }
+  .ct-felt, .ct-felt.n2 { max-width: none; min-height: 0; padding: 8px; gap: 6px; border-width: 6px; border-radius: 20px; }
+  .ct-center { min-height: 0; padding: 2px 0; gap: 4px; }
+  .ct-center .tl-log { display: none; }
+  .tl-player, .sl-opp { padding: 6px 8px; gap: 4px; }
+  .tl-player .tl-row { min-height: 0; }
+  .tl-row { min-height: 0; }
+  .ct .card.sm { width: 26px; height: 37px; font-size: 11px; }
+  .ct .card.sm .c-big { font-size: 14px; }
+  .ct .card.md { width: 40px; height: 57px; font-size: 14px; }
+  .ct .card.md .c-big { font-size: 22px; }
+  .sl-sam { padding: 8px 10px; gap: 6px; }
+  .sl-sam > .small:first-of-type { display: none; }
+  /* Bài trên tay: một hàng, các lá tự chồng nhẹ lên nhau cho vừa bề ngang */
+  .ct-hand-panel { padding: 8px 10px; gap: 8px; border-radius: 12px; }
+  .ct-hand-panel .tl-hand { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 44px); justify-content: center; min-height: 0; padding: 14px 0 0; gap: 0; }
+  .ct-hand-panel .tl-card .card.lg { width: 42px; height: 60px; font-size: 14px; }
+  .ct-hand-panel .tl-card .card.lg .c-big { font-size: 22px; }
+  .ct-hand-panel .tl-actions { gap: 4px; }
+  .ct-hand-panel .tl-actions .btn { padding: 0 10px; font-size: 13px; }
+  .tl-board, .sl-board { gap: 6px; }
 }
