@@ -59,7 +59,10 @@ export default function XiangqiGame({ room, state: s }) {
         <PlayerBar color={topColor} s={s} room={room} />
         <svg className="xq-board" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Bàn cờ tướng">
           <BoardDefs />
-          <rect x="0" y="0" width={W} height={H} rx="14" fill="url(#xq-wood)" className="xq-bg" />
+          <rect x="0" y="0" width={W} height={H} rx="16" fill="url(#xq-frame)" />
+          <rect x="7" y="7" width={W - 14} height={H - 14} rx="11" fill="url(#xq-wood)" className="xq-bg" />
+          <rect x="7" y="7" width={W - 14} height={H - 14} rx="11" filter="url(#xq-grain)" className="xq-grain" />
+          <rect x={PAD} y={PAD + 4 * CELL} width={CELL * 8} height={CELL} className="xq-river-band" />
           <BoardLines />
           <FileLabels flipped={flipped} />
           {s.lastMove && (() => {
@@ -84,8 +87,10 @@ export default function XiangqiGame({ room, state: s }) {
                 {p !== '.' && (
                   <g className={`xq-piece ${colorOf(p)} ${sel === i ? 'sel' : ''} ${checkedKing === i ? 'check' : ''}`}
                     transform={sel === i ? 'translate(0 -3)' : undefined} filter={sel === i ? 'url(#xq-lift)' : 'url(#xq-shadow)'}>
-                    <circle cx={x} cy={y} r="24" className="disc" fill="url(#xq-disc)" />
-                    <circle cx={x} cy={y} r="19.5" className="inner" />
+                    <circle cx={x} cy={y} r="25" className="rim" fill="url(#xq-rim)" />
+                    <circle cx={x} cy={y} r="21.5" className="disc" fill="url(#xq-disc)" />
+                    <circle cx={x} cy={y} r="18.5" className="inner" />
+                    <path d={`M ${x - 21} ${y - 4} A 21.5 21.5 0 0 1 ${x + 21} ${y - 4}`} className="bevel" />
                     <text x={x} y={y + 8} textAnchor="middle">{PIECE_CHAR[colorOf(p)][typeOf(p)]}</text>
                   </g>
                 )}
@@ -236,21 +241,36 @@ function MoveList({ moves }) {
 function BoardDefs() {
   return (
     <defs>
+      {/* Mặt gỗ sáng, khung gỗ sẫm */}
       <linearGradient id="xq-wood" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#f2d7a1" />
-        <stop offset=".55" stopColor="#e5bf7f" />
-        <stop offset="1" stopColor="#d6a862" />
+        <stop offset="0" stopColor="#f3d8a2" />
+        <stop offset=".5" stopColor="#e7c083" />
+        <stop offset="1" stopColor="#d9a964" />
       </linearGradient>
-      <radialGradient id="xq-disc" cx=".38" cy=".32" r=".75">
+      <linearGradient id="xq-frame" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#7a4a1f" />
+        <stop offset="1" stopColor="#4e2c10" />
+      </linearGradient>
+      {/* Vân gỗ: nhiễu kéo dài theo chiều ngang, phủ rất nhẹ */}
+      <filter id="xq-grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.006 0.14" numOctaves="3" seed="7" result="n" />
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.24  0 0 0 0 0.08  0 0 0 0.55 -0.12" />
+      </filter>
+      {/* Quân: vành gỗ + mặt ngà */}
+      <radialGradient id="xq-rim" cx=".4" cy=".3" r=".8">
+        <stop offset="0" stopColor="#c58a4a" />
+        <stop offset="1" stopColor="#7a4a1c" />
+      </radialGradient>
+      <radialGradient id="xq-disc" cx=".4" cy=".32" r=".8">
         <stop offset="0" stopColor="#fffaf0" />
-        <stop offset=".65" stopColor="#f3e2bd" />
-        <stop offset="1" stopColor="#d9b77f" />
+        <stop offset=".7" stopColor="#f4e4c3" />
+        <stop offset="1" stopColor="#e3c792" />
       </radialGradient>
       <filter id="xq-shadow" x="-30%" y="-30%" width="160%" height="170%">
-        <feDropShadow dx="0" dy="2.5" stdDeviation="1.6" floodColor="#3b2208" floodOpacity=".45" />
+        <feDropShadow dx="0" dy="2.5" stdDeviation="1.6" floodColor="#3b2208" floodOpacity=".5" />
       </filter>
       <filter id="xq-lift" x="-40%" y="-40%" width="180%" height="190%">
-        <feDropShadow dx="0" dy="6" stdDeviation="3" floodColor="#3b2208" floodOpacity=".45" />
+        <feDropShadow dx="0" dy="7" stdDeviation="3.5" floodColor="#3b2208" floodOpacity=".45" />
       </filter>
     </defs>
   );
