@@ -52,7 +52,7 @@ function Waiting({ s, act, call }) {
       <div className="row">
         {s.mySeat >= 0 ? (
           <>
-            <button className="btn primary" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Bắt đầu ván</button>
+            <button className="btn cta" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Bắt đầu ván</button>
             <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
           </>
         ) : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
@@ -213,7 +213,7 @@ function Table({ s, g, act, timeLeft, inGame }) {
           <span className="deck-count">{g.deckCount}</span>
         </div>
         {!g.result && (
-          <div className="tl-status">
+          <div className="tl-status" role="status" aria-live="polite">
             {g.turn >= 0 && <>Lượt: <b>{g.players[g.turn].name}</b> — {PHASE_VI[g.phase]}</>}
           </div>
         )}
@@ -225,18 +225,18 @@ function Table({ s, g, act, timeLeft, inGame }) {
       {inGame && (
         <div className="tl-me">
           <div className="tl-hand">
+            {/* Vạch xanh dưới lá = lá có thể tạo phỏm (gắn vào từng lá để xuống dòng cùng nhau trên màn nhỏ) */}
             {ordered.map((c, i) => (
-              <Card key={c} card={c} size="lg"
-                selected={selected.includes(c)}
-                focused={i === cursor}
-                locked={eaten.has(c)}
-                dim={false}
-                title={eaten.has(c) ? 'Lá đã ăn — phải nằm trong phỏm' : hint.has(c) ? 'Có thể tạo phỏm' : ''}
-                onClick={() => { setCursor(i); toggle(c); }} />
+              <span key={c} className={`tl-card ${hint.has(c) ? 'hint' : ''}`}>
+                <Card card={c} size="lg"
+                  selected={selected.includes(c)}
+                  focused={i === cursor}
+                  locked={eaten.has(c)}
+                  dim={false}
+                  title={eaten.has(c) ? 'Lá đã ăn — phải nằm trong phỏm' : hint.has(c) ? 'Có thể tạo phỏm' : ''}
+                  onClick={() => { setCursor(i); toggle(c); }} />
+              </span>
             ))}
-          </div>
-          <div className="tl-hint-row">
-            {ordered.map((c) => <span key={c} className={`hint-dot ${hint.has(c) ? 'on' : ''}`} />)}
           </div>
           {!g.result && (
             <div className="row wrap tl-actions">
@@ -285,7 +285,7 @@ function Result({ s, g, act, call }) {
       <div className="row">
         {s.mySeat >= 0 ? (
           <>
-            <button className="btn primary" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
+            <button className="btn cta" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
             <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
           </>
         ) : (
