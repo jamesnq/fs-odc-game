@@ -1082,3 +1082,64 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
   .ct-hand-panel .tl-actions .btn { padding: 0 10px; font-size: 13px; }
   .tl-board, .sl-board { gap: 6px; }
 }
+
+/* ---------- Điện thoại xoay ngang: thanh người chơi + nút sang cạnh bàn cờ ---------- */
+@media (max-height: 500px) and (orientation: landscape) {
+  .bg-col.xq-main, .bg-col.caro-main {
+    width: auto; display: grid; gap: 6px 10px; align-items: center;
+    grid-template-columns: auto minmax(200px, 260px); grid-template-rows: auto 1fr auto auto;
+    grid-template-areas: 'board top' 'board .' 'board bottom' 'board actions';
+  }
+  .bg-col > .xq-player:first-child { grid-area: top; }
+  .bg-col > .bg-board { grid-area: board; }
+  .bg-col > .xq-player:nth-child(3) { grid-area: bottom; }
+  .bg-col > .board-actions { grid-area: actions; justify-content: flex-start; }
+  .bg-col.xq-main > .bg-board { width: min(calc(100cqw - 280px), calc((100cqh - 4px) * 548 / 604)); }
+  .bg-col.caro-main > .bg-board { width: min(calc(100cqw - 280px), calc(100cqh - 4px)); }
+  .board-actions .btn { padding: 0 8px; font-size: 12.5px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .wc-main { gap: 6px; }
+  .wc-players { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .wc-player { padding: 4px 8px; gap: 2px; flex: 1 0 110px; }
+  .wc-stage { padding: 8px 12px; gap: 6px; }
+  .wc-word { font-size: 30px; }
+  .wc-word .small { margin-top: 4px; }
+  .wc-word.empty { min-height: 0; }
+  .wc-turn, .wc-result { min-height: 0; }
+  .wc-input-slot { min-height: 44px; }
+  .wc-object-slot { min-height: 0; }
+  .wc-input input { padding: 6px 10px; font-size: 18px; }
+}
+/* Xoay ngang: Poker và bàn bài đặt thanh hành động / bài trên tay sang bên phải */
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-fit > .pk { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; }
+  .game-fit > .pk > * { max-width: none; }
+  .game-fit > .pk > .pk-table { flex: 1 1 0; min-width: 0; width: auto; padding: 28px 8px 34px; }
+  .game-fit > .pk > .pk-actions { flex: 0 0 300px; width: 300px; }
+  .game-fit > .pk > .pk-watch { flex-basis: 100%; }
+  .pk-felt { aspect-ratio: auto; height: calc(100cqh - 70px); }
+  .pk-actions .pk-turn { display: none; }
+  .pk-actions .btn { padding: 0 8px; font-size: 12.5px; }
+  .pk-sizing input[type=range] { flex-basis: 100%; min-width: 0; }
+  .pk-sizing .num { flex: 1; width: auto; }
+  .pk-board .card.md, .pk-board .card-slot { width: 36px; height: 52px; }
+  .pk-seat .card.md { width: 36px; height: 52px; font-size: 13px; }
+  .pk-info { min-width: 70px; padding: 2px 6px; }
+
+  .tl-board, .sl-board { flex-direction: row; align-items: center; gap: 8px; }
+  .tl-board > .ct, .sl-board > .ct { flex: 1 1 0; min-width: 0; padding: 18px 10px 22px; }
+  .ct-felt, .ct-felt.n2 { min-height: 0; max-width: none; aspect-ratio: auto; height: calc(100cqh - 44px); }
+  .ct-hand-panel { flex: 0 0 min(400px, 48%); padding: 8px; gap: 6px; }
+  .ct-hand-panel .tl-hand { min-height: 0; padding-top: 12px; gap: 3px; }
+  .ct-hand-panel .tl-card .card.lg { width: 40px; height: 57px; font-size: 14px; }
+  .ct-hand-panel .tl-card .card.lg .c-big { font-size: 20px; }
+  .ct-hand-panel .tl-actions .btn { padding: 0 8px; font-size: 12.5px; }
+  .ct-center .tl-log { display: none; }
+  .tl-player, .sl-opp { min-width: 0; padding: 4px 8px; gap: 3px; }
+  .ct .card.sm { width: 24px; height: 34px; font-size: 10px; }
+  .ct .card.md { width: 36px; height: 52px; font-size: 13px; }
+  .ct-seat { max-width: 44%; }
+  .sl-sam > .small:first-of-type { display: none; }
+  .sl-sam { padding: 6px 10px; gap: 4px; }
+}
