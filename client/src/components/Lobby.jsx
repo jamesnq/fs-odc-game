@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
 export const GAME_META = {
+  chess: { name: 'Cờ vua', Icon: Crown, desc: '2 người, chuẩn FIDE, phong cấp, nhập thành, bắt qua đường' },
   tala: { name: 'Tá lả', Icon: Layers, desc: 'Phỏm 2–4 người, ăn – hạ – gửi – Ù' },
   samloc: { name: 'Sâm lốc', Icon: Club, desc: '2–5 người, 10 lá, báo Sâm – chặt heo' },
   poker: { name: 'Poker', Icon: Spade, desc: "Texas Hold'em No-Limit, 2–9 người" },

@@ -6,6 +6,7 @@
   "exports": {
     "./cards": "./src/cards.js",
     "./xiangqi": "./src/xiangqi.js",
+    "./chess": "./src/chess.js",
     "./caro": "./src/caro.js",
     "./samloc": "./src/samloc.js",
     "./wordchain": "./src/wordchain.js",
