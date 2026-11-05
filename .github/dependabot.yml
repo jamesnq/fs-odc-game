@@ -1,18 +1,39 @@
-# Tự mở PR cập nhật thư viện npm và GitHub Actions (kể cả bản vá bảo mật)
+# Tự mở PR cập nhật thư viện npm, GitHub Actions và Docker (kể cả bản vá bảo mật).
+# Gom nhóm để mỗi tuần chỉ có vài PR thay vì mỗi thư viện một PR:
+#   - npm: 1 PR cho bản nhỏ/vá (minor, patch) + 1 PR cho bản lớn (major — thường cần sửa code, xem kỹ trước khi merge)
+#   - GitHub Actions: 1 PR cho tất cả
+#   - Docker (image Node): 1 PR
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 2
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 1
