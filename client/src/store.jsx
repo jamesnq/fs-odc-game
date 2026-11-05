@@ -16,6 +16,7 @@ export function AppProvider({ children }) {
   const [room, setRoom] = useState(null); // trạng thái phòng hiện tại
   const [toasts, setToasts] = useState([]);
   const [needName, setNeedName] = useState(!storage.name);
+  const [newVersion, setNewVersion] = useState(null); // phiên bản mới trên server, khác bản đang chạy
   const [authError, setAuthError] = useState(null); // null = chưa bị chặn; chuỗi = cần nhập mật khẩu
   const receivedAt = useRef(0);
 
@@ -74,6 +75,11 @@ export function AppProvider({ children }) {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
+    // Server báo phiên bản client nó đang phục vụ; khác bản đang chạy → có bản deploy mới
+    const onVersion = ({ version }) => {
+      if (version && __APP_VERSION__ && version !== __APP_VERSION__) setNewVersion(version);
+    };
+    socket.on('app:version', onVersion);
     socket.on('lobby:rooms', onRooms);
     socket.on('room:state', onState);
     socket.on('room:closed', onClosed);
@@ -83,6 +89,7 @@ export function AppProvider({ children }) {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
+      socket.off('app:version', onVersion);
       socket.off('lobby:rooms', onRooms);
       socket.off('room:state', onState);
       socket.off('room:closed', onClosed);
@@ -121,8 +128,8 @@ export function AppProvider({ children }) {
   }, []);
 
   const value = useMemo(() => ({
-    connected, user, setUser, rooms, room, toasts, toast, needName, setNeedName, hello, call, act, authError, login,
-  }), [connected, user, rooms, room, toasts, toast, needName, hello, call, act, authError, login]);
+    connected, user, setUser, rooms, room, toasts, toast, needName, setNeedName, hello, call, act, authError, login, newVersion,
+  }), [newVersion, connected, user, rooms, room, toasts, toast, needName, hello, call, act, authError, login]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -29,8 +29,17 @@ const GAMES = {
   caro: { name: 'Cờ caro', Handler: CaroHandler },
 };
 
+// Phiên bản client đang được phục vụ (do Vite ghi ra lúc build). Gửi cho trình duyệt khi kết nối
+// để báo người dùng tải lại nếu họ đang chạy bản cũ.
+let APP_VERSION = null;
+try {
+  APP_VERSION = JSON.parse(fs.readFileSync(path.join(CLIENT_DIST, 'version.json'), 'utf8')).version || null;
+} catch {
+  // Chưa build client (chạy dev) → không có phiên bản
+}
+
 const app = express();
-app.get('/health', (_req, res) => res.json(APP_PASSWORD ? { ok: true } : { ok: true, rooms: rooms.size, users: users.size }));
+app.get('/health', (_req, res) => res.json(APP_PASSWORD ? { ok: true, version: APP_VERSION } : { ok: true, version: APP_VERSION, rooms: rooms.size, users: users.size }));
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST, { index: false, maxAge: '1h' }));
   app.get('*', (_req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
@@ -218,6 +227,7 @@ function joinRoom(user, room, mode) {
 
 io.on('connection', (socket) => {
   let user = null;
+  socket.emit('app:version', { version: APP_VERSION });
 
   // Bọc handler: bắt lỗi và trả về qua ack
   const on = (event, fn, needUser = true) => {
@@ -370,5 +380,5 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Game server: http://localhost:${PORT}`);
   console.log(APP_PASSWORD ? 'Auth gate: BẬT (APP_PASSWORD)' : 'Auth gate: TẮT — đặt APP_PASSWORD để yêu cầu mật khẩu');
-  if (fs.existsSync(CLIENT_DIST)) console.log(`Phục vụ client từ ${CLIENT_DIST}`);
+  if (fs.existsSync(CLIENT_DIST)) console.log(`Phục vụ client từ ${CLIENT_DIST} (phiên bản ${APP_VERSION || 'không rõ'})`);
 });
