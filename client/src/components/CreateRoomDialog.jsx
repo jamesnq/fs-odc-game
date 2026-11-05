@@ -6,12 +6,19 @@ import { GAME_META } from './Lobby.jsx';
 const DEFAULTS = {
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true },
+  wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true },
   poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
 };
 
 const FIELDS = {
   xiangqi: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
+  wordchain: [
+    ['maxSeats', 'Số người chơi tối đa', 2, 8],
+    ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 60],
+    ['lives', 'Số mạng mỗi người', 1, 3],
+    ['dictionary', 'Kiểm tra từ điển (mỗi chữ phải là tiếng Việt)', 'bool'],
+  ],
   caro: [
     ['size', 'Kích thước bàn (ô mỗi cạnh)', 10, 20],
     ['minutes', 'Thời gian mỗi bên (phút)', 1, 60],
