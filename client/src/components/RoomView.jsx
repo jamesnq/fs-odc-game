@@ -65,7 +65,12 @@ export default function RoomView() {
   const turn = turnInfo(room, user.id);
   const unread = useUnread(room.chat, user.id, panel === 'chat');
 
-  useHotkeys({ '?': () => setHelp((h) => !h), Escape: () => !window.matchMedia?.(WIDE).matches && setPanel(null) });
+  useHotkeys({
+    '?': () => setHelp((h) => !h),
+    Escape: () => !window.matchMedia?.(WIDE).matches && setPanel(null),
+    // M: bật/tắt mic (chưa vào kênh thoại thì vào kênh)
+    m: () => (voice.joined ? voice.toggleMute() : voice.available && voice.join()),
+  });
 
   const togglePanel = useCallback((tab) => setPanel((p) => (p === tab ? null : tab)), []);
   const ui = useMemo(() => ({ infoNode, openPanel: setPanel }), [infoNode]);
@@ -171,6 +176,7 @@ export default function RoomView() {
                 {SHORTCUTS[room.game].map(([k, d]) => (
                   <tr key={k}><td><kbd>{k}</kbd></td><td>{d}</td></tr>
                 ))}
+                {voice.available && <tr><td><kbd>M</kbd></td><td>Bật / tắt mic (chưa vào kênh thoại thì vào kênh)</td></tr>}
                 <tr><td><kbd>?</kbd></td><td>Mở / đóng bảng phím tắt</td></tr>
               </tbody>
             </table>
@@ -268,7 +274,7 @@ function VoiceControl({ v, onOpen }) {
   if (!v.joined) {
     return (
       <button className={`btn ghost sm voice-btn ${n ? 'live' : ''}`} onClick={v.join} disabled={v.joining}
-        title={n ? `Vào kênh thoại (${n} người đang nói chuyện)` : 'Vào kênh thoại'} aria-label={n ? `Vào kênh thoại, ${n} người đang trong kênh` : 'Vào kênh thoại'}>
+        title={n ? `Vào kênh thoại (${n} người đang nói chuyện) — phím M` : 'Vào kênh thoại — phím M'} aria-label={n ? `Vào kênh thoại, ${n} người đang trong kênh` : 'Vào kênh thoại'}>
         <Headphones size={18} aria-hidden /><span className="hide-xl">{v.joining ? 'Đang vào…' : 'Thoại'}</span>
         {n > 0 && <span className="unread voice" aria-hidden>{n}</span>}
       </button>
@@ -279,7 +285,7 @@ function VoiceControl({ v, onOpen }) {
     <div className="voice-ctl" role="group" aria-label="Kênh thoại">
       <button className={`btn sm voice-mic ${v.muted ? 'muted' : 'on'} ${v.speaking.has(v.me) ? 'talk' : ''} ${othersTalking ? 'others' : ''}`}
         onClick={v.micOk ? v.toggleMute : onOpen} aria-pressed={!v.muted}
-        title={!v.micOk ? 'Không có micro — chỉ nghe' : v.muted ? 'Bật mic' : 'Tắt mic'} aria-label={!v.micOk ? 'Không có micro, chỉ nghe' : v.muted ? 'Bật mic' : 'Tắt mic'}>
+        title={!v.micOk ? 'Không có micro — chỉ nghe' : v.muted ? 'Bật mic (M)' : 'Tắt mic (M)'} aria-label={!v.micOk ? 'Không có micro, chỉ nghe' : v.muted ? 'Bật mic' : 'Tắt mic'}>
         {v.muted ? <MicOff size={18} aria-hidden /> : <Mic size={18} aria-hidden />}
         <span className="voice-count" aria-hidden>{n}</span>
       </button>
@@ -308,7 +314,7 @@ function VoicePanel({ v, room, me }) {
       ) : (
         <div className="row vc-actions">
           {v.micOk
-            ? <button className={`btn ${v.muted ? '' : 'primary'}`} onClick={v.toggleMute}>{v.muted ? <><MicOff size={16} aria-hidden /> Bật mic</> : <><Mic size={16} aria-hidden /> Tắt mic</>}</button>
+            ? <button className={`btn ${v.muted ? '' : 'primary'}`} onClick={v.toggleMute}>{v.muted ? <><MicOff size={16} aria-hidden /> Bật mic</> : <><Mic size={16} aria-hidden /> Tắt mic</>} <kbd>M</kbd></button>
             : <span className="muted small">Không có micro — bạn chỉ nghe</span>}
           <button className="btn danger" onClick={v.leave}><PhoneOff size={16} aria-hidden /> Rời kênh</button>
         </div>

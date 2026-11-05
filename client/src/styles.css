@@ -1033,7 +1033,6 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 @media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
   .app.in-room .topbar { display: none; }
   .app.in-room .main { padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
-  .app.in-room .toasts { top: calc(56px + env(safe-area-inset-top)); }
   .room { gap: 6px; }
   .room-head { min-height: 44px; }
   .game-area, .board-overlay, .game-area.my-turn::after { border-radius: 12px; }
@@ -1191,3 +1190,12 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 }
 .voice-mic.on, .voice-mic.on:hover, .voice-mic.on:focus { background: var(--primary); color: #fff; }
 .voice-mic.muted, .voice-mic.muted:hover, .voice-mic.muted:focus { background: rgba(220,38,38,.2); color: #fecaca; }
+
+/* Thông báo trong phòng: giữa màn hình, phía trên hàng nút / ô nhập chat ở đáy — không che tab ngăn bên / nút đầu phòng;
+   chạm xuyên qua được nên không bao giờ chặn thao tác */
+.app.in-room .toasts { top: auto; left: 50%; right: auto; bottom: calc(env(safe-area-inset-bottom) + 76px); transform: translateX(-50%);
+  width: max-content; max-width: min(440px, calc(100vw - 24px)); align-items: center; flex-direction: column; }
+.app.in-room .toast { pointer-events: none; max-width: 100%; text-align: center; border-left-width: 1px; border-radius: 99px; padding: 8px 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.55); animation: toastup .2s var(--ease-out); }
+.app.in-room .toast.error { border-color: rgba(239,68,68,.7); background: #3a1620; }
+@keyframes toastup { from { opacity: 0; transform: translateY(8px); } }
