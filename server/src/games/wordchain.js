@@ -2,20 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WordChainGame, makeSyllableChecker, makeWordChecker } from '@game/shared/wordchain';
+import { bool, clampInt } from './options.js';
 
-// Từ điển âm tiết tiếng Việt (xem server/src/data/README.md)
-const DICT_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/vi-syllables.txt');
-const isValidSyllable = makeSyllableChecker(fs.readFileSync(DICT_FILE, 'utf8').split('\n').filter(Boolean));
-// Từ điển từ ghép 2 chữ (~48.000 từ, xem server/src/data/README.md)
-const WORDS_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/vi-words.txt');
-const isKnownWord = makeWordChecker(fs.readFileSync(WORDS_FILE, 'utf8').split('\n').filter(Boolean));
+// Từ điển (xem server/src/data/README.md): âm tiết tiếng Việt và từ ghép 2 chữ (~48.000 từ)
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data');
+const readLines = (file) => fs.readFileSync(path.join(DATA_DIR, file), 'utf8').split('\n').filter(Boolean);
+const isValidSyllable = makeSyllableChecker(readLines('vi-syllables.txt'));
+const isKnownWord = makeWordChecker(readLines('vi-words.txt'));
 
-const clampInt = (v, min, max, def) => {
-  const n = Math.floor(Number(v));
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
-};
 const HISTORY_MAX = 10;
-const bool = (v, def) => (v === undefined ? def : !!v && v !== 'false');
 
 export class WordChainHandler {
   constructor(room, options) {
@@ -147,7 +142,6 @@ export class WordChainHandler {
     clearTimeout(this.timer);
     const ms = this.options.turnSeconds * 1000;
     this.deadline = Date.now() + ms;
-    this.turnId = this.game.current.id;
     this.timer = setTimeout(() => this._onTimeout(), ms);
   }
 

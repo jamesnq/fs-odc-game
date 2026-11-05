@@ -4,6 +4,7 @@ import { useApp } from '../store.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useCountdown } from '../hooks.js';
+import { fmtTime } from '../format.js';
 
 export default function WordChainGame({ room, state: s }) {
   const { act, call, user } = useApp();
@@ -189,7 +190,6 @@ function PlayerRow({ s, timeLeft }) {
 // Mỗi người chơi một màu để nhìn là biết ai nối từ nào
 const PLAYER_COLORS = ['#60a5fa', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#fb923c', '#22d3ee', '#f87171'];
 const colorOf = (players, id) => PLAYER_COLORS[Math.max(0, players.findIndex((p) => p.id === id)) % PLAYER_COLORS.length];
-const fmtTime = (ts) => new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 /**
  * Chuỗi từ hiển thị nối liền từ trái sang phải theo thứ tự nối.

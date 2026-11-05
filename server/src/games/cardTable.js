@@ -1,0 +1,164 @@
+// Khung chung cho game bài đánh theo lượt quanh bàn (Tá lả, Sâm lốc):
+// ghế, điểm tích lũy, người rời bàn giữa ván được máy đánh hộ, đồng hồ lượt, cam kết bộ bài.
+import { randInt } from '@game/shared/cards';
+import { DeckCommitments } from './fairness.js';
+
+const AUTO_PLAY_MS = 2000; // người rời bàn / mất kết nối: máy đánh hộ sau 2 giây
+
+/**
+ * Lớp con định nghĩa:
+ *   _createGame(players, first)  ván mới (TalaGame / SamLocGame)
+ *   _startMessage(players, first)
+ *   _play(game, id, a)           áp dụng một hành động của người chơi
+ *   _turnKey(game)               khóa thay đổi khi sang lượt mới (đặt lại đồng hồ)
+ *   _resetTimer(force)           (tùy chọn) ghi đè nếu có pha đặc biệt; mặc định là đồng hồ lượt
+ *   _onFinish(game)              (tùy chọn) khi ván kết thúc
+ */
+export class CardTableHandler {
+  constructor(room, options) {
+    this.room = room;
+    this.options = options; // ít nhất { maxSeats, unit, turnSeconds }
+    this.fair = new DeckCommitments();
+    this.seats = Array(options.maxSeats).fill(null); // { id, name }
+    this.totals = new Map(); // tổng điểm tích lũy theo id
+    this.game = null;
+    this.gameSeats = []; // chỉ số ghế theo thứ tự người chơi trong ván
+    this.left = new Set(); // người rời bàn khi đang chơi → máy đánh hộ
+    this.lastWinnerId = null;
+    this.timer = null;
+    this.deadline = 0;
+    this.deadlineTotal = 0;
+    this.turnKey = '';
+    this.gameNo = 0;
+  }
+
+  get maxPlayers() { return this.options.maxSeats; }
+  playerIds() { return this.seats.filter(Boolean).map((s) => s.id); }
+  isPlaying() { return !!this.game && !this.game.result; }
+  seatOf(id) { return this.seats.findIndex((s) => s && s.id === id); }
+  _isAway(id) { return this.left.has(id) || !this.room.isOnline(id); }
+  _onFinish() {}
+
+  rename(id, name) {
+    const s = this.seats.find((x) => x && x.id === id);
+    if (s) s.name = name;
+    if (this.game) for (const p of this.game.players) if (p.id === id) p.name = name;
+  }
+
+  sit(user, seat) {
+    if (this.seatOf(user.id) >= 0) throw new Error('Bạn đã ngồi rồi');
+    if (this.isPlaying()) throw new Error('Ván đang diễn ra, hãy đợi ván sau');
+    const s = Number.isInteger(seat) ? seat : this.seats.findIndex((x) => !x);
+    if (s < 0 || s >= this.seats.length || this.seats[s]) throw new Error('Không còn ghế trống');
+    this.seats[s] = { id: user.id, name: user.name };
+    if (!this.totals.has(user.id)) this.totals.set(user.id, 0);
+  }
+
+  stand(id) {
+    const s = this.seatOf(id);
+    if (s < 0) return;
+    if (this.isPlaying() && this.game.indexOf(id) >= 0) {
+      this.left.add(id);
+      this.room.system(`${this.seats[s].name} rời bàn, máy sẽ đánh hộ đến hết ván`);
+      this._resetTimer(true);
+      return; // giữ ghế đến hết ván
+    }
+    this.seats[s] = null;
+  }
+
+  onLeave(id) { this.stand(id); }
+
+  _start() {
+    const seated = this.seats.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
+    if (seated.length < 2) throw new Error('Cần ít nhất 2 người');
+    this.gameSeats = seated;
+    const players = seated.map((i) => this.seats[i]);
+    let first = players.findIndex((p) => p.id === this.lastWinnerId);
+    if (first < 0) first = randInt(players.length);
+    this.game = this._createGame(players, first);
+    this.left.clear();
+    this.gameNo++;
+    this.turnKey = '';
+    this.room.system(this._startMessage(players, first));
+    this._afterAction();
+  }
+
+  action(id, a) {
+    if (a.type === 'start') {
+      if (this.seatOf(id) < 0) throw new Error('Bạn đang ở chế độ xem');
+      if (this.isPlaying()) throw new Error('Ván đang diễn ra');
+      return this._start();
+    }
+    const g = this.game;
+    if (!g || g.result) throw new Error('Chưa có ván nào');
+    if (g.indexOf(id) < 0) throw new Error('Bạn không chơi ván này');
+    this._play(g, id, a);
+    this._afterAction();
+  }
+
+  _afterAction() {
+    const g = this.game;
+    if (!g.result) return this._resetTimer();
+    clearTimeout(this.timer);
+    this.deadline = 0;
+    g.players.forEach((p, k) => {
+      this.totals.set(p.id, (this.totals.get(p.id) || 0) + g.result.scores[k] * this.options.unit);
+    });
+    this.lastWinnerId = g.players[g.result.winner].id;
+    this._onFinish(g);
+    // Giải phóng ghế người đã rời
+    for (const id of this.left) {
+      const s = this.seatOf(id);
+      if (s >= 0) this.seats[s] = null;
+    }
+    this.left.clear();
+  }
+
+  _resetTimer(force = false) {
+    const g = this.game;
+    if (!g || g.result) return;
+    const key = this._turnKey(g);
+    if (key === this.turnKey && !force) return;
+    this.turnKey = key;
+    const id = g.players[g.turn].id;
+    const ms = this._isAway(id) ? AUTO_PLAY_MS : this.options.turnSeconds * 1000;
+    this._setTimer(ms, () => {
+      if (this.game !== g || g.result || g.players[g.turn]?.id !== id) return;
+      g.autoPlay(id); // hết giờ: máy đánh hộ
+      this._afterAction();
+    });
+  }
+
+  /** Hẹn giờ cho lượt hiện tại; xong thì phát trạng thái mới. */
+  _setTimer(ms, fn) {
+    clearTimeout(this.timer);
+    this.deadline = Date.now() + ms;
+    this.deadlineTotal = ms;
+    this.timer = setTimeout(() => {
+      try {
+        fn();
+      } catch (e) {
+        console.error(`${this.constructor.name} timer`, e);
+      }
+      this.room.changed();
+    }, ms);
+  }
+
+  view(viewerId) {
+    this.fair.track(this.game?.initialDeck);
+    return {
+      fair: this.fair.view(!this.isPlaying()),
+      config: this.options,
+      seats: this.seats.map((s) => s && { ...s, total: this.totals.get(s.id) || 0, left: this.left.has(s.id), online: this.room.isOnline(s.id) }),
+      gameSeats: this.gameSeats,
+      game: this.game ? this.game.view(viewerId) : null,
+      playing: this.isPlaying(),
+      turnLeft: this.deadline ? Math.max(0, this.deadline - Date.now()) : 0,
+      turnTotal: this.deadlineTotal || this.options.turnSeconds * 1000,
+      mySeat: this.seatOf(viewerId),
+      gameNo: this.gameNo,
+    };
+  }
+
+  dispose() { clearTimeout(this.timer); }
+}

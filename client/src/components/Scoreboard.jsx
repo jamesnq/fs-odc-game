@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../store.jsx';
+import { fmtTime } from '../format.js';
 
 export const fmtPts = (n) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
-const fmtTime = (ts) => new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 /**
  * Bảng điểm cho game 2 người. `sides` = { r: { label, cls }, b: {...} } để hiển thị màu quân trong lịch sử.

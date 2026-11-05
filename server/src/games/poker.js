@@ -1,13 +1,7 @@
 import { PokerGame } from '@game/shared/poker';
+import { cardLabel } from '@game/shared/cards';
 import { DeckCommitments } from './fairness.js';
-
-const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
-const cardText = (c) => (c[0] === 'T' ? '10' : c[0]) + SUIT[c[1]];
-
-const clampInt = (v, min, max, def) => {
-  const n = Math.floor(Number(v));
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
-};
+import { bool, clampInt } from './options.js';
 
 export class PokerHandler {
   constructor(room, options) {
@@ -22,7 +16,7 @@ export class PokerHandler {
       buyIn: clampInt(options.buyIn, bigBlind * 10, bigBlind * 1000, bigBlind * 100),
       maxSeats: clampInt(options.maxSeats, 2, 9, 6),
       turnSeconds: clampInt(options.turnSeconds, 10, 120, 30),
-      rabbitHunt: options.rabbitHunt === undefined ? true : !!options.rabbitHunt && options.rabbitHunt !== 'false',
+      rabbitHunt: bool(options.rabbitHunt, true),
     };
     this.game = new PokerGame({ smallBlind: this.options.smallBlind, bigBlind: this.options.bigBlind, maxSeats: this.options.maxSeats });
     this.stacks = new Map(); // chip giữ lại khi đứng dậy
@@ -31,7 +25,7 @@ export class PokerHandler {
     this.deadline = 0;
     this.nextHandTimer = null;
     this.nextHandAt = 0;
-    this.lastLogLen = -1;
+    this.timerKey = ''; // lượt mà đồng hồ hiện tại đang tính
   }
 
   get maxPlayers() { return this.options.maxSeats; }
@@ -72,7 +66,7 @@ export class PokerHandler {
       const cards = this.game.rabbitHunt(id);
       const name = this.game.seats.find((x) => x && x.id === id)?.name
         || Object.values(this.game.hand.players).find((p) => p.id === id)?.name || '?';
-      this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardText).join(' ')}`);
+      this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardLabel).join(' ')}`);
       return;
     }
     const seat = this.game.seatOf(id);
@@ -138,7 +132,7 @@ export class PokerHandler {
     }
     this.timerKey = key;
     const seat = this.game.seats[h.toAct];
-    // Người đã rời / ngồi ngoài: tự động sau 1 giây
+    // Người đã rời / ngồi ngoài / mất kết nối: tự động sau 3 giây
     const ms = seat && (seat.left || seat.sitOut || !this.room.isOnline(seat.id)) ? 3000 : this.options.turnSeconds * 1000;
     this.deadline = Date.now() + ms;
     this.turnTimer = setTimeout(() => this._onTimeout(), ms);

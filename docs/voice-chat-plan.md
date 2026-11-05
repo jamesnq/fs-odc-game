@@ -35,7 +35,7 @@ Thêm **TURN của Cloudflare** để chắc chắn kết nối được qua 4G.
 
 ## Thiết kế (hướng A)
 
-### Server (`server/src/index.js`)
+### Server (`server/src/connection.js`)
 - Sự kiện mới (đi qua rate limit hiện có, chỉ trong cùng phòng, kiểm tra người gửi là thành viên phòng):
   - `voice:join` / `voice:leave` → server giữ `room.voice = Set<userId>` và phát danh sách cho cả phòng.
   - `voice:signal { to, data }` → chuyển nguyên `data` (SDP/ICE) tới `to` nếu cả hai đều trong `room.voice`. Giới hạn kích thước (vd. 16 KB) và tần suất.

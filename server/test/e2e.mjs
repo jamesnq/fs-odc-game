@@ -518,6 +518,36 @@ if (OTHER_PASSWORD) {
   await a.req('room:delete', { roomId });
 }
 
+// ---------- Dọn phòng trống ----------
+{
+  const p = await client('Chủ').ready;
+  const q = await client('Khách').ready;
+  const r = await client('Xem').ready;
+  const has = async (id) => (await p.req('lobby:list')).rooms.some((x) => x.id === id);
+
+  // Chủ phòng rời khi vẫn còn người → phòng còn, quyền chủ chuyển cho người đang kết nối
+  const { roomId } = await p.req('room:create', { name: 'Dọn', game: 'caro', options: {} });
+  await q.req('room:join', { roomId, mode: 'play' });
+  await r.req('room:join', { roomId, mode: 'watch' });
+  r.s.close(); // Xem mất kết nối (vẫn được giữ chỗ để vào lại)
+  await until(() => q.state?.members.find((m) => m.id === r.user.id)?.online === false);
+  await p.req('room:leave');
+  await until(() => q.state?.ownerId === q.user.id);
+  assert.ok(await has(roomId), 'còn người thì phòng vẫn còn');
+
+  // Người cuối cùng đang kết nối rời → xóa phòng ngay, kể cả khi còn người đang mất kết nối
+  const closed = new Promise((res) => q.s.once('room:left', res));
+  await q.req('room:leave');
+  await closed;
+  assert.equal(await has(roomId), false, 'không còn ai kết nối thì phòng bị xóa');
+  const back = await client('Xem').ready; // người mất kết nối vào lại: không còn ở phòng cũ
+  const again = await back.req('hello', { token: r.token });
+  assert.equal(again.user.id, r.user.id);
+  assert.equal(again.roomId, null);
+  for (const x of [p, q, back]) x.s.close();
+  console.log('✔ Dọn phòng trống OK');
+}
+
 for (const p of [a, b, c, d]) p.s.close();
 console.log('Tất cả kiểm thử tích hợp đều qua');
 process.exit(0);
