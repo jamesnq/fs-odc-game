@@ -3,9 +3,10 @@ import { rankOf } from '@game/shared/cards';
 import { isMeld, bestArrangement } from '@game/shared/tala';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
+import CardTable from '../components/CardTable.jsx';
+import { Timer, ArrowDownUp } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
 
-const POSITIONS = { 1: ['bottom'], 2: ['bottom', 'top'], 3: ['bottom', 'right', 'left'], 4: ['bottom', 'right', 'top', 'left'] };
 const PHASE_VI = { draw: 'Bốc hoặc ăn bài', discard: 'Đánh bài', lay: 'Hạ phỏm / gửi bài rồi đánh lá cuối', done: 'Kết thúc' };
 const fmt = (n) => (n > 0 ? '+' : '') + Number(n || 0).toLocaleString('vi-VN');
 
@@ -83,7 +84,6 @@ function Table({ s, g, act, timeLeft, inGame }) {
   const { toast } = useApp();
   const n = g.players.length;
   const base = g.me >= 0 ? g.me : 0;
-  const pos = POSITIONS[n];
   const me = inGame ? g.players[g.me] : null;
   const myTurn = inGame && g.turn === g.me;
 
@@ -157,73 +157,83 @@ function Table({ s, g, act, timeLeft, inGame }) {
 
   const canSendTo = (t, k) => myTurn && g.phase === 'lay' && target && isMeld([...g.players[t].melds[k].cards, target]) && me.melds.length > 0;
 
-  return (
-    <div className={`tl-table n${n}`}>
-      {g.players.map((p, i) => {
-        const k = (i - base + n) % n;
-        const position = pos[k];
-        const isTurn = g.turn === i;
-        const seat = s.seats[s.gameSeats[i]];
-        const isMe = i === g.me;
-        return (
-          <div key={p.id} className={`tl-player pos-${position} ${isTurn ? 'turn' : ''}`}>
-            <div className="tl-head">
-              <b>{p.name}</b>{isMe && ' (bạn)'}
-              {i === g.first && <span className="badge">Đi đầu</span>}
-              {seat?.left && <span className="badge warn">Đã rời</span>}
-              {seat && !seat.online && !seat.left && <span className="badge warn">Mất kết nối</span>}
-              <span className={`tl-score ${p.score >= 0 ? 'pos' : 'neg'}`}>{fmt(p.score)}</span>
-              {isTurn && !g.result && <span className="tl-timer">⏱ {Math.ceil(timeLeft / 1000)}s</span>}
+  const seats = g.players.map((p, i) => {
+    const isTurn = g.turn === i && !g.result;
+    const seat = s.seats[s.gameSeats[i]];
+    const isMe = i === g.me;
+    return {
+      key: p.id,
+      rel: (i - base + n) % n,
+      me: isMe,
+      active: isTurn,
+      node: (
+        <div className={`tl-player ${isTurn ? 'turn' : ''}`}>
+          <div className="tl-head">
+            <b className="seat-name">{p.name}</b>{isMe && <span className="seat-me">bạn</span>}
+            {i === g.first && <span className="badge">Đi đầu</span>}
+            {seat?.left && <span className="badge warn">Đã rời</span>}
+            {seat && !seat.online && !seat.left && <span className="badge warn">Mất kết nối</span>}
+            <span className={`tl-score ${p.score >= 0 ? 'pos' : 'neg'}`}>{fmt(p.score)}</span>
+            {/* Đồng hồ luôn giữ chỗ (ẩn khi không tới lượt) → dòng tên không đổi chiều cao */}
+            <span className={`tl-timer ${isTurn ? '' : 'off'}`} aria-hidden={!isTurn}><Timer size={13} aria-hidden /> {isTurn ? Math.ceil(timeLeft / 1000) : 0}s</span>
+          </div>
+          {!isMe && (
+            <div className="tl-hand-back">
+              {p.hand ? p.hand.map((c) => <Card key={c} card={c} size="sm" />)
+                : <span className="card-fan" aria-label={`${p.handCount} lá`}>{Array.from({ length: p.handCount }).map((_, j) => <Card key={j} card="??" size="xs" />)}</span>}
+              {!p.hand && <span className="felt-muted small">{p.handCount} lá</span>}
             </div>
-            {!isMe && (
-              <div className="tl-hand-back">
-                {p.hand ? p.hand.map((c) => <Card key={c} card={c} size="sm" />) : Array.from({ length: p.handCount }).map((_, j) => <Card key={j} card="??" size="xs" />)}
-                {!p.hand && <span className="muted small"> {p.handCount} lá</span>}
-              </div>
-            )}
-            {p.eaten.length > 0 && !p.finished && (
-              <div className="tl-row"><span className="tl-lbl">Đã ăn</span>{p.eaten.map((c) => <Card key={c} card={c} size="sm" locked />)}</div>
-            )}
-            <div className="tl-row">
-              <span className="tl-lbl">Đánh ({p.discardCount}/4)</span>
-              {p.discards.map((c) => (
-                <Card key={c} card={c} size="sm" highlight={g.lastDiscard?.card === c} />
+          )}
+          {p.eaten.length > 0 && !p.finished && (
+            <div className="tl-row"><span className="tl-lbl">Đã ăn</span>{p.eaten.map((c) => <Card key={c} card={c} size="sm" locked />)}</div>
+          )}
+          <div className="tl-row">
+            <span className="tl-lbl">Đánh {p.discardCount}/4</span>
+            {p.discards.map((c) => (
+              <Card key={c} card={c} size="sm" highlight={g.lastDiscard?.card === c} />
+            ))}
+          </div>
+          {p.melds.length > 0 && (
+            <div className="tl-row melds">
+              <span className="tl-lbl">Phỏm</span>
+              {p.melds.map((m, kk) => (
+                <div key={kk} className={`meld ${canSendTo(i, kk) ? 'sendable' : ''}`}
+                  onClick={() => canSendTo(i, kk) && doSend({ target: i, meldIdx: kk })}
+                  title={canSendTo(i, kk) ? 'Bấm để gửi lá đang chọn vào phỏm này' : ''}>
+                  {m.cards.map((c) => <Card key={c} card={c} size="sm" />)}
+                </div>
               ))}
             </div>
-            {p.melds.length > 0 && (
-              <div className="tl-row melds">
-                <span className="tl-lbl">Phỏm</span>
-                {p.melds.map((m, kk) => (
-                  <div key={kk} className={`meld ${canSendTo(i, kk) ? 'sendable' : ''}`}
-                    onClick={() => canSendTo(i, kk) && doSend({ target: i, meldIdx: kk })}
-                    title={canSendTo(i, kk) ? 'Click để gửi lá đang chọn vào phỏm này' : ''}>
-                    {m.cards.map((c) => <Card key={c} card={c} size="sm" />)}
-                  </div>
-                ))}
-              </div>
-            )}
-            {p.finished && p.melds.length === 0 && <div className="mom">MÓM</div>}
-          </div>
-        );
-      })}
+          )}
+          {p.finished && p.melds.length === 0 && <div className="mom">MÓM</div>}
+        </div>
+      ),
+    };
+  });
 
-      <div className="tl-center">
-        <div className={`deck ${myTurn && g.phase === 'draw' ? 'can' : ''}`} onClick={doDraw} title="Bốc bài (D)">
-          <Card card="??" size="md" />
-          <span className="deck-count">{g.deckCount}</span>
+  const center = (
+    <>
+      <button type="button" className={`deck ${myTurn && g.phase === 'draw' ? 'can' : ''}`} onClick={doDraw}
+        disabled={!(myTurn && g.phase === 'draw')} aria-label={`Bốc bài (còn ${g.deckCount} lá)`} title="Bốc bài (D)">
+        <Card card="??" size="md" />
+        <span className="deck-count">{g.deckCount}</span>
+      </button>
+      {!g.result && (
+        <div className="tl-status" role="status" aria-live="polite">
+          {g.turn >= 0 && <>Lượt: <b>{g.players[g.turn].name}</b> — {PHASE_VI[g.phase]}</>}
         </div>
-        {!g.result && (
-          <div className="tl-status" role="status" aria-live="polite">
-            {g.turn >= 0 && <>Lượt: <b>{g.players[g.turn].name}</b> — {PHASE_VI[g.phase]}</>}
-          </div>
-        )}
-        <div className="tl-log">
-          {g.log.slice(-4).map((l, i) => <div key={i} className="small muted">{l}</div>)}
-        </div>
+      )}
+      <div className="tl-log">
+        {g.log.slice(-3).map((l, i) => <div key={i} className="small felt-muted">{l}</div>)}
       </div>
+    </>
+  );
 
+  return (
+    <div className="tl-board">
+      <CardTable seats={seats} center={center} className="ct-tala" />
       {inGame && (
-        <div className="tl-me">
+        <div className={`ct-hand-panel ${myTurn ? 'turn' : ''}`}>
           <div className="tl-hand">
             {/* Vạch xanh dưới lá = lá có thể tạo phỏm (gắn vào từng lá để xuống dòng cùng nhau trên màn nhỏ) */}
             {ordered.map((c, i) => (
@@ -251,8 +261,8 @@ function Table({ s, g, act, timeLeft, inGame }) {
                   <button className="btn" disabled={!target || !me.melds.length} onClick={() => doSend()}><kbd>G</kbd> Gửi</button>
                 </>
               )}
-              {g.canU && <button className="btn warn pulse" onClick={doU}><kbd>U</kbd> Ù!</button>}
-              <button className="btn ghost sm" onClick={doSort}><kbd>S</kbd> Xếp theo {sortMode === 'rank' ? 'chất' : 'số'}</button>
+              {g.canU && <button className="btn cta" onClick={doU}><kbd>U</kbd> Ù!</button>}
+              <button className="btn ghost sm" onClick={doSort}><ArrowDownUp size={14} aria-hidden /> <kbd>S</kbd> Xếp theo {sortMode === 'rank' ? 'chất' : 'số'}</button>
             </div>
           )}
         </div>

@@ -393,29 +393,33 @@ if (OTHER_PASSWORD) {
   await until(() => d.state?.state.seats.length === 3);
   for (const p of [a, b, c]) await p.act({ type: 'ready' });
   await until(() => d.state.state.status === 'playing');
-  assert.equal(d.state.state.game.currentId, a.user.id, 'người ngồi đầu ra từ đầu tiên');
-  await assert.rejects(b.act({ type: 'word', text: 'con mèo' }), /lượt/);
-  await assert.rejects(a.act({ type: 'word', text: 'mèo' }), /2 chữ/);
-  await assert.rejects(a.act({ type: 'word', text: 'con xyzq' }), /từ điển/);
+  // Người ra từ đầu tiên là ngẫu nhiên: xếp lại x/y/z theo thứ tự lượt thực tế
+  const order = [a, b, c];
+  const fi = order.findIndex((p) => p.user.id === d.state.state.game.currentId);
+  assert.ok(fi >= 0, 'người đi đầu là một trong các người chơi');
+  const [x, y, z] = [order[fi], order[(fi + 1) % 3], order[(fi + 2) % 3]];
+  await assert.rejects(y.act({ type: 'word', text: 'con mèo' }), /lượt/);
+  await assert.rejects(x.act({ type: 'word', text: 'mèo' }), /2 chữ/);
+  await assert.rejects(x.act({ type: 'word', text: 'con xyzq' }), /từ điển/);
   await assert.rejects(d.act({ type: 'word', text: 'con mèo' }), /xem/);
-  await a.act({ type: 'word', text: 'Con Mèo' });
+  await x.act({ type: 'word', text: 'Con Mèo' });
   await until(() => d.state.state.game.required === 'mèo');
-  await assert.rejects(b.act({ type: 'word', text: 'con chó' }), /bắt đầu bằng "mèo"/);
-  await b.act({ type: 'word', text: 'mèo con' });
-  await assert.rejects(c.act({ type: 'word', text: 'con mèo' }), /đã được dùng/);
-  // Phản đối: a và c cùng phản đối "mèo con" → gỡ, lượt về b
-  await a.act({ type: 'object' });
-  await c.act({ type: 'object' });
-  await until(() => d.state.state.game.total === 1 && d.state.state.game.currentId === b.user.id);
-  await b.act({ type: 'word', text: 'mèo mướp' });
-  await c.act({ type: 'word', text: 'mướp đắng' });
+  await assert.rejects(y.act({ type: 'word', text: 'con chó' }), /bắt đầu bằng "mèo"/);
+  await y.act({ type: 'word', text: 'mèo con' });
+  await assert.rejects(z.act({ type: 'word', text: 'con mèo' }), /đã được dùng/);
+  // Phản đối: x và z cùng phản đối "mèo con" → gỡ, lượt về y
+  await x.act({ type: 'object' });
+  await z.act({ type: 'object' });
+  await until(() => d.state.state.game.total === 1 && d.state.state.game.currentId === y.user.id);
+  await y.act({ type: 'word', text: 'mèo mướp' });
+  await z.act({ type: 'word', text: 'mướp đắng' });
   // Chịu thua dần → người cuối thắng
-  await a.act({ type: 'giveup' });
-  await b.act({ type: 'giveup' });
+  await x.act({ type: 'giveup' });
+  await y.act({ type: 'giveup' });
   await until(() => d.state.state.status === 'over');
-  assert.equal(d.state.state.game.result.winner, c.user.id);
-  assert.deepEqual(d.state.state.game.result.ranking, [c.user.id, b.user.id, a.user.id]);
-  assert.equal(d.state.state.wins[0].id, c.user.id);
+  assert.equal(d.state.state.game.result.winner, z.user.id);
+  assert.deepEqual(d.state.state.game.result.ranking, [z.user.id, y.user.id, x.user.id]);
+  assert.equal(d.state.state.wins[0].id, z.user.id);
   await a.req('room:delete', { roomId });
   console.log('✔ Nối từ OK');
 }

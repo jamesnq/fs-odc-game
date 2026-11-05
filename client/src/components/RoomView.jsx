@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../store.jsx';
 import { ArrowLeft, Pencil, Link, Keyboard, Trash2, Eye, Check } from 'lucide-react';
 import { GAME_META, GameIcon } from './Lobby.jsx';
+import TurnBanner, { turnInfo } from './TurnBanner.jsx';
 import Modal from './Modal.jsx';
 import XiangqiGame from '../games/XiangqiGame.jsx';
 import PokerGame from '../games/PokerGame.jsx';
@@ -92,6 +93,7 @@ export default function RoomView() {
           {isOwner && <button className="btn danger sm" onClick={del} aria-label="Xóa phòng"><Trash2 size={16} aria-hidden /><span className="hide-sm">Xóa phòng</span></button>}
         </div>
       </div>
+      <TurnBanner info={turnInfo(room, user.id)} />
       <div className="room-body">
         <div className="game-area">
           <Game room={room} state={room.state} />

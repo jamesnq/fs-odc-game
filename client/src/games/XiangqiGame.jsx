@@ -3,10 +3,10 @@ import { Check, Undo2, Handshake, Flag, RotateCcw, ArrowUpDown } from 'lucide-re
 import { legalMovesFrom, colorOf, typeOf, PIECE_CHAR, rowOf, colOf, idx } from '@game/shared/xiangqi';
 import { useApp } from '../store.jsx';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
-import Scoreboard from '../components/Scoreboard.jsx';
+import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.jsx';
 
 const CELL = 56;
-const PAD = 40;
+const PAD = 50; // chừa chỗ cho số cột hai bên
 const W = CELL * 8 + PAD * 2;
 const H = CELL * 9 + PAD * 2;
 const COLOR_NAME = { r: 'Đỏ', b: 'Đen' };
@@ -57,13 +57,24 @@ export default function XiangqiGame({ room, state: s }) {
     <div className="xq">
       <div className="xq-main">
         <PlayerBar color={topColor} s={s} room={room} />
-        <svg className="xq-board" viewBox={`0 0 ${W} ${H}`}>
-          <rect x="0" y="0" width={W} height={H} rx="10" className="xq-bg" />
+        <svg className="xq-board" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Bàn cờ tướng">
+          <BoardDefs />
+          <rect x="0" y="0" width={W} height={H} rx="14" fill="url(#xq-wood)" className="xq-bg" />
           <BoardLines />
-          {s.lastMove && [s.lastMove.from, s.lastMove.to].map((i, k) => {
-            const [x, y] = pos(i);
-            return <rect key={k} x={x - 26} y={y - 26} width="52" height="52" className="xq-last" rx="6" />;
-          })}
+          <FileLabels flipped={flipped} />
+          {s.lastMove && (() => {
+            const [fx, fy] = pos(s.lastMove.from);
+            const [tx, ty] = pos(s.lastMove.to);
+            const c = 27, l = 9; // khung 4 góc quanh ô vừa đến
+            return (
+              <g className="xq-last" aria-hidden>
+                <circle cx={fx} cy={fy} r="7" className="from" />
+                {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sy]) => (
+                  <polyline key={`${sx}${sy}`} points={`${tx + sx * c},${ty + sy * (c - l)} ${tx + sx * c},${ty + sy * c} ${tx + sx * (c - l)},${ty + sy * c}`} />
+                ))}
+              </g>
+            );
+          })()}
           {s.board.map((p, i) => {
             const [x, y] = pos(i);
             const isTarget = targets.includes(i);
@@ -71,13 +82,16 @@ export default function XiangqiGame({ room, state: s }) {
               <g key={i} onClick={() => clickPoint(i)} className={myTurn ? 'xq-pt active' : 'xq-pt'}>
                 <rect x={x - CELL / 2} y={y - CELL / 2} width={CELL} height={CELL} fill="transparent" />
                 {p !== '.' && (
-                  <g className={`xq-piece ${colorOf(p)} ${sel === i ? 'sel' : ''} ${checkedKing === i ? 'check' : ''}`}>
-                    <circle cx={x} cy={y} r="24" />
-                    <circle cx={x} cy={y} r="20" className="inner" />
+                  <g className={`xq-piece ${colorOf(p)} ${sel === i ? 'sel' : ''} ${checkedKing === i ? 'check' : ''}`}
+                    transform={sel === i ? 'translate(0 -3)' : undefined} filter={sel === i ? 'url(#xq-lift)' : 'url(#xq-shadow)'}>
+                    <circle cx={x} cy={y} r="24" className="disc" fill="url(#xq-disc)" />
+                    <circle cx={x} cy={y} r="19.5" className="inner" />
                     <text x={x} y={y + 8} textAnchor="middle">{PIECE_CHAR[colorOf(p)][typeOf(p)]}</text>
                   </g>
                 )}
-                {isTarget && (p === '.' ? <circle cx={x} cy={y} r="8" className="xq-dot" /> : <circle cx={x} cy={y} r="27" className="xq-cap" />)}
+                {isTarget && (p === '.'
+                  ? <circle cx={x} cy={y} r="7" className="xq-dot" />
+                  : <circle cx={x} cy={y} r="27" className="xq-cap" />)}
               </g>
             );
           })}
@@ -105,6 +119,7 @@ export default function XiangqiGame({ room, state: s }) {
                 {s.result.winner ? <>{COLOR_NAME[s.result.winner]} thắng{my && (s.result.winner === my ? ' 🎉' : '')}</> : 'Hòa'}
               </div>
               <div className="muted">{s.result.text}</div>
+              <ScoreLine score={s.score} a={s.seats.r} b={s.seats.b} />
             </div>
           )}
 
@@ -176,6 +191,9 @@ function PlayerBar({ color, s, room }) {
       {seat ? (
         <span className="pname">
           {seat.name}{seat.id === user.id && ' (bạn)'}
+          {s.score?.gameNo > 0 && (
+            <span className="score-chip" title="Điểm trong phòng: thắng 1, hòa ½, thua 0">{fmtPts(pointsOf(s.score, seat.id) ?? 0)} điểm</span>
+          )}
           {member && !member.online && <span className="muted"> (mất kết nối)</span>}
           {s.status === 'waiting' && s.ready[color] && <span className="ready"> ✔ sẵn sàng</span>}
           {s.status === 'over' && s.rematch[color] && <span className="ready"> ↻ muốn chơi lại</span>}
@@ -214,6 +232,47 @@ function MoveList({ moves }) {
   );
 }
 
+/** Gradient gỗ, mặt quân và bóng đổ (có độ lệch) cho bàn cờ. */
+function BoardDefs() {
+  return (
+    <defs>
+      <linearGradient id="xq-wood" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#f2d7a1" />
+        <stop offset=".55" stopColor="#e5bf7f" />
+        <stop offset="1" stopColor="#d6a862" />
+      </linearGradient>
+      <radialGradient id="xq-disc" cx=".38" cy=".32" r=".75">
+        <stop offset="0" stopColor="#fffaf0" />
+        <stop offset=".65" stopColor="#f3e2bd" />
+        <stop offset="1" stopColor="#d9b77f" />
+      </radialGradient>
+      <filter id="xq-shadow" x="-30%" y="-30%" width="160%" height="170%">
+        <feDropShadow dx="0" dy="2.5" stdDeviation="1.6" floodColor="#3b2208" floodOpacity=".45" />
+      </filter>
+      <filter id="xq-lift" x="-40%" y="-40%" width="180%" height="190%">
+        <feDropShadow dx="0" dy="6" stdDeviation="3" floodColor="#3b2208" floodOpacity=".45" />
+      </filter>
+    </defs>
+  );
+}
+
+/** Số cột 1–9 kiểu Việt Nam: mỗi bên đếm từ tay phải của mình. */
+function FileLabels({ flipped }) {
+  const x = (c) => PAD + c * CELL;
+  // Cột trên màn hình (trái → phải) ứng với cột trên bàn khi lật
+  const boardCol = (c) => (flipped ? 8 - c : c);
+  return (
+    <g className="xq-files" aria-hidden>
+      {Array.from({ length: 9 }, (_, c) => (
+        <g key={c}>
+          <text x={x(c)} y={PAD - 30} textAnchor="middle" className={flipped ? 'r' : 'b'}>{boardCol(c) + 1}</text>
+          <text x={x(c)} y={PAD + CELL * 9 + 40} textAnchor="middle" className={flipped ? 'b' : 'r'}>{9 - boardCol(c)}</text>
+        </g>
+      ))}
+    </g>
+  );
+}
+
 function BoardLines() {
   const L = [];
   const x = (c) => PAD + c * CELL;
@@ -241,7 +300,8 @@ function BoardLines() {
   }
   return (
     <g className="xq-lines">
-      <rect x={x(0) - 6} y={y(0) - 6} width={CELL * 8 + 12} height={CELL * 9 + 12} fill="none" strokeWidth="3" />
+      <rect x={x(0) - 8} y={y(0) - 8} width={CELL * 8 + 16} height={CELL * 9 + 16} fill="none" className="frame" />
+      <rect x={x(0)} y={y(0)} width={CELL * 8} height={CELL * 9} fill="none" className="edge" />
       {L}
       <text x={x(2)} y={y(4.5) + 9} textAnchor="middle" className="river">楚 河</text>
       <text x={x(6)} y={y(4.5) + 9} textAnchor="middle" className="river">漢 界</text>

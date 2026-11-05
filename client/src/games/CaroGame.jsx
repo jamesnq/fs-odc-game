@@ -3,7 +3,7 @@ import { Check, Undo2, Handshake, Flag, RotateCcw, ArrowUpDown } from 'lucide-re
 import { colLabel } from '@game/shared/caro';
 import { useApp } from '../store.jsx';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
-import Scoreboard from '../components/Scoreboard.jsx';
+import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.jsx';
 
 const CELL = 36;
 const PAD = 26;
@@ -99,6 +99,7 @@ export default function CaroGame({ room, state: s }) {
                 {s.result.winner ? <>{s.seats[s.result.winner]?.name || NAME[s.result.winner]} ({NAME[s.result.winner]}) thắng{my && s.result.winner === my ? ' 🎉' : ''}</> : 'Hòa'}
               </div>
               <div className="muted">{s.result.text}</div>
+              <ScoreLine score={s.score} a={s.seats.x} b={s.seats.o} />
             </div>
           )}
 
@@ -183,6 +184,9 @@ function PlayerBar({ color, s, room }) {
       {seat ? (
         <span className="pname">
           {seat.name}{seat.id === user.id && ' (bạn)'}
+          {s.score?.gameNo > 0 && (
+            <span className="score-chip" title="Điểm trong phòng: thắng 1, hòa ½, thua 0">{fmtPts(pointsOf(s.score, seat.id) ?? 0)} điểm</span>
+          )}
           {member && !member.online && <span className="muted"> (mất kết nối)</span>}
           {s.status === 'waiting' && s.ready[color] && <span className="ready"> ✔ sẵn sàng</span>}
           {s.status === 'over' && s.rematch[color] && <span className="ready"> ↻ muốn chơi lại</span>}

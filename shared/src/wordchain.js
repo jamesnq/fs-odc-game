@@ -48,12 +48,12 @@ export function makeSyllableChecker(list) {
 export class WordChainGame {
   /**
    * @param players [{ id, name }] theo thứ tự lượt
-   * @param opts { lives, isValidSyllable? }
+   * @param opts { lives, isValidSyllable?, first? } — first: chỉ số người ra từ đầu tiên (mặc định 0)
    */
-  constructor(players, { lives = 1, isValidSyllable = null } = {}) {
+  constructor(players, { lives = 1, isValidSyllable = null, first = 0 } = {}) {
     if (players.length < 2) throw new Error('Cần ít nhất 2 người chơi');
     this.players = players.map((p) => ({ id: p.id, name: p.name, lives, out: false, words: 0, outAt: 0 }));
-    this.turn = 0;
+    this.turn = Number.isInteger(first) && first >= 0 && first < players.length ? first : 0;
     this.chain = []; // { text, syllables, keys, by, name, ts }
     this.used = new Set(); // khóa của các từ đã dùng
     this.objections = new Set(); // id người phản đối từ cuối
