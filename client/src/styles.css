@@ -1051,7 +1051,7 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
   .bo-title { font-size: 17px; }
   /* Poker: bàn thấp lại theo vùng chơi, thanh hành động gọn */
   .pk-table { padding: 40px 4px 48px; }
-  .pk-felt { aspect-ratio: auto; height: clamp(220px, calc(100cqh - 340px), 520px); }
+  .pk-felt { aspect-ratio: auto; height: clamp(200px, calc(100cqh - 356px), 520px); }
   .pk-actions { padding: 8px; gap: 6px; }
   .pk-actions .pk-turn { display: none; }
   .pk-actions .btn { padding: 0 10px; font-size: 13px; }
