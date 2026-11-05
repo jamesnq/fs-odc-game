@@ -662,6 +662,7 @@ button, a, [role=tab], input, label { touch-action: manipulation; -webkit-tap-hi
   .user-chip { height: 40px; }
   .link { min-height: 40px; min-width: 40px; padding: 0 8px; }
   .brand { min-height: 44px; }
+  .fair-badge { min-height: 40px; padding: 0 12px; }
   input:not([type=range]):not([type=checkbox]), select, textarea { font-size: 16px; min-height: 44px; } /* iOS không tự phóng to */
   input[type=range] { min-height: 32px; }
   kbd, .only-kbd { display: none !important; }
