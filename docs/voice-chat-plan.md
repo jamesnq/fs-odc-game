@@ -49,6 +49,8 @@ Thêm **TURN của Cloudflare** để chắc chắn kết nối được qua 4G.
 3. TURN Cloudflare + `/api/turn` + hướng dẫn thêm biến môi trường trên Render — ~0,5 ngày
 4. Kiểm thử trên iOS Safari / Android Chrome / 4G, chỉnh echo & tự phát âm thanh — ~0,5–1 ngày
 
+Nguồn: [Cloudflare Realtime — pricing](https://developers.cloudflare.com/realtime/pricing/), [TURN FAQ](https://developers.cloudflare.com/realtime/turn/faq/).
+
 ## Rủi ro
 - iOS Safari: phải chạm để phát âm thanh, chuyển loa ngoài/tai nghe đôi khi lạ → test kỹ.
 - Mạng công ty/trường chặn UDP → cần TURN qua TCP/TLS 443 (Cloudflare hỗ trợ).
