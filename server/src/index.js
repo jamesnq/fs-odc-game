@@ -10,6 +10,7 @@ import { PokerHandler } from './games/poker.js';
 import { TalaHandler } from './games/tala.js';
 import { CaroHandler } from './games/caro.js';
 import { SamLocHandler } from './games/samloc.js';
+import { WordChainHandler } from './games/wordchain.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -33,6 +34,7 @@ const GAMES = {
   tala: { name: 'Tá lả', Handler: TalaHandler },
   caro: { name: 'Cờ caro', Handler: CaroHandler },
   samloc: { name: 'Sâm lốc', Handler: SamLocHandler },
+  wordchain: { name: 'Nối từ', Handler: WordChainHandler },
 };
 
 // Phiên bản client đang được phục vụ (do Vite ghi ra lúc build). Gửi cho trình duyệt khi kết nối

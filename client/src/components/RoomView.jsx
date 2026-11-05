@@ -7,9 +7,10 @@ import PokerGame from '../games/PokerGame.jsx';
 import TalaGame from '../games/TalaGame.jsx';
 import CaroGame from '../games/CaroGame.jsx';
 import SamLocGame from '../games/SamLocGame.jsx';
+import WordChainGame from '../games/WordChainGame.jsx';
 import { useHotkeys } from '../hooks.js';
 
-const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame };
+const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame };
 
 export const SHORTCUTS = {
   poker: [
@@ -30,6 +31,7 @@ export const SHORTCUTS = {
     ['Enter', 'Đánh các lá đã chọn'], ['P', 'Bỏ lượt'], ['Esc', 'Bỏ chọn tất cả'],
     ['Y / K', 'Báo Sâm / Không báo (đầu ván)'], ['N', 'Chia ván mới'],
   ],
+  wordchain: [['Enter', 'Gửi từ'], ['Gõ', 'Khi tới lượt, ô nhập tự focus — chỉ cần gõ chữ thứ hai']],
   caro: [['Click', 'Đánh vào ô'], ['← ↑ → ↓', 'Di chuyển con trỏ trên bàn'], ['Enter / Space', 'Đánh vào ô có con trỏ'], ['Esc', 'Ẩn con trỏ']],
 };
 

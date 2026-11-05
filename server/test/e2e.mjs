@@ -303,6 +303,43 @@ if (OTHER_PASSWORD) {
   console.log('✔ Sâm lốc OK —', r.text);
 }
 
+// ---------- Nối từ ----------
+{
+  a.state = b.state = c.state = d.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Nối từ test', game: 'wordchain', options: { turnSeconds: 15, lives: 1 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'play' });
+  await d.req('room:join', { roomId, mode: 'watch' });
+  await until(() => d.state?.state.seats.length === 3);
+  for (const p of [a, b, c]) await p.act({ type: 'ready' });
+  await until(() => d.state.state.status === 'playing');
+  assert.equal(d.state.state.game.currentId, a.user.id, 'người ngồi đầu ra từ đầu tiên');
+  await assert.rejects(b.act({ type: 'word', text: 'con mèo' }), /lượt/);
+  await assert.rejects(a.act({ type: 'word', text: 'mèo' }), /2 chữ/);
+  await assert.rejects(a.act({ type: 'word', text: 'con xyzq' }), /từ điển/);
+  await assert.rejects(d.act({ type: 'word', text: 'con mèo' }), /xem/);
+  await a.act({ type: 'word', text: 'Con Mèo' });
+  await until(() => d.state.state.game.required === 'mèo');
+  await assert.rejects(b.act({ type: 'word', text: 'con chó' }), /bắt đầu bằng "mèo"/);
+  await b.act({ type: 'word', text: 'mèo con' });
+  await assert.rejects(c.act({ type: 'word', text: 'con mèo' }), /đã được dùng/);
+  // Phản đối: a và c cùng phản đối "mèo con" → gỡ, lượt về b
+  await a.act({ type: 'object' });
+  await c.act({ type: 'object' });
+  await until(() => d.state.state.game.total === 1 && d.state.state.game.currentId === b.user.id);
+  await b.act({ type: 'word', text: 'mèo mướp' });
+  await c.act({ type: 'word', text: 'mướp đắng' });
+  // Chịu thua dần → người cuối thắng
+  await a.act({ type: 'giveup' });
+  await b.act({ type: 'giveup' });
+  await until(() => d.state.state.status === 'over');
+  assert.equal(d.state.state.game.result.winner, c.user.id);
+  assert.deepEqual(d.state.state.game.result.ranking, [c.user.id, b.user.id, a.user.id]);
+  assert.equal(d.state.state.wins[0].id, c.user.id);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Nối từ OK');
+}
+
 // ---------- Tá lả ----------
 {
   a.state = b.state = c.state = d.state = null;

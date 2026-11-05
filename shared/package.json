@@ -8,6 +8,7 @@
     "./xiangqi": "./src/xiangqi.js",
     "./caro": "./src/caro.js",
     "./samloc": "./src/samloc.js",
+    "./wordchain": "./src/wordchain.js",
     "./poker": "./src/poker.js",
     "./tala": "./src/tala.js"
   },

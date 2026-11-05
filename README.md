@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro
+# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -28,6 +28,13 @@
 - Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
 - **Bảng điểm** cộng dồn qua các ván (xem bên dưới)
 - **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
+
+**Nối từ** (2–8 người)
+- Mỗi từ gồm **2 chữ**, chữ đầu phải trùng chữ cuối của từ trước: *con mèo → mèo con → con đường*; không lặp từ trong ván
+- Kiểm tra mỗi chữ có trong **từ điển âm tiết tiếng Việt** (6.609 âm tiết, tắt được khi tạo bàn); bỏ dấu kiểu cũ hay mới đều được (*hòa* = *hoà*)
+- Từ vô nghĩa? Bạn bè bấm **❌ phản đối** — quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại
+- Mỗi lượt 10–60 giây, hết giờ mất 1 mạng (1–3 mạng), hết mạng bị loại; người cuối cùng còn lại thắng. Có bảng thắng qua các ván
+- Khi tới lượt, ô nhập tự điền sẵn chữ đầu — chỉ cần gõ chữ thứ hai rồi `Enter`
 
 **Bảng điểm (Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người
@@ -143,6 +150,8 @@ APP_SERVERS={"Bên A":"mat-khau-A","Bên B":"mat-khau-B"}
 shared/src/       Luật chơi thuần JS (dùng cho cả server và client)
   xiangqi.js      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
   caro.js         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
+  wordchain.js    Nối từ: chuẩn hóa âm tiết, lượt, mạng, phản đối
+server/src/data/  Từ điển âm tiết tiếng Việt cho Nối từ (MIT, xem README trong thư mục)
   poker.js        Chấm bài, ván cược, side pot
   samloc.js       Sâm lốc: phân loại bộ, chặn, báo Sâm, báo 1, tới trắng, tính tiền
   tala.js         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
