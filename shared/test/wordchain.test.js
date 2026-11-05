@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WordChainGame, parseWord, syllableKey, makeSyllableChecker } from '../src/wordchain.js';
+import { WordChainGame, parseWord, syllableKey, makeSyllableChecker, makeWordChecker } from '../src/wordchain.js';
 
 const P = [{ id: 'a', name: 'An' }, { id: 'b', name: 'Bình' }, { id: 'c', name: 'Chi' }];
 
@@ -84,4 +84,20 @@ test('chọn người ra từ đầu tiên', () => {
   const g = new WordChainGame(P, { first: 1 });
   g.submit('b', 'con mèo');
   assert.equal(g.current.id, 'c', 'sau đó đi tiếp theo vòng');
+});
+
+test('từ điển từ ghép: chế độ chặt chặn từ vô nghĩa, chế độ thoáng chỉ gắn cờ', () => {
+  const known = makeWordChecker(['học tập', 'tập tành', 'hoà bình']);
+  assert.equal(known(parseWord('Học Tập')), true);
+  assert.equal(known(parseWord('hòa bình')), true, 'không phụ thuộc vị trí bỏ dấu');
+  assert.equal(known(parseWord('tành mui')), false);
+  const strict = new WordChainGame(P, { isKnownWord: known, strict: true });
+  strict.submit('a', 'học tập');
+  strict.submit('b', 'tập tành');
+  assert.throws(() => strict.submit('c', 'tành mui'), /"tành mui" không có trong từ điển/);
+  const loose = new WordChainGame(P, { isKnownWord: known, strict: false });
+  loose.submit('a', 'học tập');
+  loose.submit('b', 'tập tành');
+  loose.submit('c', 'tành mui');
+  assert.deepEqual(loose.chain.map((w) => w.known), [true, true, false], 'từ lạ được gắn cờ');
 });

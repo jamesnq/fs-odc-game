@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Flag, RotateCcw, ThumbsDown, Timer } from 'lucide-react';
+import { Check, Flag, RotateCcw, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import { useCountdown } from '../hooks.js';
 
@@ -35,7 +35,7 @@ export default function WordChainGame({ room, state: s }) {
                 <div className="wc-word">
                   <span className="wc-syl">{last.syllables[0]}</span>{' '}
                   <span className="wc-syl key">{last.syllables[1]}</span>
-                  <div className="muted small">#{g.total} · {last.name}</div>
+                  <div className="muted small">#{g.total} · {last.name}{last.known === false && <span className="wf-flag-text"> · <AlertTriangle size={12} aria-hidden /> không có trong từ điển</span>}</div>
                 </div>
               ) : (
                 <div className="wc-word empty">
@@ -80,7 +80,7 @@ export default function WordChainGame({ room, state: s }) {
           )}
         </div>
 
-        {g && <Chain chain={g.chain} total={g.total} me={me} />}
+        {g && <Chain g={g} history={s.history || []} me={me} />}
       </div>
 
       <div className="wc-side">
@@ -116,8 +116,10 @@ export default function WordChainGame({ room, state: s }) {
         <div className="panel small muted wc-rules">
           <b>Luật chơi</b>
           <ul>
-            <li>Mỗi từ gồm <b>2 chữ</b>, chữ đầu phải trùng chữ cuối của từ trước: <i>con mèo → mèo con → con đường</i>.</li>
-            <li>Không lặp lại từ đã dùng trong ván.{s.options.dictionary && ' Mỗi chữ phải có trong từ điển tiếng Việt.'}</li>
+            <li>Mỗi từ gồm <b>2 chữ</b>, chữ đầu phải trùng chữ cuối của từ trước: <i>đắng cay → cay nghiệt → nghiệt ngã</i>.</li>
+            <li>Không lặp lại từ đã dùng trong ván.{s.options.dictionary && (s.options.strict
+              ? ' Từ phải có trong từ điển tiếng Việt (~48.000 từ 2 chữ).'
+              : ' Mỗi chữ phải là tiếng Việt; từ không có trong từ điển bị gắn cờ ⚠ để mọi người cân nhắc phản đối.')}</li>
             <li>Mỗi lượt {s.options.turnSeconds} giây. Hết giờ mất 1 mạng (có {s.options.lives} mạng), hết mạng bị loại.</li>
             <li>Từ vô nghĩa? Bấm <b>vô nghĩa</b>: quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại.</li>
             <li>Người cuối cùng còn lại thắng.</li>
@@ -149,7 +151,7 @@ function WordInput({ required, act }) {
       {required && <span className="wc-prefix">{required}</span>}
       <input ref={ref} autoFocus value={text} maxLength={required ? 12 : 24} disabled={busy}
         onChange={(e) => setText(required ? e.target.value.replace(/\s/g, '') : e.target.value)}
-        placeholder={required ? 'chữ thứ hai…' : 'từ đầu tiên, vd: con mèo'} autoComplete="off" autoCapitalize="off" spellCheck={false} />
+        placeholder={required ? 'chữ thứ hai…' : 'từ đầu tiên, vd: học tập'} autoComplete="off" autoCapitalize="off" spellCheck={false} />
       <button className="btn primary" disabled={!text.trim() || busy}>Nối ↵</button>
     </form>
   );
@@ -179,18 +181,89 @@ function PlayerRow({ s, timeLeft }) {
   );
 }
 
-function Chain({ chain, total, me }) {
+// Mỗi người chơi một màu để nhìn là biết ai nối từ nào
+const PLAYER_COLORS = ['#60a5fa', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#fb923c', '#22d3ee', '#f87171'];
+const colorOf = (players, id) => PLAYER_COLORS[Math.max(0, players.findIndex((p) => p.id === id)) % PLAYER_COLORS.length];
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+/**
+ * Chuỗi từ hiển thị nối liền từ trái sang phải theo thứ tự nối.
+ * Chữ nối (chữ đầu của từ = chữ cuối của từ trước) được tô sáng để thấy mạch nối.
+ */
+function WordFlow({ words, players, me, offset = 0, follow = false }) {
+  const ref = useRef(null);
+  useEffect(() => { if (follow && ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [follow, words.length]);
+  const nameOf = (id) => players.find((p) => p.id === id)?.name || '?';
+  return (
+    <ol className="wf" ref={ref} aria-label="Chuỗi từ theo thứ tự nối">
+      {words.map((w, i) => (
+        <li key={offset + i} className={`wf-item ${w.by === me ? 'mine' : ''}`} style={{ '--pc': colorOf(players, w.by) }}
+          title={`${offset + i + 1}. ${w.s.join(' ')} — ${nameOf(w.by)}`}>
+          {offset + i > 0 && <ChevronRight size={12} className="wf-arrow" aria-hidden />}
+          <span className="wf-n">{offset + i + 1}</span>
+          <span className="wf-word">
+            <span className={offset + i > 0 ? 'wf-link' : ''}>{w.s[0]}</span> {w.s[1]}
+            {w.known === false && <AlertTriangle size={12} className="wf-flag" aria-label="không có trong từ điển" />}
+          </span>
+          <span className="sr-only"> — {nameOf(w.by)}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Legend({ players, me }) {
+  return (
+    <div className="wf-legend">
+      {players.map((p) => (
+        <span key={p.id} className="wf-legend-item" style={{ '--pc': colorOf(players, p.id) }}>
+          <span className="wf-dot" aria-hidden />{p.name}{p.id === me && ' (bạn)'}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Chain({ g, history, me }) {
+  const [tab, setTab] = useState('now');
+  const words = g.chain.map((w) => ({ s: w.syllables, by: w.by, known: w.known }));
   return (
     <div className="panel wc-chain">
-      <h4>Chuỗi từ ({total})</h4>
-      {chain.length === 0 ? <div className="muted small">Chưa có từ nào</div> : (
-        <ol reversed start={total}>
-          {chain.slice().reverse().map((w, i) => (
-            <li key={total - i} className={w.by === me ? 'mine' : ''}>
-              <span className="wc-chain-word">{w.text}</span> <span className="muted small">— {w.name}</span>
-            </li>
-          ))}
-        </ol>
+      <div className="sb-head">
+        <h4>Chuỗi từ</h4>
+        <div className="tabs sm" role="tablist">
+          <button role="tab" aria-selected={tab === 'now'} className={`tab ${tab === 'now' ? 'active' : ''}`} onClick={() => setTab('now')}>
+            Ván này <span className="tab-count">{g.total}</span>
+          </button>
+          <button role="tab" aria-selected={tab === 'past'} className={`tab ${tab === 'past' ? 'active' : ''}`} onClick={() => setTab('past')}>
+            Các ván trước <span className="tab-count">{history.length}</span>
+          </button>
+        </div>
+      </div>
+      {tab === 'now' ? (
+        <>
+          <Legend players={g.players} me={me} />
+          {words.length === 0 ? <div className="wf-empty muted small">Chưa có từ nào — từ đầu tiên sẽ hiện ở đây</div>
+            : <WordFlow words={words} players={g.players} me={me} offset={g.total - words.length} follow />}
+        </>
+      ) : (
+        <div className="wf-history">
+          {history.length === 0 ? <div className="wf-empty muted small">Chưa có ván nào kết thúc</div> : history.map((h) => {
+            const winner = h.players.find((p) => p.id === h.winner);
+            return (
+              <details key={h.no} className="wf-game">
+                <summary>
+                  <b>Ván {h.no}</b>
+                  <span className="wf-meta">
+                    {winner ? <><Trophy size={13} aria-hidden /> {winner.name}</> : 'Không ai thắng'} · {h.words.length} từ · {fmtTime(h.endedAt)}
+                  </span>
+                </summary>
+                <Legend players={h.players} me={me} />
+                {h.words.length ? <WordFlow words={h.words} players={h.players} me={me} /> : <div className="muted small">Không có từ nào</div>}
+              </details>
+            );
+          })}
+        </div>
       )}
     </div>
   );

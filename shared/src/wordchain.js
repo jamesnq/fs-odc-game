@@ -39,6 +39,12 @@ export function parseWord(input) {
   return { text, syllables, keys: syllables.map(syllableKey) };
 }
 
+/** Tạo hàm kiểm tra một từ (đã parse) có trong danh sách từ ghép không — không phụ thuộc vị trí bỏ dấu. */
+export function makeWordChecker(list) {
+  const keys = new Set(list.map((t) => String(t).trim().split(/\s+/).map(syllableKey).join(' ')));
+  return (w) => keys.has(w.keys.join(' '));
+}
+
 /** Tạo hàm kiểm tra âm tiết từ danh sách âm tiết của từ điển. */
 export function makeSyllableChecker(list) {
   const keys = new Set(list.map(syllableKey));
@@ -48,9 +54,11 @@ export function makeSyllableChecker(list) {
 export class WordChainGame {
   /**
    * @param players [{ id, name }] theo thứ tự lượt
-   * @param opts { lives, isValidSyllable?, first? } — first: chỉ số người ra từ đầu tiên (mặc định 0)
+   * @param opts { lives, isValidSyllable?, isKnownWord?, strict?, first? }
+   *   isKnownWord: từ có trong từ điển từ ghép không; strict: bắt buộc phải có (không thì chỉ gắn cờ)
+   *   first: chỉ số người ra từ đầu tiên (mặc định 0)
    */
-  constructor(players, { lives = 1, isValidSyllable = null, first = 0 } = {}) {
+  constructor(players, { lives = 1, isValidSyllable = null, isKnownWord = null, strict = false, first = 0 } = {}) {
     if (players.length < 2) throw new Error('Cần ít nhất 2 người chơi');
     this.players = players.map((p) => ({ id: p.id, name: p.name, lives, out: false, words: 0, outAt: 0 }));
     this.turn = Number.isInteger(first) && first >= 0 && first < players.length ? first : 0;
@@ -58,6 +66,8 @@ export class WordChainGame {
     this.used = new Set(); // khóa của các từ đã dùng
     this.objections = new Set(); // id người phản đối từ cuối
     this.isValidSyllable = isValidSyllable;
+    this.isKnownWord = isKnownWord;
+    this.strict = strict && !!isKnownWord;
     this.result = null; // { winner: id, ranking: [id...] }
     this.outOrder = [];
   }
@@ -80,10 +90,13 @@ export class WordChainGame {
       const bad = w.syllables.find((s) => !this.isValidSyllable(s));
       if (bad) throw new Error(`"${bad}" không có trong từ điển tiếng Việt`);
     }
+    // Từ ghép phải có trong từ điển (chế độ chặt); chế độ thoáng chỉ gắn cờ để mọi người dễ phản đối
+    const known = this.isKnownWord ? this.isKnownWord(w) : null;
+    if (this.strict && !known) throw new Error(`"${w.text}" không có trong từ điển`);
     const key = w.keys.join(' ');
     if (this.used.has(key)) throw new Error(`"${w.text}" đã được dùng rồi`);
     this.used.add(key);
-    this.chain.push({ ...w, by: id, name: this.current.name, ts: Date.now() });
+    this.chain.push({ ...w, known, by: id, name: this.current.name, ts: Date.now() });
     this.current.words++;
     this.objections = new Set();
     this._advance();

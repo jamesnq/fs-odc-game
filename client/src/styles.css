@@ -296,12 +296,15 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
 .card-slot { width: 48px; height: 68px; border-radius: 6px; border: 1px dashed rgba(255,255,255,.25); }
 
 /* ---------- Cờ tướng ---------- */
-.xq { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
-.xq-main { flex: 1; min-width: 300px; max-width: 600px; display: flex; flex-direction: column; gap: 8px; }
+.xq { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; justify-content: center; } /* bàn cờ + cột thông tin nằm giữa vùng chơi */
+.xq-main { flex: 1; min-width: 300px; max-width: min(680px, max(360px, calc((100dvh - 330px) / 1.1))); display: flex; flex-direction: column; gap: 8px; }
 .xq-side { width: 300px; display: flex; flex-direction: column; gap: 12px; }
 @media (max-width: 1000px) { .xq-side { width: 100%; } }
 .xq-board { width: 100%; height: auto; display: block; }
-.xq-bg { stroke: #7a4a1c; stroke-width: 2; }
+.xq-bg { stroke: #3a2009; stroke-opacity: .5; stroke-width: 1.5; }
+.xq-board { border-radius: 16px; box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+.xq-grain { fill: #000; mix-blend-mode: multiply; pointer-events: none; }
+.xq-river-band { fill: rgba(150, 95, 35, .12); }
 .xq-lines line, .xq-lines polyline { stroke: #5a3510; stroke-width: 1.4; stroke-linecap: round; }
 .xq-lines .edge { stroke: #5a3510; stroke-width: 2; }
 .xq-lines .frame { stroke: #5a3510; stroke-width: 3.5; }
@@ -314,13 +317,15 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
 .xq-last polyline { fill: none; stroke: #1d4ed8; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .xq-pt.active { cursor: pointer; }
 .xq-piece { transition: transform .12s var(--ease-out); }
-.xq-piece .disc { stroke: #8a5a2b; stroke-width: 2.2; }
+.xq-piece .rim { stroke: #3e2410; stroke-width: 1; }
+.xq-piece .disc { stroke: rgba(90,55,20,.55); stroke-width: 1; }
+.xq-piece .bevel { fill: none; stroke: rgba(255,255,255,.75); stroke-width: 1.2; stroke-linecap: round; pointer-events: none; }
 .xq-piece .inner { fill: none; stroke-width: 1.3; }
-.xq-piece text { font-size: 24px; font-weight: 700; font-family: 'KaiTi', 'STKaiti', 'Noto Serif CJK SC', 'SimSun', serif; pointer-events: none; }
+.xq-piece text { font-size: 23px; font-weight: 700; paint-order: stroke; stroke: rgba(255,250,235,.85); stroke-width: 1.4px; font-family: 'KaiTi', 'STKaiti', 'Noto Serif CJK SC', 'SimSun', serif; pointer-events: none; }
 .xq-piece.r text { fill: #b3121b; } .xq-piece.r .inner { stroke: #b3121b; }
 .xq-piece.b text { fill: #1d140c; } .xq-piece.b .inner { stroke: #1d140c; }
-.xq-piece.sel .disc { stroke: #1d4ed8; stroke-width: 3.5; }
-.xq-piece.check .disc { stroke: #e11d48; stroke-width: 4; animation: checkpulse .8s infinite alternate; }
+.xq-piece.sel .rim { stroke: #1d4ed8; stroke-width: 3.5; }
+.xq-piece.check .rim { stroke: #e11d48; stroke-width: 4; animation: checkpulse .8s infinite alternate; }
 .xq-dot { fill: #16a34a; stroke: #fff; stroke-width: 2; pointer-events: none; }
 .xq-cap { fill: none; stroke: #dc2626; stroke-width: 3; stroke-dasharray: 6 4; pointer-events: none; }
 .xq-player { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
@@ -563,10 +568,6 @@ label.check input { width: auto; }
 .wc-input input { flex: 1; font-size: 20px; padding: 10px 12px; }
 .wc-prefix { font-size: 20px; font-weight: 700; color: var(--gold); padding: 8px 12px; border-radius: 8px; background: #3b2f0b; white-space: nowrap; }
 .wc-result .wc-big { color: var(--gold); }
-.wc-chain ol { margin: 0; padding-left: 36px; height: 180px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-.wc-chain li.mine .wc-chain-word { color: var(--gold); }
-.wc-chain-word { font-weight: 600; }
-.wc-chain > .muted.small { min-height: 180px; } /* chưa có từ: giữ cùng chiều cao với danh sách */
 .wc-rules ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .wc-word .small { display: block; margin-top: 10px; font-size: 13px; font-weight: 400; line-height: 1.4; }
 
@@ -845,3 +846,37 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .fair-badge.muted { color: var(--muted); }
 .fair-info p { margin: 0 0 12px; line-height: 1.5; }
 .fair-info code { word-break: break-all; font-size: 12px; }
+
+/* ---------- Căn giữa vùng chơi ở mọi trò ---------- */
+/* Nối từ: khung chơi rộng vừa phải, cả cụm nằm giữa */
+.wc { justify-content: center; }
+.wc-main { max-width: 720px; }
+/* Poker: bàn co theo chiều cao màn hình để thanh hành động luôn thấy được, cả cột nằm giữa */
+.pk { align-items: center; }
+.pk > * { width: 100%; max-width: max(640px, calc((100dvh - 480px) * 2 + 120px)); }
+@media (max-width: 640px) { .pk > * { max-width: none; } }
+
+/* ---------- Nối từ: chuỗi từ nối liền + lịch sử theo ván ---------- */
+.wc-chain .sb-head { margin-bottom: 8px; }
+.wf-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+.wf-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.wf-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--pc); }
+.wf { list-style: none; margin: 0; padding: 2px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px 2px;
+  height: 180px; overflow-y: auto; scrollbar-width: thin; }
+.wf-item { display: inline-flex; align-items: center; gap: 6px; }
+.wf-arrow { color: var(--muted); flex: none; }
+.wf-n { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 14px; text-align: right; }
+.wf-word { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--pc); background: color-mix(in srgb, var(--pc) 14%, transparent); white-space: nowrap; }
+.wf-item.mine .wf-word { font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.wf-link { color: var(--gold); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.wf-empty { height: 180px; display: grid; place-items: center; border: 1px dashed var(--line-strong); border-radius: 10px; }
+.wf-history { height: 206px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
+.wf-history .wf-empty { height: 100%; }
+.wf-game { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--panel-2); }
+.wf-game summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style-position: inside; }
+.wf-meta { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+.wf-game[open] summary { margin-bottom: 8px; }
+.wf-game .wf { height: auto; max-height: 220px; }
+.wf-flag { color: var(--warn); margin-left: 4px; vertical-align: -2px; }
+.wf-flag-text { color: var(--warn); }
+.wf-flag-text svg { vertical-align: -2px; }
