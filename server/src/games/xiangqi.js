@@ -1,3 +1,4 @@
+import { Scoreboard } from './scoreboard.js';
 import { createGame, makeMove, undoMoves, isInCheck, other } from '@game/shared/xiangqi';
 
 const REASON = {
@@ -28,6 +29,7 @@ export class XiangqiHandler {
     this.result = null;
     this.timer = null;
     this.gameNo = 0;
+    this.score = new Scoreboard();
   }
 
   get maxPlayers() { return 2; }
@@ -37,6 +39,7 @@ export class XiangqiHandler {
 
   rename(id, name) {
     for (const c of ['r', 'b']) if (this.seats[c]?.id === id) this.seats[c].name = name;
+    this.score.rename(id, name);
   }
 
   sit(user, seat) {
@@ -100,14 +103,27 @@ export class XiangqiHandler {
   _end(winner, reason) {
     if (this.status === 'playing') this._chargeClock();
     clearTimeout(this.timer);
+    const started = this.status === 'playing';
     this.status = 'over';
     this.pending = null;
     this.result = { winner, reason, text: REASON[reason] || reason };
     const who = winner ? `${this.seats[winner]?.name || (winner === 'r' ? 'Đỏ' : 'Đen')} thắng` : 'Hòa';
     this.room.system(`Kết thúc: ${who} — ${this.result.text}`);
+    const [a, b] = ['r', 'b'].map((c) => this.seats[c] && { ...this.seats[c], side: c });
+    if (started && a && b) {
+      this.score.record([a, b], winner ? this.seats[winner].id : null, this.result.text, this.game.history.length);
+      this.room.system(`Tỉ số: ${this.score.line(a, b)}`);
+    }
   }
 
   action(id, a) {
+    if (a.type === 'resetScore') {
+      if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đặt lại bảng điểm');
+      if (this.status === 'playing') throw new Error('Không thể đặt lại khi ván đang diễn ra');
+      this.score.reset();
+      this.room.system('Chủ phòng đã đặt lại bảng điểm');
+      return;
+    }
     const c = this.colorOf(id);
     if (!c) throw new Error('Bạn đang ở chế độ xem');
     const opp = other(c);
@@ -212,6 +228,7 @@ export class XiangqiHandler {
       pending: this.pending,
       result: this.result,
       myColor: this.colorOf(viewerId),
+      score: this.score.view(),
     };
   }
 

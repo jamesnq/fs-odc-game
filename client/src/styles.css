@@ -339,3 +339,17 @@ label.check input { width: auto; }
 .gate-box h2 { margin: 4px 0; }
 .gate-icon { font-size: 40px; }
 .gate-error { background: #3b1219; border: 1px solid var(--danger); color: #fecaca; padding: 8px; border-radius: 8px; font-size: 13px; }
+
+/* ---------- Bảng điểm (Cờ tướng / Cờ caro) ---------- */
+.scoreboard { display: flex; flex-direction: column; gap: 8px; }
+.sb-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sb-head h4 { margin: 0; }
+.tabs.sm .tab { padding: 2px 10px; font-size: 12px; }
+.sb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sb-table th { color: var(--muted); font-weight: 500; font-size: 11px; text-align: center; padding: 2px 4px; }
+.sb-table td { text-align: center; padding: 4px; border-top: 1px solid var(--line); }
+.sb-table th:nth-child(2), .sb-table .sb-name { text-align: left; }
+.sb-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-table tr.me td { background: rgba(59,130,246,.12); }
+.sb-history { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.sb-history li { border-top: 1px solid var(--line); padding-top: 6px; }
