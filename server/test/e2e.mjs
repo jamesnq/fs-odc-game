@@ -35,6 +35,18 @@ if (PASSWORD) {
   console.log('✔ Auth gate OK');
 }
 
+// ---------- Phiên bản (báo bản deploy mới) ----------
+{
+  const health = await (await fetch(URL + '/health')).json();
+  const got = await new Promise((res) => {
+    const s = io(URL, { transports: ['websocket'], forceNew: true, reconnection: false, auth: { password: PASSWORD } });
+    s.on('app:version', (v) => { s.close(); res(v.version); });
+    s.on('connect_error', (e) => { s.close(); res('ERR ' + e.message); });
+  });
+  assert.equal(got, health.version, 'server gửi phiên bản khi kết nối, khớp với /health');
+  console.log(`✔ Phiên bản OK (${got || 'chưa build client'})`);
+}
+
 const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) => client(n).ready));
 
 // ---------- Cờ tướng ----------

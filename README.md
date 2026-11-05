@@ -13,6 +13,7 @@
 - Tạo / vào / rời / xóa phòng, đặt và đổi tên phòng, lọc và tìm phòng theo trò chơi
 - Vào chơi hoặc chỉ **xem**, ngồi / đứng dậy, chủ phòng mời người ra, chat trong phòng, chia sẻ link phòng
 - Chủ phòng rời thì quyền chủ phòng tự chuyển cho người khác; phòng trống tự xóa
+- **Báo bản deploy mới:** khi server được deploy bản mới, người đang mở app thấy thông báo "Đã có phiên bản mới" kèm nút **Tải lại** (tải lại vẫn giữ chỗ trong phòng). Phiên bản hiện tại xem ở `/health`
 
 **Cờ tướng**
 - Đủ luật: cản chân mã, cản mắt tượng, pháo cần ngòi, tốt qua sông, cấm lộ mặt tướng, cấm tự để bị chiếu, chiếu bí / hết nước là thua
