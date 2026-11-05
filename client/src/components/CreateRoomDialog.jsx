@@ -4,6 +4,7 @@ import Modal from './Modal.jsx';
 import { GAME_META, GameIcon } from './Lobby.jsx';
 
 const DEFAULTS = {
+  chess: { minutes: 10 },
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true },
   wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true, strict: true },
@@ -13,6 +14,7 @@ const DEFAULTS = {
 };
 
 const FIELDS = {
+  chess: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
   xiangqi: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
   wordchain: [
     ['maxSeats', 'Số người chơi tối đa', 2, 8],

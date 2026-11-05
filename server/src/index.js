@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { XiangqiHandler } from './games/xiangqi.js';
+import { ChessHandler } from './games/chess.js';
 import { PokerHandler } from './games/poker.js';
 import { TalaHandler } from './games/tala.js';
 import { CaroHandler } from './games/caro.js';
@@ -60,6 +61,7 @@ const LIMITS = {
 
 const GAMES = {
   xiangqi: { name: 'Cờ tướng', Handler: XiangqiHandler },
+  chess: { name: 'Cờ vua', Handler: ChessHandler },
   poker: { name: 'Poker', Handler: PokerHandler },
   tala: { name: 'Tá lả', Handler: TalaHandler },
   caro: { name: 'Cờ caro', Handler: CaroHandler },

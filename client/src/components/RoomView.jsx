@@ -5,6 +5,7 @@ import { GAME_META, GameIcon } from './Lobby.jsx';
 import TurnBanner, { turnInfo } from './TurnBanner.jsx';
 import Modal from './Modal.jsx';
 import XiangqiGame from '../games/XiangqiGame.jsx';
+import ChessGame from '../games/ChessGame.jsx';
 import PokerGame from '../games/PokerGame.jsx';
 import TalaGame from '../games/TalaGame.jsx';
 import CaroGame from '../games/CaroGame.jsx';
@@ -13,7 +14,7 @@ import WordChainGame from '../games/WordChainGame.jsx';
 import FairnessBadge from './FairnessBadge.jsx';
 import { useHotkeys } from '../hooks.js';
 
-const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame };
+const GAME_COMPONENT = { xiangqi: XiangqiGame, chess: ChessGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame };
 
 export const SHORTCUTS = {
   poker: [
@@ -29,6 +30,7 @@ export const SHORTCUTS = {
     ['Esc', 'Bỏ chọn tất cả'], ['N', 'Bắt đầu ván mới'],
   ],
   xiangqi: [['Click', 'Chọn quân → chọn ô đích'], ['Esc', 'Bỏ chọn quân'], ['F', 'Lật bàn cờ']],
+  chess: [['Click', 'Chọn quân → chọn ô đích'], ['Esc', 'Bỏ chọn quân / đóng phong cấp'], ['F', 'Lật bàn cờ']],
   samloc: [
     ['← / →', 'Di chuyển giữa các lá'], ['Space / ↑', 'Chọn lá đang trỏ'], ['↓', 'Bỏ chọn lá đang trỏ'],
     ['Enter', 'Đánh các lá đã chọn'], ['P', 'Bỏ lượt'], ['Esc', 'Bỏ chọn tất cả'],
