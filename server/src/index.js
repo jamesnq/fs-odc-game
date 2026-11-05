@@ -11,6 +11,7 @@ import { TalaHandler } from './games/tala.js';
 import { CaroHandler } from './games/caro.js';
 import { SamLocHandler } from './games/samloc.js';
 import { WordChainHandler } from './games/wordchain.js';
+import { Voice, cleanSignal } from './voice.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -54,6 +55,7 @@ const LIMITS = {
   // token bucket mỗi socket: [sức chứa, số lượt hồi mỗi giây]
   events: [40, 15],
   chat: [5, 1],
+  signal: [120, 40], // tín hiệu WebRTC (ICE candidate đến dồn dập lúc mới kết nối)
   create: [10, 0.5],
   abuseDisconnect: 300, // bị chặn quá chừng này lần → ngắt kết nối
 };
@@ -122,6 +124,20 @@ const io = new Server(server, {
   connectTimeout: 10_000,
 });
 
+// Voice chat: tắt / bật lại (vd. hết hạn mức TURN miễn phí) → báo mọi người, đưa tất cả ra khỏi kênh thoại khi tắt
+const voice = new Voice({
+  onStatusChange: (st) => {
+    io.emit('voice:status', st);
+    if (st.enabled) return;
+    for (const room of rooms.values()) {
+      if (!room.voice.size) continue;
+      room.voice.clear();
+      room.system('Voice chat đã tạm tắt (hết hạn mức miễn phí tháng này)');
+      room.changed();
+    }
+  },
+});
+
 /** Header bảo mật cho mọi phản hồi HTTP (tương đương helmet, không cần thêm thư viện). */
 function securityHeaders(req, res, next) {
   const host = String(req.headers.host || '').replace(/[^\w.:\-\[\]]/g, '');
@@ -143,7 +159,7 @@ function securityHeaders(req, res, next) {
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+  res.setHeader('Permissions-Policy', `camera=(), ${voice.micPolicy}, geolocation=(), payment=(), usb=(), interest-cohort=()`);
   const https = req.secure || (TRUST_PROXY && String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https');
   if (https) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
@@ -291,6 +307,7 @@ class Room {
     this.createdAt = Date.now();
     this.members = new Set();
     this.chat = [];
+    this.voice = new Map(); // userId -> { muted, sid } — ai đang trong kênh thoại của phòng
     this.handler = new GAMES[game].Handler(this, options || {});
     this._pending = false;
   }
@@ -330,6 +347,7 @@ class Room {
         online: isOnline(id),
       })),
       chat: this.chat.slice(-60),
+      voice: [...this.voice].map(([id, v]) => ({ id, muted: v.muted })),
       state: this.handler.view(uid),
       serverTime: Date.now(),
     };
@@ -393,6 +411,7 @@ function leaveRoom(user) {
   if (!room) return;
   room.handler.onLeave(user.id);
   room.members.delete(user.id);
+  room.voice.delete(user.id);
   io.to('u:' + user.id).emit('room:left', { roomId: room.id });
   if (!room.members.size) return deleteRoom(room, 'Phòng trống');
   room.system(`${user.name} đã rời phòng`);
@@ -430,10 +449,10 @@ io.on('connection', (socket) => {
   socket.emit('app:version', { version: APP_VERSION });
 
   // Giới hạn tần suất theo từng loại sự kiện
-  const limit = { events: bucket(LIMITS.events), chat: bucket(LIMITS.chat), create: bucket(LIMITS.create) };
+  const limit = { events: bucket(LIMITS.events), chat: bucket(LIMITS.chat), create: bucket(LIMITS.create), signal: bucket(LIMITS.signal) };
   let blocked = 0;
   const tooFast = (kind) => {
-    if (limit.events() && (!kind || limit[kind]())) return false;
+    if (kind === 'signal' ? limit.signal() : limit.events() && (!kind || limit[kind]())) return false;
     if (++blocked >= LIMITS.abuseDisconnect) socket.disconnect(true);
     return true;
   };
@@ -485,6 +504,7 @@ io.on('connection', (socket) => {
     return {
       user: { id: u.id, name: u.name }, token: u.token, roomId: room ? room.id : null, rooms: lobbyList(srv.id),
       server: { id: srv.id, name: srv.name, gated: GATED },
+      voice: voice.status(),
       session: issueSession(srv), // gia hạn phiên mỗi lần vào
     };
   }, false);
@@ -598,6 +618,54 @@ io.on('connection', (socket) => {
     return { data: room.handler.query(user.id, q) };
   });
 
+  // ---------- Voice chat ----------
+  const voiceRoom = () => {
+    const room = rooms.get(user.roomId);
+    if (!room) throw new Error('Bạn chưa vào phòng');
+    return room;
+  };
+
+  on('voice:join', async ({ muted }) => {
+    const room = voiceRoom();
+    const st = voice.status();
+    if (!st.enabled) throw new Error(st.reason);
+    if (!room.voice.has(user.id) && room.voice.size >= st.maxPerRoom) throw new Error(`Kênh thoại đã đủ ${st.maxPerRoom} người`);
+    const iceServers = await voice.iceServers();
+    if (!rooms.has(room.id) || user.roomId !== room.id) throw new Error('Bạn đã rời phòng');
+    const fresh = !room.voice.has(user.id);
+    room.voice.set(user.id, { muted: !!muted, sid: socket.id });
+    if (fresh) room.system(`${user.name} vào kênh thoại`);
+    room.changed();
+    return { iceServers, peers: [...room.voice.keys()].filter((id) => id !== user.id) };
+  });
+
+  on('voice:leave', () => {
+    const room = rooms.get(user.roomId);
+    if (!room || !room.voice.has(user.id)) return;
+    room.voice.delete(user.id);
+    room.system(`${user.name} rời kênh thoại`);
+    room.changed();
+  });
+
+  on('voice:mute', ({ muted }) => {
+    const room = voiceRoom();
+    const v = room.voice.get(user.id);
+    if (!v) throw new Error('Bạn chưa vào kênh thoại');
+    v.muted = !!muted;
+    room.changed();
+  });
+
+  // Chuyển tiếp SDP / ICE giữa hai người cùng kênh thoại của một phòng (tới đúng tab đang nói chuyện)
+  on('voice:signal', ({ to, data }) => {
+    const room = voiceRoom();
+    const me = room.voice.get(user.id);
+    const peer = typeof to === 'string' && room.voice.get(to);
+    if (!me || me.sid !== socket.id || !peer) return;
+    const clean = cleanSignal(data);
+    if (!clean) throw new Error('Tín hiệu không hợp lệ');
+    io.to(peer.sid).emit('voice:signal', { from: user.id, data: clean });
+  }, true, 'signal');
+
   socket.on('disconnect', () => {
     const left = (connByIp.get(ip) || 1) - 1;
     if (left > 0) connByIp.set(ip, left);
@@ -605,6 +673,9 @@ io.on('connection', (socket) => {
     if (!user) return;
     const u = user;
     u.sockets.delete(socket.id);
+    const vroom = u.roomId && rooms.get(u.roomId);
+    // Tab đang nói chuyện mất kết nối → ra khỏi kênh thoại (âm thanh không thể tiếp tục)
+    if (vroom && vroom.voice.get(u.id)?.sid === socket.id) { vroom.voice.delete(u.id); vroom.changed(); }
     if (u.sockets.size) return;
     const room = u.roomId && rooms.get(u.roomId);
     if (room) room.changed();
@@ -629,6 +700,7 @@ setInterval(() => {
 }, 10 * 60_000).unref();
 
 server.listen(PORT, () => {
+  voice.start();
   console.log(`Game server: http://localhost:${PORT}`);
   if (TRUST_PROXY) console.log(`TRUST_PROXY=${TRUST_PROXY}: lấy IP thứ ${TRUST_PROXY} tính từ cuối X-Forwarded-For`);
   if (CORS_ORIGINS.length) console.log(`Cho phép thêm origin: ${CORS_ORIGINS.join(', ')}`);

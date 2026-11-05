@@ -1,6 +1,21 @@
-# Voice chat trong phòng chơi — nghiên cứu & kế hoạch
+# Voice chat trong phòng chơi
 
-## Mục tiêu
+> **Trạng thái:** đã làm theo hướng A (WebRTC mesh) — `server/src/voice.js`, `client/src/voice.js`, nút thoại ở đầu phòng + khối "Kênh thoại" trong tab Người chơi.
+
+## Cấu hình TURN Cloudflare & tự tắt khi hết hạn mức miễn phí
+1. Cloudflare dashboard → **Realtime → TURN Server → Create** → lấy **Turn Token ID** và **API Token** → đặt `CF_TURN_KEY_ID`, `CF_TURN_KEY_API_TOKEN` trên Render.
+2. (Để tự tắt khi gần hết miễn phí) Tạo API token quyền **Account → Account Analytics → Read** → `CF_ANALYTICS_TOKEN`; Account ID ở trang tổng quan → `CF_ACCOUNT_ID`.
+3. Server đọc dung lượng TURN (egress) từ đầu tháng mỗi 10 phút qua GraphQL Analytics (`callsTurnUsageAdaptiveGroups`). Chạm `VOICE_TURN_QUOTA_GB` (mặc định 900 GB, chừa 100 GB vì số liệu lấy mẫu và trễ vài phút):
+   - `VOICE_QUOTA_ACTION=disable` (mặc định): tắt voice chat, đưa mọi người ra khỏi kênh, **thu hồi mọi credential TURN đã cấp** (ngừng phát sinh dung lượng ngay), nút thoại ẩn đi; đầu tháng sau tự bật lại.
+   - `VOICE_QUOTA_ACTION=stun`: vẫn cho nói chuyện nhưng không cấp TURN nữa (miễn phí hoàn toàn; ~10–20% mạng như 4G/NAT chặt sẽ không kết nối được).
+4. Không đặt biến nào của Cloudflare → chỉ dùng STUN (miễn phí, không giới hạn), không có gì phải theo dõi.
+
+Lưu ý: chốt chặn trên là phía app. Nên đặt thêm **cảnh báo chi tiêu (billing notification)** trong Cloudflare làm lớp bảo vệ thứ hai. Ước lượng: âm thanh Opus ~40 kbps/luồng ≈ 18 MB/giờ/luồng — chỉ những kết nối phải đi qua TURN mới tính; 1.000 GB ≈ hơn 50.000 giờ-luồng/tháng, rất khó dùng hết với nhóm bạn bè.
+
+
+## Nghiên cứu ban đầu
+
+### Mục tiêu
 - Người trong cùng một phòng nói chuyện bằng giọng nói khi chơi (2–8 người, chủ yếu 2–6).
 - Bật/tắt mic một chạm, thấy ai đang nói, không làm chậm game.
 - Chi phí ≈ 0 với quy mô bạn bè; chạy được trên Render (gói hiện tại) + điện thoại.

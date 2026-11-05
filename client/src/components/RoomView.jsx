@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store.jsx';
-import { ArrowLeft, Pencil, Link, Keyboard, Trash2, Eye, Check, Info, MessageCircle, Users, MoreVertical, X, Crown } from 'lucide-react';
+import { ArrowLeft, Pencil, Link, Keyboard, Trash2, Eye, Check, Info, MessageCircle, Users, MoreVertical, X, Crown, Headphones, Mic, MicOff, PhoneOff, Volume2 } from 'lucide-react';
+import { useVoice } from '../voice.js';
 import { RoomUICtx } from './GameInfo.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { GAME_META, GameIcon } from './Lobby.jsx';
@@ -48,7 +49,8 @@ const PANEL_TABS = [
 ];
 
 export default function RoomView() {
-  const { room, user, call } = useApp();
+  const { room, user, call, voiceStatus, toast } = useApp();
+  const voice = useVoice({ room, me: user.id, status: voiceStatus, toast });
   const [help, setHelp] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -107,6 +109,7 @@ export default function RoomView() {
             )}
           </div>
           <div className="room-actions">
+            <VoiceControl v={voice} onOpen={() => setPanel('people')} />
             {PANEL_TABS.map(([tab, label, Icon]) => (
               <button key={tab} className={`btn ghost sm rp-toggle ${tab === 'people' ? 'hide-sm' : ''} ${panel === tab ? 'on' : ''}`} onClick={() => togglePanel(tab)}
                 aria-pressed={panel === tab} aria-label={tab === 'chat' && unread ? `${label} (${unread} tin mới)` : label} title={label}>
@@ -123,7 +126,8 @@ export default function RoomView() {
                   <div className="menu-scrim" onClick={() => setMenu(false)} />
                   <div className="menu" role="menu" onClick={() => setMenu(false)}>
                     <button role="menuitem" onClick={copyLink}><Link size={16} aria-hidden /> Sao chép link phòng</button>
-                    <button role="menuitem" className="show-sm" onClick={() => setPanel('people')}><Users size={16} aria-hidden /> Người chơi</button>
+                    <button role="menuitem" className="show-sm" onClick={() => setPanel('people')}><Users size={16} aria-hidden /> Người chơi{voice.available ? ' & kênh thoại' : ''}</button>
+                    {voice.joined && <button role="menuitem" className="danger" onClick={voice.leave}><PhoneOff size={16} aria-hidden /> Rời kênh thoại</button>}
                     {isOwner && <button role="menuitem" onClick={() => { setName(room.name); setEditing(true); }}><Pencil size={16} aria-hidden /> Đổi tên phòng</button>}
                     <button role="menuitem" className="only-kbd" onClick={() => setHelp(true)}><Keyboard size={16} aria-hidden /> Phím tắt <kbd>?</kbd></button>
                     {isOwner && <button role="menuitem" className="danger" onClick={() => setConfirmDel(true)}><Trash2 size={16} aria-hidden /> Xóa phòng</button>}
@@ -156,7 +160,7 @@ export default function RoomView() {
             <div className="rp-body">
               <div className="rp-pane rp-info" hidden={panel !== 'info'} ref={setInfoNode} />
               <div className="rp-pane" hidden={panel !== 'chat'}><Chat room={room} active={panel === 'chat'} /></div>
-              <div className="rp-pane" hidden={panel !== 'people'}><Members room={room} isOwner={isOwner} /></div>
+              <div className="rp-pane" hidden={panel !== 'people'}><Members room={room} isOwner={isOwner} voice={voice} /></div>
             </div>
           </aside>
         </div>
@@ -217,8 +221,9 @@ function ChatPeek({ chat, me, onOpen }) {
   );
 }
 
-function Members({ room, isOwner }) {
+function Members({ room, isOwner, voice }) {
   const { user, call } = useApp();
+  const inVoice = new Map(voice.members.map((v) => [v.id, v]));
   const players = room.members.filter((m) => m.role === 'player');
   const watchers = room.members.filter((m) => m.role === 'spectator');
   const [kick, setKick] = useState(null);
@@ -226,6 +231,9 @@ function Members({ room, isOwner }) {
     <li key={m.id} className={m.online ? '' : 'offline'}>
       <span className={`dot ${m.online ? 'on' : 'off'}`} />
       {m.name}
+      {inVoice.has(m.id) && (inVoice.get(m.id).muted
+        ? <MicOff size={13} className="mem-mic off" aria-label="Trong kênh thoại, đang tắt mic" />
+        : <Mic size={13} className={`mem-mic ${voice.speaking.has(m.id) ? 'talk' : ''}`} aria-label="Trong kênh thoại" />)}
       {m.id === room.ownerId && <Crown size={14} className="owner-crown" aria-label="Chủ phòng" />}
       {m.id === user.id && <span className="muted"> (bạn)</span>}
       {isOwner && m.id !== user.id && (
@@ -235,6 +243,7 @@ function Members({ room, isOwner }) {
   );
   return (
     <div className="members">
+      <VoicePanel v={voice} room={room} me={user.id} />
       <h4>Người chơi ({players.length})</h4>
       <ul>{players.map(row)}</ul>
       <h4>Người xem ({watchers.length})</h4>
@@ -245,6 +254,88 @@ function Members({ room, isOwner }) {
         </ConfirmDialog>
       )}
     </div>
+  );
+}
+
+/**
+ * Nút thoại ở đầu phòng — gọn một chỗ:
+ *  - Chưa vào: tai nghe "Vào thoại" (+ số người đang trong kênh)
+ *  - Đã vào: nút micro bật/tắt (viền xanh khi mình đang nói) + nút rời (màn rộng; điện thoại rời trong menu ⋮ / tab Người chơi)
+ */
+function VoiceControl({ v, onOpen }) {
+  if (!v.available && !v.joined) return null;
+  const n = v.members.length;
+  if (!v.joined) {
+    return (
+      <button className={`btn ghost sm voice-btn ${n ? 'live' : ''}`} onClick={v.join} disabled={v.joining}
+        title={n ? `Vào kênh thoại (${n} người đang nói chuyện)` : 'Vào kênh thoại'} aria-label={n ? `Vào kênh thoại, ${n} người đang trong kênh` : 'Vào kênh thoại'}>
+        <Headphones size={18} aria-hidden /><span className="hide-xl">{v.joining ? 'Đang vào…' : 'Thoại'}</span>
+        {n > 0 && <span className="unread voice" aria-hidden>{n}</span>}
+      </button>
+    );
+  }
+  const othersTalking = [...v.speaking].some((id) => id !== v.me);
+  return (
+    <div className="voice-ctl" role="group" aria-label="Kênh thoại">
+      <button className={`btn sm voice-mic ${v.muted ? 'muted' : 'on'} ${v.speaking.has(v.me) ? 'talk' : ''} ${othersTalking ? 'others' : ''}`}
+        onClick={v.micOk ? v.toggleMute : onOpen} aria-pressed={!v.muted}
+        title={!v.micOk ? 'Không có micro — chỉ nghe' : v.muted ? 'Bật mic' : 'Tắt mic'} aria-label={!v.micOk ? 'Không có micro, chỉ nghe' : v.muted ? 'Bật mic' : 'Tắt mic'}>
+        {v.muted ? <MicOff size={18} aria-hidden /> : <Mic size={18} aria-hidden />}
+        <span className="voice-count" aria-hidden>{n}</span>
+      </button>
+      <button className="btn sm ghost voice-leave hide-sm" onClick={v.leave} title="Rời kênh thoại" aria-label="Rời kênh thoại"><PhoneOff size={16} aria-hidden /></button>
+    </div>
+  );
+}
+
+/** Khối kênh thoại trong tab Người chơi: vào/rời, bật/tắt mic, ai đang nói, chỉnh âm lượng từng người. */
+function VoicePanel({ v, room, me }) {
+  if (!v.status) return null;
+  const nameOf = (id) => room.members.find((m) => m.id === id)?.name || '?';
+  return (
+    <section className="voice-card" aria-label="Kênh thoại">
+      <div className="vc-head">
+        <Headphones size={16} aria-hidden /> <b>Kênh thoại</b>
+        {v.available && <span className="muted small">{v.members.length}/{v.status.maxPerRoom}</span>}
+      </div>
+      {!v.available && !v.joined ? (
+        <div className="muted small">{v.status.reason || 'Voice chat đang tắt'}</div>
+      ) : !v.joined ? (
+        <>
+          <button className="btn cta vc-join" onClick={v.join} disabled={v.joining}><Headphones size={16} aria-hidden /> {v.joining ? 'Đang vào…' : 'Vào kênh thoại'}</button>
+          <div className="muted small">Âm thanh đi thẳng giữa các máy, không ghi âm. Trình duyệt sẽ hỏi quyền dùng micro.</div>
+        </>
+      ) : (
+        <div className="row vc-actions">
+          {v.micOk
+            ? <button className={`btn ${v.muted ? '' : 'primary'}`} onClick={v.toggleMute}>{v.muted ? <><MicOff size={16} aria-hidden /> Bật mic</> : <><Mic size={16} aria-hidden /> Tắt mic</>}</button>
+            : <span className="muted small">Không có micro — bạn chỉ nghe</span>}
+          <button className="btn danger" onClick={v.leave}><PhoneOff size={16} aria-hidden /> Rời kênh</button>
+        </div>
+      )}
+      {v.members.length > 0 && (
+        <ul className="vc-list">
+          {v.members.map((m) => {
+            const st = m.id === me ? null : v.peerState[m.id];
+            return (
+              <li key={m.id} className={v.speaking.has(m.id) ? 'talk' : ''}>
+                <span className="vc-avatar" aria-hidden>{nameOf(m.id).trim()[0]?.toUpperCase()}</span>
+                <span className="vc-name">{nameOf(m.id)}{m.id === me && <span className="muted"> (bạn)</span>}</span>
+                {st && st !== 'connected' && v.joined && <span className="muted small">{st === 'failed' ? 'không kết nối được' : 'đang kết nối…'}</span>}
+                {m.muted ? <MicOff size={14} className="mem-mic off" aria-label="Tắt mic" /> : <Mic size={14} className={`mem-mic ${v.speaking.has(m.id) ? 'talk' : ''}`} aria-label="Bật mic" />}
+                {v.joined && m.id !== me && (
+                  <label className="vc-vol" title="Âm lượng">
+                    <Volume2 size={14} aria-hidden />
+                    <input type="range" min="0" max="1" step="0.05" value={v.volumes[m.id] ?? 1} aria-label={`Âm lượng của ${nameOf(m.id)}`}
+                      onChange={(e) => v.setVolume(m.id, Number(e.target.value))} />
+                  </label>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
