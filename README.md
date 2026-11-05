@@ -138,7 +138,7 @@ docker run -p 3001:3001 game-lobby
 | `VOICE_ENABLED` | `1` | Đặt `0` để tắt hẳn voice chat |
 | `VOICE_SERVERS` | `B4` | Chỉ bật voice chat cho các server (tên trong `APP_SERVERS`, cách nhau dấu phẩy, không phân biệt hoa thường). `*` = mọi server. Chạy một server không đặt tên thì không bị giới hạn |
 | `VOICE_MAX_PER_ROOM` | `6` | Số người tối đa trong kênh thoại mỗi phòng |
-| `VOICE_TURN_ENABLED` | `0` | Đặt `1` để dùng TURN Cloudflare (đang **tắt**: voice chat chỉ dùng STUN miễn phí) |
+| `VOICE_TURN_ENABLED` | `1` | Đặt `0` để tắt TURN Cloudflare dù đã có key (chỉ dùng STUN miễn phí — mạng 4G/NAT chặt sẽ không kết nối được) |
 | `CF_TURN_KEY_ID`, `CF_TURN_KEY_API_TOKEN` | _(trống)_ | TURN của Cloudflare cho voice chat (giúp kết nối qua 4G). Trống = chỉ dùng STUN miễn phí |
 | `CF_ACCOUNT_ID`, `CF_ANALYTICS_TOKEN` | _(trống)_ | Để server tự theo dõi dung lượng TURN đã dùng trong tháng (token quyền *Account Analytics: Read*) |
 | `VOICE_TURN_QUOTA_GB` | `900` | Ngưỡng GB/tháng (gói miễn phí 1.000 GB) |
