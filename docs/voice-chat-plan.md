@@ -3,6 +3,8 @@
 > **Trạng thái:** đã làm theo hướng A (WebRTC mesh) — `server/src/voice.js`, `client/src/voice.js`, nút thoại ở đầu phòng + khối "Kênh thoại" trong tab Người chơi.
 
 ## Cấu hình TURN Cloudflare & tự tắt khi hết hạn mức miễn phí
+> **Hiện đang TẮT** (`VOICE_TURN_ENABLED` mặc định `0`): voice chat chỉ dùng STUN miễn phí. Muốn bật: đặt `VOICE_TURN_ENABLED=1` cùng các biến bên dưới.
+
 1. Cloudflare dashboard → **Realtime → TURN Server → Create** → lấy **Turn Token ID** và **API Token** → đặt `CF_TURN_KEY_ID`, `CF_TURN_KEY_API_TOKEN` trên Render.
 2. (Để tự tắt khi gần hết miễn phí) Tạo API token quyền **Account → Account Analytics → Read** → `CF_ANALYTICS_TOKEN`; Account ID ở trang tổng quan → `CF_ACCOUNT_ID`.
 3. Server đọc dung lượng TURN (egress) từ đầu tháng mỗi 10 phút qua GraphQL Analytics (`callsTurnUsageAdaptiveGroups`). Chạm `VOICE_TURN_QUOTA_GB` (mặc định 900 GB, chừa 100 GB vì số liệu lấy mẫu và trễ vài phút):

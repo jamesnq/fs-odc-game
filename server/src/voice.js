@@ -7,6 +7,7 @@
 //                                   (tên như trong APP_SERVERS). '*' = mọi server. Mặc định: B4.
 //                                   Chạy một server không đặt tên (APP_PASSWORD / không mật khẩu) thì không bị giới hạn này.
 //   VOICE_MAX_PER_ROOM=6            số người tối đa trong kênh thoại mỗi phòng (mesh: mỗi người gửi N-1 luồng)
+//   VOICE_TURN_ENABLED=1            bật TURN Cloudflare (mặc định: TẮT — chỉ dùng STUN miễn phí, không phát sinh chi phí)
 //   CF_TURN_KEY_ID, CF_TURN_KEY_API_TOKEN
 //                                   TURN của Cloudflare (giúp kết nối qua 4G / mạng chặn P2P). Không đặt = chỉ STUN.
 //   CF_ACCOUNT_ID, CF_ANALYTICS_TOKEN
@@ -29,7 +30,7 @@ export class Voice {
     const list = (env.VOICE_SERVERS ?? 'B4').split(',').map((x) => x.trim()).filter(Boolean);
     this.servers = list.includes('*') ? null : new Set(list.map((x) => x.toLowerCase())); // null = mọi server
     this.maxPerRoom = Math.max(2, Math.min(12, num(env.VOICE_MAX_PER_ROOM, 6)));
-    this.turn = env.CF_TURN_KEY_ID && env.CF_TURN_KEY_API_TOKEN ? { keyId: env.CF_TURN_KEY_ID, token: env.CF_TURN_KEY_API_TOKEN } : null;
+    this.turn = bool(env.VOICE_TURN_ENABLED, false) && env.CF_TURN_KEY_ID && env.CF_TURN_KEY_API_TOKEN ? { keyId: env.CF_TURN_KEY_ID, token: env.CF_TURN_KEY_API_TOKEN } : null;
     this.analytics = this.turn && env.CF_ACCOUNT_ID && env.CF_ANALYTICS_TOKEN ? { account: env.CF_ACCOUNT_ID, token: env.CF_ANALYTICS_TOKEN } : null;
     this.quotaBytes = num(env.VOICE_TURN_QUOTA_GB, 900) * 1e9;
     this.quotaAction = env.VOICE_QUOTA_ACTION === 'stun' ? 'stun' : 'disable';

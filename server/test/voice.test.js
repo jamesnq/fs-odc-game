@@ -11,7 +11,7 @@ async function makeVoice(envVars, fetchImpl) {
   process.env = saved;
   return { v, events };
 }
-const TURN = { CF_TURN_KEY_ID: 'k1', CF_TURN_KEY_API_TOKEN: 't1', CF_ACCOUNT_ID: 'a1', CF_ANALYTICS_TOKEN: 'an1', VOICE_TURN_QUOTA_GB: '900' };
+const TURN = { VOICE_TURN_ENABLED: '1', CF_TURN_KEY_ID: 'k1', CF_TURN_KEY_API_TOKEN: 't1', CF_ACCOUNT_ID: 'a1', CF_ANALYTICS_TOKEN: 'an1', VOICE_TURN_QUOTA_GB: '900' };
 
 test('không cấu hình TURN → chỉ STUN, vẫn bật', async () => {
   const { v } = await makeVoice({}, async () => { throw new Error('không được gọi'); });
@@ -85,4 +85,14 @@ test('VOICE_SERVERS: mặc định chỉ server B4; "*" = mọi server; server k
   const { v: two } = await makeVoice({ VOICE_SERVERS: 'B4, Bên A' }, async () => ({}));
   assert.equal(two.status('Bên A').enabled, true);
   assert.equal(two.status('Bên B').enabled, false);
+});
+
+test('TURN Cloudflare mặc định tắt dù có key → chỉ STUN, không gọi Cloudflare', async () => {
+  const { VOICE_TURN_ENABLED, ...keysOnly } = TURN;
+  void VOICE_TURN_ENABLED;
+  const { v } = await makeVoice(keysOnly, async () => { throw new Error('không được gọi Cloudflare'); });
+  assert.equal(v.turn, null);
+  assert.equal(v.analytics, null);
+  const ice = await v.iceServers('B4');
+  assert.ok(ice.every((s) => s.urls.every((u) => u.startsWith('stun:'))));
 });
