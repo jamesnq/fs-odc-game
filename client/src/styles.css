@@ -1015,9 +1015,13 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .pk-center .btn { margin-top: 4px; }
 
 /* ---------- Tá lả / Sâm lốc: bàn co theo chiều cao vùng chơi ---------- */
-.ct-felt, .ct-felt.n2 { min-height: 320px; }
-.ct-felt { max-width: max(560px, calc((100cqh - 310px) * 16 / 9)); }
-.ct-felt.n2 { max-width: max(600px, calc((100cqh - 310px) * 2)); }
+.ct-felt, .ct-felt.n2 { min-height: 280px; }
+.ct-felt { max-width: max(500px, calc((100cqh - 330px) * 16 / 9)); }
+.ct-felt.n2 { max-width: max(540px, calc((100cqh - 330px) * 2)); }
+@media (max-width: 1100px) and (min-width: 641px) {
+  .ct-felt { max-width: max(420px, calc((100cqh - 330px) * 4 / 3)); }
+  .ct-felt.n2 { max-width: max(460px, calc((100cqh - 330px) * 16 / 10)); }
+}
 .ct { padding: 40px 32px 48px; }
 .tl-board, .sl-board { gap: 8px; }
 
