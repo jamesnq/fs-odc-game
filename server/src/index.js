@@ -15,7 +15,9 @@ import { WordChainHandler } from './games/wordchain.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
 const CLIENT_DIST = process.env.CLIENT_DIST || path.resolve(__dirname, '../../client/dist');
-const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+// Các origin khác được phép kết nối (vd client trên GitHub Pages), cách nhau dấu phẩy.
+// Không đặt = chỉ cho phép trang cùng domain với server. '*' = cho tất cả (không khuyến nghị).
+const CORS_ORIGINS = (process.env.CORS_ORIGIN || '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
 const RECONNECT_GRACE_MS = 60_000;
 // Chia app thành nhiều server (sảnh riêng), mỗi server một mật khẩu. Mật khẩu quyết định vào server nào.
 //   APP_SERVERS={"Bên A":"mat-khau-A","Bên B":"mat-khau-B"}
@@ -23,10 +25,38 @@ const RECONNECT_GRACE_MS = 60_000;
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 const SERVERS = loadServers();
 const GATED = SERVERS.some((s) => s.password);
-// Đặt TRUST_PROXY=1 khi chạy sau reverse proxy (Render, Nginx…) để lấy IP thật từ X-Forwarded-For.
-const TRUST_PROXY = /^(1|true|yes)$/i.test(process.env.TRUST_PROXY || '');
-const AUTH_MAX_FAILS = 10;
+// Chạy sau reverse proxy (Render, Nginx…): TRUST_PROXY = số proxy phía trước server (1 = một proxy).
+// Proxy NỐI IP nó thấy vào CUỐI X-Forwarded-For, còn phần đầu do client tự điền (giả được),
+// nên IP thật là phần tử thứ TRUST_PROXY tính từ cuối. true/yes được hiểu là 1.
+const TRUST_PROXY = (() => {
+  const v = String(process.env.TRUST_PROXY || '').trim();
+  if (/^(true|yes)$/i.test(v)) return 1;
+  const n = Number.parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 10) : 0;
+})();
+const DEBUG_IP = /^(1|true|yes)$/i.test(process.env.DEBUG_IP || '');
+const AUTH_MAX_FAILS = 10; // sai quá số lần này trong cửa sổ → khóa IP
 const AUTH_WINDOW_MS = 10 * 60_000;
+// Chặn đoán mật khẩu từ nhiều IP cùng lúc: quá ngưỡng này lần sai/phút trên toàn server thì tạm
+// không nhận đăng nhập bằng mật khẩu (người đã có phiên đăng nhập vẫn vào bình thường).
+const AUTH_GLOBAL_MAX_FAILS = 60;
+const AUTH_GLOBAL_WINDOW_MS = 60_000;
+const SESSION_TTL_MS = 30 * 24 * 3600_000; // phiên đăng nhập (thay cho lưu mật khẩu ở trình duyệt)
+
+// Giới hạn chống spam / làm cạn tài nguyên
+const LIMITS = {
+  connPerIp: 30, // số kết nối socket đồng thời mỗi IP
+  newUsersPerIpPerHour: 30, // số danh tính mới mỗi IP mỗi giờ
+  maxUsers: 5000, // tổng danh tính trong bộ nhớ
+  userIdleMs: 24 * 3600_000, // xóa danh tính không hoạt động sau 24 giờ
+  roomsPerServer: 200, // tổng số phòng mỗi server (sảnh)
+  roomsPerUser: 5,
+  // token bucket mỗi socket: [sức chứa, số lượt hồi mỗi giây]
+  events: [40, 15],
+  chat: [5, 1],
+  create: [10, 0.5],
+  abuseDisconnect: 300, // bị chặn quá chừng này lần → ngắt kết nối
+};
 
 const GAMES = {
   xiangqi: { name: 'Cờ tướng', Handler: XiangqiHandler },
@@ -74,7 +104,9 @@ function loadServers() {
 }
 
 const app = express();
-app.get('/health', (_req, res) => res.json(GATED ? { ok: true, version: APP_VERSION } : { ok: true, version: APP_VERSION, rooms: rooms.size, users: users.size }));
+app.disable('x-powered-by');
+app.use(securityHeaders);
+app.get('/health', (_req, res) => res.json({ ok: true, version: APP_VERSION }));
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST, { index: false, maxAge: '1h' }));
   app.get('*', (_req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
@@ -83,31 +115,130 @@ if (fs.existsSync(CLIENT_DIST)) {
 }
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: CORS_ORIGIN } });
+const io = new Server(server, {
+  cors: { origin: CORS_ORIGINS.length ? CORS_ORIGINS : false },
+  allowRequest: (req, cb) => cb(null, originAllowed(req)),
+  maxHttpBufferSize: 16 * 1024, // gói tin lớn nhất client gửi lên (chat 300 ký tự là đủ)
+  connectTimeout: 10_000,
+});
+
+/** Header bảo mật cho mọi phản hồi HTTP (tương đương helmet, không cần thêm thư viện). */
+function securityHeaders(req, res, next) {
+  const host = String(req.headers.host || '').replace(/[^\w.:\-\[\]]/g, '');
+  const ws = host ? ` wss://${host} ws://${host}` : '';
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'", // React đặt style inline qua thuộc tính style
+    "img-src 'self' data:",
+    "font-src 'self'",
+    `connect-src 'self'${ws}`,
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'", // không cho trang khác nhúng app vào iframe (chống clickjacking)
+  ].join('; '));
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+  const https = req.secure || (TRUST_PROXY && String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https');
+  if (https) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+}
+
+/**
+ * Chỉ nhận kết nối từ trang cùng domain hoặc origin được khai báo trong CORS_ORIGIN.
+ * Ngăn trang web lạ mở socket tới server bằng trình duyệt của người chơi.
+ * (Client không phải trình duyệt — không gửi Origin — vẫn qua được, nhưng vẫn phải có mật khẩu.)
+ */
+function originAllowed(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  if (CORS_ORIGINS.includes('*') || CORS_ORIGINS.includes(origin)) return true;
+  try {
+    return new URL(origin).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
 
 // ---------- Auth gate: kiểm tra mật khẩu ngay khi kết nối socket ----------
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
-for (const s of SERVERS) s.hash = s.password ? sha(s.password) : null;
+for (const s of SERVERS) {
+  s.hash = s.password ? sha(s.password) : null;
+  // Khóa ký phiên suy ra từ mật khẩu: đổi mật khẩu là mọi phiên cũ hết hiệu lực
+  s.sessionKey = s.password ? crypto.createHmac('sha256', 'game-lobby/session/v1').update(s.password).digest() : null;
+}
 const authFails = new Map(); // ip -> { count, until }
+let globalFails = { count: 0, since: Date.now() };
 
+/** IP thật của client: phần tử thứ TRUST_PROXY tính từ CUỐI X-Forwarded-For (phần đầu do client tự điền). */
 function clientIp(socket) {
-  const xff = socket.handshake.headers['x-forwarded-for'];
-  if (TRUST_PROXY && xff) return String(xff).split(',')[0].trim();
-  return socket.handshake.address;
+  const direct = socket.handshake.address;
+  if (!TRUST_PROXY) return direct;
+  const xff = String(socket.handshake.headers['x-forwarded-for'] || '');
+  const ips = xff.split(',').map((s) => s.trim()).filter(Boolean);
+  return ips[ips.length - TRUST_PROXY] || ips[0] || direct;
 }
 
+/** Phiên đăng nhập ký HMAC: "<serverId>.<hết hạn>.<chữ ký>" — không cần lưu mật khẩu ở trình duyệt. */
+function issueSession(srv) {
+  if (!srv.sessionKey) return null;
+  const body = `${srv.id}.${Date.now() + SESSION_TTL_MS}`;
+  return `${body}.${crypto.createHmac('sha256', srv.sessionKey).update(body).digest('base64url')}`;
+}
+function verifySession(token) {
+  if (typeof token !== 'string' || token.length > 200) return null;
+  const [id, exp, sig] = token.split('.');
+  const srv = SERVERS.find((s) => s.id === id);
+  if (!srv?.sessionKey || !sig || !(Number(exp) > Date.now())) return null;
+  const want = crypto.createHmac('sha256', srv.sessionKey).update(`${id}.${exp}`).digest();
+  const got = Buffer.from(sig, 'base64url');
+  return got.length === want.length && crypto.timingSafeEqual(got, want) ? srv : null;
+}
+
+function recordFail(ip, now) {
+  if (now - globalFails.since > AUTH_GLOBAL_WINDOW_MS) globalFails = { count: 0, since: now };
+  globalFails.count++;
+  if (authFails.size >= 50_000 && !authFails.has(ip)) return AUTH_MAX_FAILS; // bảng đầy: coi như bị khóa
+  const r = authFails.get(ip) || { count: 0, until: now + AUTH_WINDOW_MS };
+  r.count++;
+  authFails.set(ip, r);
+  return r.count;
+}
+
+// Đếm kết nối đồng thời / danh tính mới theo IP
+const connByIp = new Map(); // ip -> số socket
+const newUsersByIp = new Map(); // ip -> { count, until }
+
 io.use((socket, next) => {
+  const ip = clientIp(socket);
+  socket.data.ip = ip;
+  if (DEBUG_IP) console.log('[ip]', ip, 'xff=', socket.handshake.headers['x-forwarded-for'] || '-', 'addr=', socket.handshake.address);
+  if ((connByIp.get(ip) || 0) >= LIMITS.connPerIp) return next(new Error('TOO_MANY_CONNECTIONS'));
   if (!GATED) {
     socket.data.server = SERVERS[0];
     return next();
   }
-  const ip = clientIp(socket);
+  // 1) Phiên đăng nhập còn hạn → vào luôn, không cần mật khẩu
+  const bySession = verifySession(socket.handshake.auth?.session);
+  if (bySession) {
+    socket.data.server = bySession;
+    return next();
+  }
+  // 2) Mật khẩu
   const now = Date.now();
   const rec = authFails.get(ip);
   if (rec && rec.until < now) authFails.delete(ip);
   else if (rec && rec.count >= AUTH_MAX_FAILS) return next(new Error('AUTH_LOCKED'));
   const pw = socket.handshake.auth?.password;
-  if (typeof pw !== 'string' || !pw) return next(new Error('AUTH_REQUIRED'));
+  if (typeof pw !== 'string' || !pw || pw.length > 256) return next(new Error('AUTH_REQUIRED'));
+  if (now - globalFails.since <= AUTH_GLOBAL_WINDOW_MS && globalFails.count >= AUTH_GLOBAL_MAX_FAILS) {
+    return next(new Error('AUTH_BUSY'));
+  }
   // So với mọi server (không dừng sớm) để thời gian phản hồi không lộ thông tin
   const h = sha(pw);
   let match = null;
@@ -117,17 +248,30 @@ io.use((socket, next) => {
     socket.data.server = match;
     return next();
   }
-  const r = authFails.get(ip) || { count: 0, until: now + AUTH_WINDOW_MS };
-  r.count++;
-  authFails.set(ip, r);
-  next(new Error(r.count >= AUTH_MAX_FAILS ? 'AUTH_LOCKED' : 'AUTH_FAILED'));
+  const count = recordFail(ip, now);
+  next(new Error(count >= AUTH_MAX_FAILS ? 'AUTH_LOCKED' : 'AUTH_FAILED'));
 });
 setInterval(() => {
   const now = Date.now();
   for (const [ip, r] of authFails) if (r.until < now) authFails.delete(ip);
-}, AUTH_WINDOW_MS).unref();
+  for (const [ip, r] of newUsersByIp) if (r.until < now) newUsersByIp.delete(ip);
+}, 60_000).unref();
 
-/** @type {Map<string, {id:string, token:string, name:string, sockets:Set<string>, roomId:string|null, graceTimer:any}>} */
+/** Token bucket: trả về false khi vượt giới hạn. */
+function bucket([capacity, perSec]) {
+  let tokens = capacity;
+  let last = Date.now();
+  return () => {
+    const now = Date.now();
+    tokens = Math.min(capacity, tokens + ((now - last) / 1000) * perSec);
+    last = now;
+    if (tokens < 1) return false;
+    tokens--;
+    return true;
+  };
+}
+
+/** @type {Map<string, {id:string, token:string, name:string, sockets:Set<string>, roomId:string|null, graceTimer:any, lastSeen:number}>} */
 const users = new Map(); // theo id
 const byToken = new Map();
 /** @type {Map<string, Room>} */
@@ -281,14 +425,28 @@ function joinRoom(user, room, mode) {
 io.on('connection', (socket) => {
   let user = null;
   const srv = socket.data.server;
+  const ip = socket.data.ip;
+  connByIp.set(ip, (connByIp.get(ip) || 0) + 1);
   socket.emit('app:version', { version: APP_VERSION });
 
-  // Bọc handler: bắt lỗi và trả về qua ack
-  const on = (event, fn, needUser = true) => {
+  // Giới hạn tần suất theo từng loại sự kiện
+  const limit = { events: bucket(LIMITS.events), chat: bucket(LIMITS.chat), create: bucket(LIMITS.create) };
+  let blocked = 0;
+  const tooFast = (kind) => {
+    if (limit.events() && (!kind || limit[kind]())) return false;
+    if (++blocked >= LIMITS.abuseDisconnect) socket.disconnect(true);
+    return true;
+  };
+
+  // Bọc handler: giới hạn tần suất, bắt lỗi và trả về qua ack
+  const on = (event, fn, needUser = true, kind = null) => {
     socket.on(event, async (payload, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
       try {
+        if (tooFast(kind)) throw new Error('Thao tác quá nhanh, hãy chậm lại');
+        if (payload !== undefined && (payload === null || typeof payload !== 'object' || Array.isArray(payload))) throw new Error('Dữ liệu không hợp lệ');
         if (needUser && !user) throw new Error('Chưa đăng nhập');
+        if (user) user.lastSeen = Date.now();
         const res = await fn(payload || {});
         reply({ ok: true, ...(res || {}) });
       } catch (e) {
@@ -305,11 +463,19 @@ io.on('connection', (socket) => {
     const nm = cleanName(name);
     if (!u) {
       if (!nm) throw new Error('Hãy nhập tên');
-      u = { id: newId(10), token: crypto.randomBytes(18).toString('base64url'), name: nm, server: srv.id, sockets: new Set(), roomId: null, graceTimer: null };
+      const now = Date.now();
+      const quota = newUsersByIp.get(ip) || { count: 0, until: now + 3600_000 };
+      if (quota.count >= LIMITS.newUsersPerIpPerHour) throw new Error('Tạo quá nhiều danh tính, hãy thử lại sau');
+      if (users.size >= LIMITS.maxUsers) throw new Error('Máy chủ đang quá tải, hãy thử lại sau');
+      quota.count++;
+      newUsersByIp.set(ip, quota);
+      u = { id: newId(10), token: crypto.randomBytes(18).toString('base64url'), name: nm, server: srv.id, sockets: new Set(), roomId: null, graceTimer: null, lastSeen: now };
       users.set(u.id, u);
       byToken.set(u.token, u);
     }
+    if (user && user !== u) user.sockets.delete(socket.id); // gọi hello lần nữa với danh tính khác
     clearTimeout(u.graceTimer);
+    u.lastSeen = Date.now();
     u.sockets.add(socket.id);
     user = u;
     socket.join('u:' + u.id);
@@ -319,10 +485,11 @@ io.on('connection', (socket) => {
     return {
       user: { id: u.id, name: u.name }, token: u.token, roomId: room ? room.id : null, rooms: lobbyList(srv.id),
       server: { id: srv.id, name: srv.name, gated: GATED },
+      session: issueSession(srv), // gia hạn phiên mỗi lần vào
     };
   }, false);
 
-  on('user:rename', ({ name }) => {
+  on('user:rename', ({ name } = {}) => {
     const nm = cleanName(name);
     if (!nm) throw new Error('Tên không hợp lệ');
     const old = user.name;
@@ -340,15 +507,17 @@ io.on('connection', (socket) => {
   on('lobby:list', () => ({ rooms: lobbyList(user.server) }));
 
   on('room:create', ({ name, game, options }) => {
-    if (!GAMES[game]) throw new Error('Trò chơi không hợp lệ');
+    if (typeof game !== 'string' || !Object.hasOwn(GAMES, game)) throw new Error('Trò chơi không hợp lệ');
     const nm = cleanName(name, 40) || `Bàn ${GAMES[game].name} của ${user.name}`;
-    if ([...rooms.values()].filter((r) => r.ownerId === user.id).length >= 5) throw new Error('Bạn chỉ được tạo tối đa 5 phòng');
-    const room = new Room({ name: nm, game, owner: user, options });
+    const mine = [...rooms.values()].filter((r) => r.server === user.server);
+    if (mine.filter((r) => r.ownerId === user.id).length >= LIMITS.roomsPerUser) throw new Error(`Bạn chỉ được tạo tối đa ${LIMITS.roomsPerUser} phòng`);
+    if (mine.length >= LIMITS.roomsPerServer) throw new Error('Sảnh đã đủ phòng, hãy vào một phòng có sẵn');
+    const room = new Room({ name: nm, game, owner: user, options: options && typeof options === 'object' ? options : {} });
     rooms.set(room.id, room);
     room.system(`${user.name} tạo phòng "${nm}"`);
     const warning = joinRoom(user, room, 'play');
     return { roomId: room.id, warning };
-  });
+  }, true, 'create');
 
   on('room:join', ({ roomId, mode }) => {
     const room = roomFor(user, roomId);
@@ -409,7 +578,7 @@ io.on('connection', (socket) => {
     if (!t) return;
     room._pushChat({ from: user.id, name: user.name, text: t });
     room.changed();
-  });
+  }, true, 'chat');
 
   on('game:action', (a) => {
     const room = rooms.get(user.roomId);
@@ -430,6 +599,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const left = (connByIp.get(ip) || 1) - 1;
+    if (left > 0) connByIp.set(ip, left);
+    else connByIp.delete(ip);
     if (!user) return;
     const u = user;
     u.sockets.delete(socket.id);
@@ -440,13 +612,26 @@ io.on('connection', (socket) => {
     u.graceTimer = setTimeout(() => {
       if (u.sockets.size) return;
       leaveRoom(u);
-      // Giữ user (token) để lần sau vào lại vẫn giữ tên
+      // Giữ user (token) để lần sau vào lại vẫn giữ tên; dọn sau LIMITS.userIdleMs không hoạt động
     }, RECONNECT_GRACE_MS);
   });
 });
 
+// Dọn danh tính lâu không hoạt động để bộ nhớ không tăng mãi
+setInterval(() => {
+  const cutoff = Date.now() - LIMITS.userIdleMs;
+  for (const u of users.values()) {
+    if (u.sockets.size || u.roomId || u.lastSeen > cutoff) continue;
+    if ([...rooms.values()].some((r) => r.members.has(u.id))) continue;
+    users.delete(u.id);
+    byToken.delete(u.token);
+  }
+}, 10 * 60_000).unref();
+
 server.listen(PORT, () => {
   console.log(`Game server: http://localhost:${PORT}`);
+  if (TRUST_PROXY) console.log(`TRUST_PROXY=${TRUST_PROXY}: lấy IP thứ ${TRUST_PROXY} tính từ cuối X-Forwarded-For`);
+  if (CORS_ORIGINS.length) console.log(`Cho phép thêm origin: ${CORS_ORIGINS.join(', ')}`);
   if (!GATED) console.log('Auth gate: TẮT — đặt APP_PASSWORD hoặc APP_SERVERS để yêu cầu mật khẩu');
   else if (SERVERS[0].name) console.log(`Auth gate: BẬT — ${SERVERS.length} server: ${SERVERS.map((s) => s.name).join(', ')}`);
   else console.log('Auth gate: BẬT (APP_PASSWORD)');

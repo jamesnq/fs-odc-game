@@ -10,6 +10,7 @@ import TalaGame from '../games/TalaGame.jsx';
 import CaroGame from '../games/CaroGame.jsx';
 import SamLocGame from '../games/SamLocGame.jsx';
 import WordChainGame from '../games/WordChainGame.jsx';
+import FairnessBadge from './FairnessBadge.jsx';
 import { useHotkeys } from '../hooks.js';
 
 const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame };
@@ -96,6 +97,7 @@ export default function RoomView() {
       <div className="room-body">
         <div className="game-area">
           <Game room={room} state={room.state} />
+          {room.state?.fair && <FairnessBadge roomId={room.id} fair={room.state.fair} />}
         </div>
         <aside className="sidebar">
           <Members room={room} isOwner={isOwner} />

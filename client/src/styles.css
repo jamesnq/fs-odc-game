@@ -719,8 +719,7 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .pk-felt { box-shadow: inset 0 2px 30px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.35); }
 .card:not(.back) { box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 3px 8px rgba(0,0,0,.35); }
 
-/* ===================================================================
-   Bàn đánh bài dùng chung (CardTable) — Tá lả, Sâm lốc
+/* ============================================================   Bàn đánh bài dùng chung (CardTable) — Tá lả, Sâm lốc
    Cùng ngôn ngữ với bàn Poker: nỉ xanh, viền gỗ, ghế quanh bàn, mình ngồi dưới.
    =================================================================== */
 .tl-board, .sl-board { display: flex; flex-direction: column; gap: 12px; }
@@ -839,3 +838,10 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 @media (max-width: 640px) {
   .tl-actions > .your-turn, .tl-actions > .muted:first-child { flex-basis: 100%; text-align: center; }
 }
+=======
+/* Huy hiệu xáo bài kiểm chứng được */
+.fair-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px; font-size: 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); cursor: pointer; font: inherit; font-size: 12px; }
+.fair-badge:hover { background: rgba(255,255,255,.08); }
+.fair-badge.muted { color: var(--muted); }
+.fair-info p { margin: 0 0 12px; line-height: 1.5; }
+.fair-info code { word-break: break-all; font-size: 12px; }

@@ -2,6 +2,7 @@
 // Mô phỏng nhiều người chơi kết nối qua Socket.IO tới server đang chạy.
 import { io } from 'socket.io-client';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 
 const URL = process.argv[2] || 'http://localhost:3001';
 const PASSWORD = process.env.APP_PASSWORD || '';
@@ -16,6 +17,17 @@ function client(name, password = PASSWORD) {
   c.ready = new Promise((res) => s.on('connect', async () => { const r = await c.req('hello', { name }); c.user = r.user; c.token = r.token; res(c); }));
   c.act = (a) => c.req('game:action', a);
   return c;
+}
+/** Kiểm chứng xáo bài commit–reveal như trình duyệt làm; trả về số lá được công bố. */
+const sha256 = (x) => crypto.createHash('sha256').update(x).digest('hex');
+function verifyFair(seenCommit, f) {
+  assert.ok(seenCommit, 'phải nhận commit lúc đầu ván');
+  assert.equal(f.commit, seenCommit, 'commit không đổi');
+  assert.equal(f.leaves.length, f.total);
+  assert.equal(sha256(f.leaves.join('')), seenCommit, 'leaves băm ra commit');
+  for (const { i, card, salt } of f.cards) assert.equal(sha256(`${i}:${card}:${salt}`), f.leaves[i], `lá ${card} khớp`);
+  assert.equal(new Set(f.cards.map((x) => x.card)).size, f.cards.length, 'không lá nào trùng');
+  return f.cards.length;
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 3000) => {
@@ -35,6 +47,66 @@ if (PASSWORD) {
   assert.equal(await tryConnect({ password: PASSWORD + 'x' }), 'AUTH_FAILED');
   assert.equal(await tryConnect({ password: PASSWORD }), 'ok');
   console.log('✔ Auth gate OK');
+
+  // Phiên đăng nhập: hello trả session, lần sau vào bằng session không cần mật khẩu
+  const session = await new Promise((res, rej) => {
+    const s = io(URL, { transports: ['websocket'], forceNew: true, reconnection: false, auth: { password: PASSWORD } });
+    s.on('connect', () => s.emit('hello', { name: 'Phiên' }, (r) => { s.close(); r.ok ? res(r.session) : rej(new Error(r.error)); }));
+  });
+  assert.match(session, /^[\w-]+\.\d+\.[\w-]+$/);
+  assert.equal(await tryConnect({ session }), 'ok');
+  assert.equal(await tryConnect({ session: session.slice(0, -2) + 'xx' }), 'AUTH_REQUIRED', 'session bị sửa không dùng được');
+  const [sid, , sig] = session.split('.');
+  assert.equal(await tryConnect({ session: `${sid}.${Date.now() + 1e12}.${sig}` }), 'AUTH_REQUIRED', 'không tự gia hạn được');
+  console.log('✔ Phiên đăng nhập OK');
+
+  // X-Forwarded-For giả không vượt được giới hạn đoán mật khẩu (server CI chạy với TRUST_PROXY=1)
+  if (process.env.TRUST_PROXY) {
+    const spoof = (i, real = '203.0.113.7') => ({ 'X-Forwarded-For': `10.0.${i}.${i}, ${real}` });
+    const tryXff = (headers, auth) => new Promise((res) => {
+      const s = io(URL, { transports: ['websocket'], forceNew: true, reconnection: false, auth, extraHeaders: headers });
+      s.on('connect', () => { s.close(); res('ok'); });
+      s.on('connect_error', (e) => { s.close(); res(e.message); });
+    });
+    const got = [];
+    for (let i = 0; i < 11; i++) got.push(await tryXff(spoof(i), { password: 'sai-' + i }));
+    assert.equal(got.at(-1), 'AUTH_LOCKED', 'đổi phần đầu XFF vẫn bị khóa: ' + got.join(','));
+    assert.equal(await tryXff(spoof(99), { password: PASSWORD }), 'AUTH_LOCKED', 'IP đã khóa thì mật khẩu đúng cũng phải chờ');
+    assert.equal(await tryXff(spoof(1, '203.0.113.8'), { password: PASSWORD }), 'ok', 'IP khác không bị ảnh hưởng');
+    console.log('✔ Chống giả X-Forwarded-For OK');
+  }
+}
+
+// ---------- Header bảo mật & Origin ----------
+{
+  const r = await fetch(URL + '/health');
+  assert.match(r.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
+  assert.equal(r.headers.get('x-frame-options'), 'DENY');
+  assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(r.headers.get('x-powered-by'), null);
+  const body = await r.json();
+  assert.equal(body.users, undefined, '/health không lộ số người dùng');
+  const tryOrigin = (origin) => new Promise((res) => {
+    const s = io(URL, { transports: ['websocket'], forceNew: true, reconnection: false, auth: { password: PASSWORD }, extraHeaders: { Origin: origin } });
+    s.on('connect', () => { s.close(); res('ok'); });
+    s.on('connect_error', (e) => { s.close(); res('ERR ' + e.message); });
+  });
+  assert.notEqual(await tryOrigin('https://evil.example'), 'ok', 'trang lạ không mở được socket');
+  assert.equal(await tryOrigin(new globalThis.URL(URL).origin), 'ok', 'cùng origin thì được');
+  console.log('✔ Header bảo mật & kiểm tra Origin OK');
+}
+
+// ---------- Giới hạn tần suất ----------
+{
+  const z = await client('Spam').ready;
+  const { roomId } = await z.req('room:create', { name: 'Spam', game: 'caro', options: {} });
+  const res = await Promise.all(Array.from({ length: 12 }, (_, i) => z.req('room:chat', { text: 'x' + i }).then(() => 'ok', (e) => e.message)));
+  assert.ok(res.filter((x) => x === 'ok').length <= 6, 'chat bị giới hạn');
+  assert.ok(res.some((x) => /quá nhanh/.test(x)));
+  await assert.rejects(z.req('room:create', { name: 'x', game: 'toString' }), /không hợp lệ/);
+  await z.req('room:delete', { roomId });
+  z.s.close();
+  console.log('✔ Giới hạn tần suất OK');
 }
 
 // ---------- Phiên bản (báo bản deploy mới) ----------
@@ -209,6 +281,9 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'watch' });
   await until(() => a.state?.state.hand?.street === 'preflop' && b.state?.state.hand?.street === 'preflop', 5000);
+  await until(() => c.state?.state.fair?.commit);
+  const commitSeen = c.state.state.fair.commit;
+  assert.equal(c.state.state.fair.leaves, undefined, 'đang chơi thì chưa công bố bộ bài');
   const p = [a, b].find((x) => x.state.state.options);
   await p.act({ type: 'act', action: 'fold' });
   await until(() => a.state.state.canRabbit && c.state?.state.hand?.street === 'done');
@@ -221,6 +296,9 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await assert.rejects(a.act({ type: 'rabbit' }), /rồi/);
   const { data } = await c.req('game:query', { type: 'handLog' });
   assert.deepEqual(data[0].rabbit, c.state.state.hand.rabbit, 'Hands log ghi rabbit');
+  await until(() => c.state.state.fair?.leaves && b.state.state.fair?.leaves);
+  assert.equal(verifyFair(commitSeen, c.state.state.fair), 5, 'người xem chỉ thấy 5 lá rabbit, bài bỏ vẫn kín');
+  assert.equal(verifyFair(commitSeen, b.state.state.fair), 7, 'người chơi thấy thêm 2 lá tẩy của mình');
   await a.req('room:delete', { roomId });
   // Bàn tắt rabbit hunt
   const { roomId: r2 } = await a.req('room:create', { name: 'No rabbit', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2, rabbitHunt: false } });
@@ -269,6 +347,7 @@ if (OTHER_PASSWORD) {
   await assert.rejects(d.act({ type: 'start' }), /xem/);
   await a.act({ type: 'start' });
   await until(() => [a, b, c, d].every((p) => p.state?.state.game));
+  const samCommit = d.state.state.fair.commit;
   const players = [a, b, c];
   const g0 = d.state.state.game;
   assert.ok(g0.players.every((p) => p.hand === null) || g0.result, 'người xem không thấy bài');
@@ -297,6 +376,7 @@ if (OTHER_PASSWORD) {
   const r = d.state.state.game.result;
   assert.equal(r.scores.reduce((x, y) => x + y, 0), 0, 'tổng thắng thua bằng 0');
   assert.ok(d.state.state.game.players.every((p) => Array.isArray(p.hand)), 'hết ván lật bài');
+  assert.equal(verifyFair(samCommit, d.state.state.fair), 52, 'hết ván công bố cả bộ bài');
   const totals = d.state.state.seats.filter(Boolean).map((x) => x.total);
   assert.equal(totals.reduce((x, y) => x + y, 0), 0);
   await a.req('room:delete', { roomId });
