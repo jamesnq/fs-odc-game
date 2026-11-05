@@ -70,6 +70,7 @@ export class PokerGame {
     this.dealer = -1;
     this.hand = null;
     this.handNo = 0;
+    this.nextBlinds = null; // blind mới chờ áp dụng từ ván sau: { smallBlind, bigBlind }
     this.history = []; // Hands log: các ván đã kết thúc (mới nhất ở cuối)
     this.historyMax = 50;
   }
@@ -121,8 +122,31 @@ export class PokerGame {
     return -1;
   }
 
+  /**
+   * Đổi mức blind. Đang giữa ván thì chờ tới ván sau mới áp dụng.
+   * @returns true nếu áp dụng ngay, false nếu chờ ván sau
+   */
+  setBlinds(smallBlind, bigBlind) {
+    const sb = Math.floor(Number(smallBlind));
+    const bb = Math.floor(Number(bigBlind));
+    if (!Number.isFinite(sb) || !Number.isFinite(bb) || sb < 1 || bb < 2) throw new Error('Blind không hợp lệ');
+    if (sb > bb) throw new Error('Small blind không được lớn hơn big blind');
+    if (this.inHand) {
+      this.nextBlinds = { smallBlind: sb, bigBlind: bb };
+      return false;
+    }
+    this.smallBlind = sb;
+    this.bigBlind = bb;
+    this.nextBlinds = null;
+    return true;
+  }
+
   startHand() {
     if (!this.canStart()) throw new Error('Cần ít nhất 2 người chơi có chip');
+    if (this.nextBlinds) {
+      ({ smallBlind: this.smallBlind, bigBlind: this.bigBlind } = this.nextBlinds);
+      this.nextBlinds = null;
+    }
     // Dọn ghế của người đã rời
     this.seats = this.seats.map((s) => (s && s.left ? null : s));
     const eligible = (i) => { const s = this.seats[i]; return !!s && !s.sitOut && s.chips > 0; };
@@ -495,6 +519,7 @@ export class PokerGame {
     return {
       smallBlind: this.smallBlind,
       bigBlind: this.bigBlind,
+      nextBlinds: this.nextBlinds,
       seats,
       hand: h ? {
         no: h.no,

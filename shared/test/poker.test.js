@@ -147,3 +147,25 @@ test('Hands log: showdown lộ bài người lật, giới hạn số ván', () 
   assert.ok(e.players.every((p) => p.hole && p.hole.length === 2), 'showdown: thấy bài cả hai');
   assert.deepEqual([...new Set(e.actions.map((x) => x.street))], ['preflop', 'flop', 'turn', 'river']);
 });
+
+test('Đổi blind: áp dụng ngay khi chưa chơi, chờ ván sau khi đang chơi', () => {
+  const g = new PokerGame({ smallBlind: 10, bigBlind: 20, maxSeats: 2 });
+  assert.equal(g.setBlinds(5, 15), true);
+  assert.deepEqual([g.smallBlind, g.bigBlind], [5, 15]);
+  assert.throws(() => g.setBlinds(30, 20), /lớn hơn/);
+  assert.throws(() => g.setBlinds(0, 20), /không hợp lệ/);
+  g.sit(0, 'a', 'A', 1000);
+  g.sit(1, 'b', 'B', 1000);
+  g.startHand();
+  const posted = () => Object.values(g.hand.players).map((p) => p.bet).sort((x, y) => x - y);
+  assert.deepEqual(posted(), [5, 15]);
+  assert.equal(g.setBlinds(25, 50), false, 'đang giữa ván thì chờ');
+  assert.deepEqual([g.smallBlind, g.bigBlind], [5, 15], 'ván hiện tại giữ blind cũ');
+  assert.deepEqual(g.nextBlinds, { smallBlind: 25, bigBlind: 50 });
+  g.act(g.seats[g.hand.toAct].id, 'fold');
+  assert.equal(g.history[0].bigBlind, 15, 'Hands log ghi blind của ván đó');
+  g.startHand();
+  assert.deepEqual(posted(), [25, 50]);
+  assert.equal(g.nextBlinds, null);
+  assert.equal(g.options(g.hand.toAct).minTo, 100, 'raise tối thiểu theo big blind mới');
+});

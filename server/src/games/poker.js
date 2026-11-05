@@ -9,9 +9,11 @@ export class PokerHandler {
   constructor(room, options) {
     this.room = room;
     const bigBlind = clampInt(options.bigBlind, 2, 100000, 20);
+    // Small blind nhập riêng (mặc định = ½ big blind), luôn trong khoảng 1..big blind
+    const smallBlind = clampInt(options.smallBlind, 1, bigBlind, Math.max(1, Math.floor(bigBlind / 2)));
     this.options = {
       bigBlind,
-      smallBlind: Math.max(1, Math.floor(bigBlind / 2)),
+      smallBlind,
       buyIn: clampInt(options.buyIn, bigBlind * 10, bigBlind * 1000, bigBlind * 100),
       maxSeats: clampInt(options.maxSeats, 2, 9, 6),
       turnSeconds: clampInt(options.turnSeconds, 10, 120, 30),
@@ -58,6 +60,7 @@ export class PokerHandler {
   onLeave(id) { this.stand(id); }
 
   action(id, a) {
+    if (a.type === 'setBlinds') return this._setBlinds(id, a);
     const seat = this.game.seatOf(id);
     if (seat < 0) throw new Error('Bạn đang ở chế độ xem');
     const s = this.game.seats[seat];
@@ -80,6 +83,22 @@ export class PokerHandler {
         throw new Error('Hành động không hợp lệ');
     }
     this._afterChange();
+  }
+
+  /** Chủ phòng đổi blind. Giữa ván thì áp dụng từ ván sau. */
+  _setBlinds(id, a) {
+    if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đổi blind');
+    const bb = Math.floor(Number(a.bigBlind));
+    const sb = Math.floor(Number(a.smallBlind));
+    if (!Number.isFinite(bb) || bb < 2 || bb > 100000) throw new Error('Big blind phải từ 2 đến 100.000');
+    if (!Number.isFinite(sb) || sb < 1 || sb > bb) throw new Error('Small blind phải từ 1 đến big blind');
+    if (bb > this.options.buyIn) throw new Error(`Big blind không được lớn hơn buy-in (${this.options.buyIn})`);
+    const now = this.game.setBlinds(sb, bb);
+    if (now) {
+      this.options.smallBlind = sb;
+      this.options.bigBlind = bb;
+    }
+    this.room.system(`Chủ phòng đổi blind thành ${sb}/${bb}${now ? '' : ' — áp dụng từ ván sau'}`);
   }
 
   _afterChange() {
@@ -131,6 +150,9 @@ export class PokerHandler {
       this.nextHandAt = 0;
       if (!this.game.inHand && this.game.canStart()) {
         this.game.startHand();
+        // Blind chờ (nếu có) vừa được áp dụng khi chia ván mới
+        this.options.smallBlind = this.game.smallBlind;
+        this.options.bigBlind = this.game.bigBlind;
         this._afterChange();
       }
       this.room.changed();

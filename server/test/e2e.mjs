@@ -147,10 +147,11 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
 // ---------- Poker ----------
 {
   a.state = b.state = c.state = null;
-  const { roomId } = await a.req('room:create', { name: 'Poker test', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 6 } });
+  const { roomId } = await a.req('room:create', { name: 'Poker test', game: 'poker', options: { smallBlind: 5, bigBlind: 20, buyIn: 1000, maxSeats: 6 } });
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'play' });
   await until(() => a.state?.state.hand?.street === 'preflop', 5000);
+  assert.deepEqual([a.state.state.smallBlind, a.state.state.bigBlind], [5, 20], 'small blind nhập riêng');
   const players = [a, b, c];
   let acted = 0;
   // Chơi vài hành động: ai tới lượt thì call
@@ -190,8 +191,15 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
     }
     assert.ok(e.players.some((x) => x.folded && x.id !== p.user.id ? x.hole === null : true));
   }
+  // Đổi blind: chỉ chủ phòng; giữa ván thì chờ ván sau
+  await assert.rejects(b.act({ type: 'setBlinds', smallBlind: 5, bigBlind: 10 }), /chủ phòng/);
+  await assert.rejects(a.act({ type: 'setBlinds', smallBlind: 40, bigBlind: 30 }), /Small blind/);
+  await a.act({ type: 'setBlinds', smallBlind: 15, bigBlind: 30 });
+  await until(() => c.state.state.bigBlind === 30 || c.state.state.nextBlinds?.bigBlind === 30);
+  await until(() => c.state.state.hand?.no === 2 && c.state.state.bigBlind === 30, 10000);
+  assert.equal(c.state.state.smallBlind, 15);
   await a.req('room:delete', { roomId });
-  console.log('✔ Poker OK (Hands log)');
+  console.log('✔ Poker OK (Hands log, đổi blind)');
 }
 
 // ---------- Nhiều server: sảnh và phòng tách biệt ----------
