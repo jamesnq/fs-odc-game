@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -9,18 +12,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Kiểm tra lỗ hổng thư viện (npm audit)
+        run: npm audit --omit=dev --audit-level=high
       - name: Unit test (luật chơi)
         run: npm test
       - name: Build client
         run: npm run build
       - name: Kiểm thử tích hợp (server + socket)
         run: |
-          PORT=3001 APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
+          PORT=3001 TRUST_PROXY=1 APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
           npx --yes wait-on -t 20000 http://localhost:3001/health
-          APP_PASSWORD=ci-secret OTHER_PASSWORD=ci-secret-b npm run test:e2e -- http://localhost:3001
+          TRUST_PROXY=1 APP_PASSWORD=ci-secret OTHER_PASSWORD=ci-secret-b npm run test:e2e -- http://localhost:3001

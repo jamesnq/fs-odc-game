@@ -1,4 +1,5 @@
 import { PokerGame } from '@game/shared/poker';
+import { DeckCommitments } from './fairness.js';
 
 const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
 const cardText = (c) => (c[0] === 'T' ? '10' : c[0]) + SUIT[c[1]];
@@ -10,6 +11,7 @@ const clampInt = (v, min, max, def) => {
 
 export class PokerHandler {
   constructor(room, options) {
+    this.fair = new DeckCommitments();
     this.room = room;
     const bigBlind = clampInt(options.bigBlind, 2, 100000, 20);
     // Small blind nhập riêng (mặc định = ½ big blind), luôn trong khoảng 1..big blind
@@ -176,12 +178,26 @@ export class PokerHandler {
     throw new Error('Truy vấn không hợp lệ');
   }
 
+  /** Lá của ván vừa xong mà người xem được thấy: bài chung, bài đã lật, rabbit, bài tẩy của chính mình. */
+  _visibleCards(viewerId) {
+    const e = this.game.history[this.game.history.length - 1];
+    const set = new Set();
+    if (!e) return set;
+    for (const c of e.board) set.add(c);
+    for (const v of Object.values(e.shown)) for (const c of v.hole) set.add(c);
+    for (const p of e.players) if (p.id === viewerId) for (const c of p.hole) set.add(c);
+    if (Array.isArray(e.rabbit)) for (const c of e.rabbit) set.add(c);
+    return set;
+  }
+
   view(viewerId) {
+    this.fair.track(this.game.lastDeck);
     const v = this.game.view(viewerId);
     if (!this.options.rabbitHunt) v.canRabbit = false;
     const last = this.game.history[this.game.history.length - 1];
     return {
       ...v,
+      fair: this.fair.view(!this.game.inHand, () => this._visibleCards(viewerId)),
       handLogCount: this.game.history.length,
       handLogLast: last ? last.no : 0,
       config: this.options,

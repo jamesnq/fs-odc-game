@@ -39,6 +39,8 @@ export function AppProvider({ children }) {
   const hello = useCallback(async (name) => {
     const res = await request('hello', { token: storage.token, tokens: storage.tokens, name: name || storage.name });
     storage.setServerToken(res.server.id, res.token);
+    if (res.session) storage.session = res.session;
+    storage.password = '';
     setServer(res.server);
     storage.name = res.user.name;
     setUser(res.user);
@@ -73,7 +75,9 @@ export function AppProvider({ children }) {
     // Middleware auth từ chối: socket.io không tự thử lại, phải nhập mật khẩu rồi connect lại
     const onConnectError = (err) => {
       if (!AUTH_ERRORS[err.message]) return;
-      if (err.message !== 'AUTH_LOCKED') storage.password = '';
+      if (err.message === 'TOO_MANY_CONNECTIONS') return toast(AUTH_ERRORS[err.message], 'error');
+      storage.session = ''; // phiên hết hạn / đổi mật khẩu → phải nhập lại
+      if (err.message === 'AUTH_REQUIRED' || err.message === 'AUTH_FAILED') storage.password = '';
       setAuthError(err.message);
       setPhase('auth');
     };
@@ -163,6 +167,7 @@ export function AppProvider({ children }) {
   const switchServer = useCallback(async () => {
     if (room) await request('room:leave').catch(() => {});
     storage.password = '';
+    storage.session = '';
     location.hash = '';
     socket.disconnect();
     setRoom(null);

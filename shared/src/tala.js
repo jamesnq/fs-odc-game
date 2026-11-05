@@ -122,6 +122,8 @@ export class TalaGame {
     this.n = n;
     this.first = first;
     this.deck = shuffle(newDeck());
+    /** Thứ tự bộ bài lúc vừa xáo (lá chia trước ở cuối mảng) — để server cam kết/công bố. */
+    this.initialDeck = this.deck.slice();
     this.hands = Array.from({ length: n }, () => []);
     for (let r = 0; r < 9; r++) for (let i = 0; i < n; i++) this.hands[(first + i) % n].push(this.deck.pop());
     this.hands[first].push(this.deck.pop());

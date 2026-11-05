@@ -6,15 +6,21 @@ const URL = import.meta.env.VITE_SERVER_URL || undefined;
 export const socket = io(URL, {
   autoConnect: false,
   transports: ['websocket', 'polling'],
-  // Mật khẩu vào app (auth gate) gửi kèm mỗi lần kết nối
-  auth: (cb) => cb({ password: storage.password }),
+  // Phiên đăng nhập (do server cấp) gửi kèm mỗi lần kết nối; mật khẩu chỉ gửi ở lần đăng nhập đầu
+  auth: (cb) => cb({ session: storage.session, password: storage.password }),
 });
 
 export const AUTH_ERRORS = {
   AUTH_REQUIRED: 'Cần nhập mật khẩu để vào',
   AUTH_FAILED: 'Sai mật khẩu',
   AUTH_LOCKED: 'Nhập sai quá nhiều lần, hãy thử lại sau 10 phút',
+  AUTH_BUSY: 'Máy chủ đang tạm khóa đăng nhập do có quá nhiều lần nhập sai, hãy thử lại sau 1 phút',
+  TOO_MANY_CONNECTIONS: 'Quá nhiều kết nối từ mạng của bạn, hãy đóng bớt tab rồi thử lại',
 };
+
+// Bản cũ lưu mật khẩu dạng chữ thường trong localStorage → xóa đi
+try { localStorage.removeItem('gl_pw'); } catch {}
+let memoryPassword = '';
 
 /** Gửi sự kiện và chờ phản hồi; ném lỗi nếu server trả về lỗi. */
 export function request(event, payload = {}) {
@@ -36,8 +42,11 @@ export const storage = {
   setServerToken(serverId, token) {
     try { localStorage.setItem('gl_tokens', JSON.stringify({ ...this.tokens, [serverId]: token })); } catch {}
   },
-  get password() { try { return localStorage.getItem('gl_pw') || ''; } catch { return ''; } },
-  set password(v) { try { v ? localStorage.setItem('gl_pw', v) : localStorage.removeItem('gl_pw'); } catch {} },
+  // Mật khẩu chỉ giữ trong bộ nhớ đến khi đổi được lấy phiên đăng nhập, không bao giờ ghi xuống ổ đĩa
+  get password() { return memoryPassword; },
+  set password(v) { memoryPassword = v || ''; },
+  get session() { try { return localStorage.getItem('gl_session') || ''; } catch { return ''; } },
+  set session(v) { try { v ? localStorage.setItem('gl_session', v) : localStorage.removeItem('gl_session'); } catch {} },
   get name() { return localStorage.getItem('gl_name') || ''; },
   set name(v) { localStorage.setItem('gl_name', v); },
 };
