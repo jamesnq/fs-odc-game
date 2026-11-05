@@ -43,7 +43,7 @@ function Waiting({ s, act, call }) {
       <div className="row">
         {s.mySeat >= 0 ? (
           <>
-            <button className="btn primary" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Chia bài</button>
+            <button className="btn cta" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Chia bài</button>
             <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
           </>
         ) : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
@@ -175,7 +175,7 @@ function Table({ s, g, act, timeLeft }) {
           <div className="muted">{g.turn >= 0 && <><b>{g.players[g.turn].name}</b> đi vòng mới</>}</div>
         )}
         {!g.result && g.phase === 'play' && (
-          <div className="tl-status">Lượt: <b>{g.players[g.turn].name}</b>{g.samBy >= 0 && <span className="muted"> · {g.players[g.samBy].name} đang đi Sâm</span>}</div>
+          <div className="tl-status" role="status" aria-live="polite">Lượt: <b>{g.players[g.turn].name}</b>{g.samBy >= 0 && <span className="muted"> · {g.players[g.samBy].name} đang đi Sâm</span>}</div>
         )}
         <div className="tl-log">{g.log.slice(-3).map((l, i) => <div key={i} className="small muted">{l}</div>)}</div>
       </div>
@@ -243,7 +243,7 @@ function Result({ s, g, act, call }) {
       <div className="row">
         {s.mySeat >= 0 ? (
           <>
-            <button className="btn primary" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
+            <button className="btn cta" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
             <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
           </>
         ) : s.seats.map((x, i) => !x && (

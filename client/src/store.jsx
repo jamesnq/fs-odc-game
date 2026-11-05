@@ -3,6 +3,12 @@ import { socket, request, storage, AUTH_ERRORS } from './socket.js';
 
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
+// Dữ liệu đổi liên tục (số yêu cầu đang chờ, danh sách toast) để ở context riêng:
+// chỉ thanh tiến trình / khung toast vẽ lại, không kéo cả app vẽ lại mỗi lần bấm nút.
+const BusyCtx = createContext(0);
+const ToastCtx = createContext([]);
+export const useBusy = () => useContext(BusyCtx);
+export const useToasts = () => useContext(ToastCtx);
 
 const roomFromHash = () => {
   const m = location.hash.match(/^#\/room\/([\w-]+)/);
@@ -168,8 +174,14 @@ export function AppProvider({ children }) {
   }, [room]);
 
   const value = useMemo(() => ({
-    connected, user, setUser, rooms, room, toasts, toast, phase, busy, hello, call, act, authError, login, newVersion, server, switchServer,
-  }), [newVersion, server, switchServer, connected, user, rooms, room, toasts, toast, phase, busy, hello, call, act, authError, login]);
+    connected, user, setUser, rooms, room, toast, phase, hello, call, act, authError, login, newVersion, server, switchServer,
+  }), [newVersion, server, switchServer, connected, user, rooms, room, toast, phase, hello, call, act, authError, login]);
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      <BusyCtx.Provider value={busy}>
+        <ToastCtx.Provider value={toasts}>{children}</ToastCtx.Provider>
+      </BusyCtx.Provider>
+    </Ctx.Provider>
+  );
 }

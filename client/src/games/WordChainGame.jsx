@@ -88,7 +88,7 @@ export default function WordChainGame({ room, state: s }) {
           {me ? (
             <div className="xq-actions">
               {!playing && (
-                <button className={`btn ${s.ready.includes(me) ? '' : 'primary'}`} onClick={() => act({ type: 'ready' })}
+                <button className={`btn ${s.ready.includes(me) ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })}
                   disabled={s.seats.length < 2}>
                   {s.ready.includes(me) ? 'Hủy sẵn sàng' : s.status === 'over' ? <><RotateCcw size={16} aria-hidden /> Chơi ván mới</> : <><Check size={16} aria-hidden /> Sẵn sàng</>}
                 </button>

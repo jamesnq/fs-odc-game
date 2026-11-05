@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dices, ArrowLeftRight } from 'lucide-react';
-import { useApp } from './store.jsx';
+import { useApp, useBusy } from './store.jsx';
 import Lobby from './components/Lobby.jsx';
 import RoomView from './components/RoomView.jsx';
 import NameDialog from './components/NameDialog.jsx';
@@ -53,7 +53,7 @@ export default function App() {
 
 /** Thanh tiến trình mảnh dưới header khi có yêu cầu chờ server lâu hơn 250ms. */
 function BusyBar() {
-  const { busy } = useApp();
+  const busy = useBusy();
   const [show, setShow] = useState(false);
   useEffect(() => {
     if (!busy) return setShow(false);

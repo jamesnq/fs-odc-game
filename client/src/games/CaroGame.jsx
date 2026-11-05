@@ -85,10 +85,10 @@ export default function CaroGame({ room, state: s }) {
       <div className="xq-side">
         <div className="panel">
           {s.status === 'waiting' && (
-            <div className="xq-status">{s.seats.x && s.seats.o ? 'Chờ hai bên sẵn sàng…' : 'Đang chờ người chơi…'}</div>
+            <div className="xq-status" role="status" aria-live="polite">{s.seats.x && s.seats.o ? 'Chờ hai bên sẵn sàng…' : 'Đang chờ người chơi…'}</div>
           )}
           {s.status === 'playing' && (
-            <div className="xq-status">
+            <div className="xq-status" role="status" aria-live="polite">
               Lượt: <b className={`c-${s.turn}`}>{NAME[s.turn]}</b>
               {myTurn && <span className="your-turn"> — tới lượt bạn</span>}
             </div>
@@ -122,7 +122,7 @@ export default function CaroGame({ room, state: s }) {
           {my && (
             <div className="xq-actions">
               {s.status === 'waiting' && (
-                <button className={`btn ${s.ready[my] ? '' : 'primary'}`} onClick={() => act({ type: 'ready' })} disabled={!s.seats[opp]}>
+                <button className={`btn ${s.ready[my] ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })} disabled={!s.seats[opp]}>
                   {s.ready[my] ? 'Hủy sẵn sàng' : <><Check size={16} aria-hidden /> Sẵn sàng</>}
                 </button>
               )}

@@ -68,7 +68,7 @@ function PasswordStep() {
         </button>
       </div>
       <div className="onboard-msg" id="pw-msg" role="alert">{error && <span className="error-text">{error}</span>}</div>
-      <button className="btn primary lg block" disabled={!pw || locked || checking}>
+      <button className="btn cta lg block" disabled={!pw || locked || checking}>
         {checking ? <><span className="spinner" /> Đang kiểm tra…</> : 'Tiếp tục'}
       </button>
     </form>
@@ -99,7 +99,7 @@ function NameStep() {
       <label className="sr-only" htmlFor="nick">Tên hiển thị</label>
       <input id="nick" autoFocus maxLength={24} autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên hiển thị" readOnly={busy} />
       <div className="onboard-msg" />
-      <button className="btn primary lg block" disabled={busy || !name.trim() || !connected}>
+      <button className="btn cta lg block" disabled={busy || !name.trim() || !connected}>
         {busy ? <><span className="spinner" /> Đang vào sảnh…</> : 'Vào sảnh'}
       </button>
     </form>

@@ -2,21 +2,33 @@
    Nền tảng: màu, chữ, nút, ô nhập, panel
    =================================================================== */
 :root {
-  /* Bảng màu "Card & Board Game" (UI/UX Pro Max): xanh nỉ bàn bài + vàng trên nền tối */
-  --bg: #0b1220;
-  --bg2: #0f1829;
-  --panel: #162033;
-  --panel-2: #1c283f;
-  --line: #243049;
-  --line-strong: #33415f;
+  /* Design system từ UI/UX Pro Max (.claude/skills/ui-ux-pro-max — "Card & Board Game"):
+     felt green + gold on dark. Tên biến theo vai trò (semantic tokens). */
+  --color-primary: #15803d;      --color-on-primary: #ffffff;
+  --color-secondary: #166534;    --color-on-secondary: #ffffff;
+  --color-accent: #d97706;       --color-on-accent: #000000;
+  --color-background: #0f172a;   --color-foreground: #ffffff;
+  --color-card: #192134;         --color-card-foreground: #ffffff;
+  --color-muted: #0f1f2b;        --color-muted-foreground: #94a3b8;
+  --color-border: rgba(255,255,255,.08);
+  --color-destructive: #dc2626;  --color-on-destructive: #ffffff;
+  --color-ring: #22c55e; /* #15803D của skill quá tối trên nền tối → dùng sắc sáng hơn cho vòng focus 3:1 */
+  /* Ánh xạ sang biến cũ đang dùng trong các component */
+  --bg: var(--color-background);
+  --bg2: #111b31;
+  --panel: var(--color-card);
+  --panel-2: #212c44;
+  --line: var(--color-border);
+  --line-strong: rgba(255,255,255,.14);
   --text: #eef2f8;
-  --muted: #94a3b8;
-  --primary: #15803d;
-  --primary2: #166534;
-  --primary-hi: #22c55e;
+  --muted: var(--color-muted-foreground);
+  --primary: var(--color-primary);
+  --primary2: var(--color-secondary);
+  --primary-hi: var(--color-ring);
   --primary-soft: rgba(34,197,94,.14);
-  --accent: #d97706;
-  --danger: #ef4444;
+  --accent: var(--color-accent);
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --danger: var(--color-destructive);
   --warn: #f59e0b;
   --ok: #22c55e;
   --gold: #fbbf24;
@@ -25,7 +37,7 @@
   --radius: 12px;
   --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.25);
   --topbar-h: 56px;
-  font-family: 'Be Vietnam Pro', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: Inter, 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
   color-scheme: dark;
   -webkit-font-smoothing: antialiased;
 }
@@ -63,10 +75,13 @@ kbd {
 .btn {
   border: 1px solid var(--line-strong); background: var(--panel-2); min-height: 36px; padding: 0 14px; border-radius: 9px; cursor: pointer;
   display: inline-flex; gap: 6px; align-items: center; justify-content: center; white-space: nowrap; font-weight: 500;
-  transition: background .15s, border-color .15s, box-shadow .15s, transform .05s;
+  transition: background .15s var(--ease-out), border-color .15s var(--ease-out), box-shadow .15s var(--ease-out), transform .1s var(--ease-out);
 }
 .btn:hover:not(:disabled) { background: #243058; border-color: #4a5a8f; }
-.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:active:not(:disabled) { transform: scale(.97); } /* phản hồi khi bấm, không đổi layout */
+/* Nút hành động chính của màn hình (CTA vàng, chữ đen — tương phản 7.9:1) */
+.btn.cta { background: var(--color-accent); border-color: #f59e0b; color: var(--color-on-accent); font-weight: 700; box-shadow: 0 4px 14px rgba(217,119,6,.35); }
+.btn.cta:hover:not(:disabled) { background: #f59e0b; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn.primary { background: var(--primary); border-color: #1a9148; color: #fff; font-weight: 600; box-shadow: 0 4px 14px rgba(21,128,61,.35); }
 .btn.primary:hover:not(:disabled) { background: var(--primary2); }
@@ -717,3 +732,11 @@ button, a, [role=tab], input, label { touch-action: manipulation; -webkit-tap-hi
 input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,.2); }
 .pk-handlog summary svg, .ready svg { vertical-align: -3px; }
 @media (max-width: 640px) { .search { max-width: none; flex-basis: 100%; } }
+
+/* Phản hồi khi bấm lá bài (transform, không đổi layout); có pointer cho mọi thứ bấm được */
+.card.clickable { cursor: pointer; transition: transform .12s var(--ease-out), box-shadow .12s var(--ease-out); }
+.card.clickable:active { transform: scale(.96); }
+.tab, .seg button, .user-chip, summary { cursor: pointer; }
+/* Chiều sâu nhẹ cho bàn chơi & lá bài (skill: tránh 3D/bóng phức tạp → chỉ 1–2 lớp bóng) */
+.pk-felt, .tl-table, .sl-table { box-shadow: inset 0 2px 30px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.35); }
+.card:not(.back) { box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 3px 8px rgba(0,0,0,.35); }
