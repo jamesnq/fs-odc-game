@@ -290,7 +290,7 @@ function VoiceControl({ v, onOpen }) {
 
 /** Khối kênh thoại trong tab Người chơi: vào/rời, bật/tắt mic, ai đang nói, chỉnh âm lượng từng người. */
 function VoicePanel({ v, room, me }) {
-  if (!v.status) return null;
+  if (!v.status || v.status.hidden) return null; // server (sảnh) này không bật voice chat
   const nameOf = (id) => room.members.find((m) => m.id === id)?.name || '?';
   return (
     <section className="voice-card" aria-label="Kênh thoại">

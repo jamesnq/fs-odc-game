@@ -3,6 +3,9 @@
 //
 // Biến môi trường:
 //   VOICE_ENABLED=0                 tắt hẳn voice chat (mặc định: bật)
+//   VOICE_SERVERS=B4                chỉ bật voice chat cho các server (sảnh) có tên trong danh sách, cách nhau dấu phẩy
+//                                   (tên như trong APP_SERVERS). '*' = mọi server. Mặc định: B4.
+//                                   Chạy một server không đặt tên (APP_PASSWORD / không mật khẩu) thì không bị giới hạn này.
 //   VOICE_MAX_PER_ROOM=6            số người tối đa trong kênh thoại mỗi phòng (mesh: mỗi người gửi N-1 luồng)
 //   CF_TURN_KEY_ID, CF_TURN_KEY_API_TOKEN
 //                                   TURN của Cloudflare (giúp kết nối qua 4G / mạng chặn P2P). Không đặt = chỉ STUN.
@@ -23,6 +26,8 @@ const QUOTA_CHECK_MS = 10 * 60_000;
 export class Voice {
   constructor({ onStatusChange = () => {}, fetchImpl = globalThis.fetch, log = console } = {}) {
     this.enabled = bool(env.VOICE_ENABLED, true);
+    const list = (env.VOICE_SERVERS ?? 'B4').split(',').map((x) => x.trim()).filter(Boolean);
+    this.servers = list.includes('*') ? null : new Set(list.map((x) => x.toLowerCase())); // null = mọi server
     this.maxPerRoom = Math.max(2, Math.min(12, num(env.VOICE_MAX_PER_ROOM, 6)));
     this.turn = env.CF_TURN_KEY_ID && env.CF_TURN_KEY_API_TOKEN ? { keyId: env.CF_TURN_KEY_ID, token: env.CF_TURN_KEY_API_TOKEN } : null;
     this.analytics = this.turn && env.CF_ACCOUNT_ID && env.CF_ANALYTICS_TOKEN ? { account: env.CF_ACCOUNT_ID, token: env.CF_ANALYTICS_TOKEN } : null;
@@ -37,8 +42,12 @@ export class Voice {
     this.timer = null;
   }
 
-  /** Trạng thái gửi cho client. */
-  status() {
+  /** Server (sảnh) này có được dùng voice chat không. name = null: chạy một server không đặt tên. */
+  allowed(name) { return !this.servers || !name || this.servers.has(String(name).trim().toLowerCase()); }
+
+  /** Trạng thái gửi cho client (theo server/sảnh người đó đang vào). */
+  status(serverName = null) {
+    if (!this.allowed(serverName)) return { enabled: false, reason: null, hidden: true, maxPerRoom: this.maxPerRoom, relay: false };
     const off = !this.enabled || (this.overQuota && this.quotaAction === 'disable');
     return {
       enabled: !off,
@@ -54,7 +63,7 @@ export class Voice {
 
   start() {
     if (!this.enabled) return;
-    this.log.log?.(`Voice chat: BẬT${this.turn ? ' (TURN Cloudflare' + (this.analytics ? `, ngưỡng ${this.quotaBytes / 1e9} GB/tháng → ${this.quotaAction})` : ', KHÔNG theo dõi dung lượng — đặt CF_ACCOUNT_ID + CF_ANALYTICS_TOKEN)') : ' (chỉ STUN)'}`);
+    this.log.log?.(`Voice chat: BẬT cho ${this.servers ? 'server ' + [...this.servers].join(', ') : 'mọi server'}${this.turn ? ' (TURN Cloudflare' + (this.analytics ? `, ngưỡng ${this.quotaBytes / 1e9} GB/tháng → ${this.quotaAction})` : ', KHÔNG theo dõi dung lượng — đặt CF_ACCOUNT_ID + CF_ANALYTICS_TOKEN)') : ' (chỉ STUN)'}`);
     if (!this.analytics) return;
     const tick = () => this.checkQuota().catch((e) => this.log.warn?.('voice quota:', e.message));
     tick();
@@ -65,8 +74,9 @@ export class Voice {
   stop() { clearInterval(this.timer); }
 
   /** Danh sách ICE server cho một người vào kênh thoại. */
-  async iceServers() {
-    if (!this.status().enabled) throw new Error(this.status().reason);
+  async iceServers(serverName = null) {
+    const st = this.status(serverName);
+    if (!st.enabled) throw new Error(st.reason || 'Voice chat không bật cho server này');
     if (!this.turn || this.overQuota) return STUN;
     try {
       const res = await this.fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(this.turn.keyId)}/credentials/generate-ice-servers`, {

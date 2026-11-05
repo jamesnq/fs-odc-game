@@ -430,6 +430,17 @@ if (OTHER_PASSWORD) {
 {
   const h = await fetch(URL + '/health');
   assert.match(h.headers.get('permissions-policy') || '', /microphone=\(self\)/, 'cho phép micro trên trang mình');
+  // Chỉ server có tên trong VOICE_SERVERS mới có voice chat (CI: VOICE_SERVERS="Bên A")
+  if (OTHER_PASSWORD) {
+    const o = client('Ngoài', OTHER_PASSWORD);
+    await o.ready;
+    const hello = await o.req('hello', { name: 'Ngoài' });
+    assert.equal(hello.voice.enabled, false, 'server không có trong VOICE_SERVERS thì không có voice');
+    const r = await o.req('room:create', { name: 'x', game: 'caro' });
+    await assert.rejects(() => o.req('voice:join', {}), /không bật/);
+    await o.req('room:delete', { roomId: r.roomId });
+    o.s.close();
+  }
   a.state = b.state = c.state = null;
   const { roomId } = await a.req('room:create', { name: 'Voice test', game: 'caro' });
   await b.req('room:join', { roomId, mode: 'watch' });

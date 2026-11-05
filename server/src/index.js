@@ -127,7 +127,7 @@ const io = new Server(server, {
 // Voice chat: tắt / bật lại (vd. hết hạn mức TURN miễn phí) → báo mọi người, đưa tất cả ra khỏi kênh thoại khi tắt
 const voice = new Voice({
   onStatusChange: (st) => {
-    io.emit('voice:status', st);
+    for (const s of SERVERS) io.to('lobby:' + s.id).emit('voice:status', voice.status(s.name));
     if (st.enabled) return;
     for (const room of rooms.values()) {
       if (!room.voice.size) continue;
@@ -504,7 +504,7 @@ io.on('connection', (socket) => {
     return {
       user: { id: u.id, name: u.name }, token: u.token, roomId: room ? room.id : null, rooms: lobbyList(srv.id),
       server: { id: srv.id, name: srv.name, gated: GATED },
-      voice: voice.status(),
+      voice: voice.status(srv.name),
       session: issueSession(srv), // gia hạn phiên mỗi lần vào
     };
   }, false);
@@ -627,10 +627,10 @@ io.on('connection', (socket) => {
 
   on('voice:join', async ({ muted }) => {
     const room = voiceRoom();
-    const st = voice.status();
-    if (!st.enabled) throw new Error(st.reason);
+    const st = voice.status(srv.name);
+    if (!st.enabled) throw new Error(st.reason || 'Voice chat không bật cho server này');
     if (!room.voice.has(user.id) && room.voice.size >= st.maxPerRoom) throw new Error(`Kênh thoại đã đủ ${st.maxPerRoom} người`);
-    const iceServers = await voice.iceServers();
+    const iceServers = await voice.iceServers(srv.name);
     if (!rooms.has(room.id) || user.roomId !== room.id) throw new Error('Bạn đã rời phòng');
     const fresh = !room.voice.has(user.id);
     room.voice.set(user.id, { muted: !!muted, sid: socket.id });

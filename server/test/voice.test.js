@@ -71,3 +71,18 @@ test('VOICE_QUOTA_ACTION=stun → vẫn bật nhưng bỏ TURN khi chạm ngư�
   const ice = await v.iceServers();
   assert.ok(ice[0].urls.every((u) => u.startsWith('stun:')));
 });
+
+test('VOICE_SERVERS: mặc định chỉ server B4; "*" = mọi server; server không tên luôn được', async () => {
+  const { v } = await makeVoice({}, async () => ({}));
+  assert.equal(v.status('B4').enabled, true);
+  assert.equal(v.status('b4 ').enabled, true, 'không phân biệt hoa thường / khoảng trắng');
+  assert.equal(v.status('Bên A').enabled, false);
+  assert.equal(v.status('Bên A').hidden, true);
+  assert.equal(v.status(null).enabled, true, 'một server không đặt tên');
+  await assert.rejects(() => v.iceServers('Bên A'));
+  const { v: all } = await makeVoice({ VOICE_SERVERS: '*' }, async () => ({}));
+  assert.equal(all.status('Bên A').enabled, true);
+  const { v: two } = await makeVoice({ VOICE_SERVERS: 'B4, Bên A' }, async () => ({}));
+  assert.equal(two.status('Bên A').enabled, true);
+  assert.equal(two.status('Bên B').enabled, false);
+});

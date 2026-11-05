@@ -136,6 +136,7 @@ docker run -p 3001:3001 game-lobby
 | `TRUST_PROXY` | _(trống)_ | Số reverse proxy đứng trước server (thường là `1`). IP thật = phần tử thứ N tính từ **cuối** `X-Forwarded-For` — phần đầu do client tự điền nên không tin được. Để trống khi không có proxy |
 | `DEBUG_IP` | _(trống)_ | Đặt `1` để in IP và `X-Forwarded-For` của mỗi kết nối ra log — dùng để kiểm tra `TRUST_PROXY` đúng chưa |
 | `VOICE_ENABLED` | `1` | Đặt `0` để tắt hẳn voice chat |
+| `VOICE_SERVERS` | `B4` | Chỉ bật voice chat cho các server (tên trong `APP_SERVERS`, cách nhau dấu phẩy, không phân biệt hoa thường). `*` = mọi server. Chạy một server không đặt tên thì không bị giới hạn |
 | `VOICE_MAX_PER_ROOM` | `6` | Số người tối đa trong kênh thoại mỗi phòng |
 | `CF_TURN_KEY_ID`, `CF_TURN_KEY_API_TOKEN` | _(trống)_ | TURN của Cloudflare cho voice chat (giúp kết nối qua 4G). Trống = chỉ dùng STUN miễn phí |
 | `CF_ACCOUNT_ID`, `CF_ANALYTICS_TOKEN` | _(trống)_ | Để server tự theo dõi dung lượng TURN đã dùng trong tháng (token quyền *Account Analytics: Read*) |
