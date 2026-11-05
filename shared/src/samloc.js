@@ -98,6 +98,8 @@ export class SamLocGame {
   constructor(players, leader = 0, deck = null) {
     if (players.length < 2 || players.length > 5) throw new Error('Sâm lốc chơi 2–5 người');
     const d = deck ? deck.slice() : shuffle(newDeck());
+    /** Thứ tự bộ bài lúc vừa xáo (lá chia trước ở đầu mảng) — để server cam kết/công bố. */
+    this.initialDeck = d.slice();
     this.players = players.map((p) => ({
       id: p.id, name: p.name, hand: sortHand(d.splice(0, HAND_SIZE)), played: 0, passed: false,
     }));

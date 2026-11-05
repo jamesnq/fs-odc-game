@@ -160,9 +160,12 @@ export class PokerGame {
     const sb = heads ? this.dealer : this._nextSeat(this.dealer, (i) => !!players[i]);
     const bb = this._nextSeat(sb, (i) => !!players[i]);
     this.handNo++;
+    const deck = shuffle(newDeck());
+    /** Thứ tự bộ bài lúc vừa xáo (lá chia trước ở cuối mảng) — để server cam kết/công bố. */
+    this.lastDeck = deck.slice();
     this.hand = {
       no: this.handNo,
-      deck: shuffle(newDeck()),
+      deck,
       board: [],
       street: 'preflop',
       players,

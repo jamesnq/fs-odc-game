@@ -103,6 +103,16 @@ Thêm các secret: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (private key), tùy ch�
 Workflow sẽ SSH vào máy, `docker pull` image mới rồi chạy lại container `game-lobby`.
 > Nếu package GHCR để private, máy VPS cần đăng nhập được GHCR; cách đơn giản nhất là đổi package sang public.
 
+> **Nên chạy sau HTTPS.** Container chỉ nói HTTP; nếu để lộ thẳng cổng 80 thì mật khẩu và tin nhắn đi qua mạng dạng chữ thường.
+> Cách nhanh: đặt `APP_PORT=3001` (chỉ mở nội bộ) và chạy [Caddy](https://caddyserver.com) phía trước — tự xin chứng chỉ Let's Encrypt:
+> ```
+> # /etc/caddy/Caddyfile
+> game.ten-mien-cua-ban.com {
+>   reverse_proxy localhost:3001
+> }
+> ```
+> rồi đặt variable `TRUST_PROXY=1`. Trang web cũng chỉ kiểm chứng được xáo bài (cần Web Crypto) khi chạy qua HTTPS.
+
 ### C. Client trên GitHub Pages, server ở nơi khác
 1. Deploy server bằng cách A hoặc B, đặt biến môi trường `CORS_ORIGIN=https://<user>.github.io` cho server.
 2. **Settings → Pages → Source: GitHub Actions**.
@@ -119,20 +129,36 @@ docker run -p 3001:3001 game-lobby
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
 | `PORT` | `3001` | Cổng HTTP |
-| `CORS_ORIGIN` | `*` | Origin được phép khi client ở domain khác |
+| `CORS_ORIGIN` | _(trống)_ | Origin khác được phép kết nối, cách nhau dấu phẩy (vd `https://user.github.io`). Trống = chỉ trang cùng domain với server |
 | `CLIENT_DIST` | `client/dist` | Thư mục client đã build |
 | `APP_PASSWORD` | _(trống)_ | Mật khẩu để vào app (auth gate). Để trống = ai cũng vào được |
 | `APP_SERVERS` | _(trống)_ | Chia app thành nhiều server, mỗi server một mật khẩu (JSON). Có biến này thì `APP_PASSWORD` bị bỏ qua |
-| `TRUST_PROXY` | _(trống)_ | Đặt `1` khi chạy sau reverse proxy để giới hạn nhập sai mật khẩu theo IP thật |
+| `TRUST_PROXY` | _(trống)_ | Số reverse proxy đứng trước server (thường là `1`). IP thật = phần tử thứ N tính từ **cuối** `X-Forwarded-For` — phần đầu do client tự điền nên không tin được. Để trống khi không có proxy |
+| `DEBUG_IP` | _(trống)_ | Đặt `1` để in IP và `X-Forwarded-For` của mỗi kết nối ra log — dùng để kiểm tra `TRUST_PROXY` đúng chưa |
 
 ### Auth gate (mật khẩu vào app)
-Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật khẩu, nếu không sẽ bị từ chối. Người dùng thấy màn hình nhập mật khẩu, nhập đúng thì trình duyệt nhớ lại cho lần sau. Mỗi IP nhập sai quá 10 lần sẽ bị khóa 10 phút.
+Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật khẩu, nếu không sẽ bị từ chối. Người dùng thấy màn hình nhập mật khẩu; nhập đúng thì server cấp một **phiên đăng nhập** (ký HMAC, hạn 30 ngày, tự gia hạn khi vào) để trình duyệt nhớ — bản thân mật khẩu **không** được lưu trên máy người chơi. Nút **⇄ Đổi server** xóa phiên (đăng xuất).
+
+Chống đoán mật khẩu:
+- Mỗi IP nhập sai quá 10 lần bị khóa 10 phút (cần đặt `TRUST_PROXY` đúng khi chạy sau proxy, xem bảng trên).
+- Toàn server quá 60 lần sai trong 1 phút thì tạm ngừng nhận đăng nhập bằng mật khẩu trong phút đó (chặn đoán từ nhiều IP). Người đã có phiên vẫn vào bình thường.
+- Nên dùng mật khẩu dài, ngẫu nhiên (≥ 16 ký tự).
+
+Kiểm tra `TRUST_PROXY` trên Render/VPS: bật `DEBUG_IP=1`, mở app, xem log — IP in ra phải là IP của bạn; gửi thử một request kèm header `X-Forwarded-For: 1.2.3.4` thì IP in ra vẫn phải là IP thật, không phải `1.2.3.4`. Xong thì tắt `DEBUG_IP`.
 - **Chạy local:** `APP_PASSWORD=bimat npm run dev`
 - **Docker:** `docker run -p 3001:3001 -e APP_PASSWORD=bimat game-lobby`
 - **Render:** nhập `APP_PASSWORD` trong tab Environment của service
 - **VPS (GitHub Actions):** thêm secret `APP_PASSWORD` (và tùy chọn variable `TRUST_PROXY=1` nếu có Nginx phía trước)
 
-Đổi mật khẩu thì khởi động lại server; người đang dùng sẽ phải nhập mật khẩu mới khi kết nối lại.
+Đổi mật khẩu thì khởi động lại server; mọi phiên đăng nhập cũ hết hiệu lực, người đang dùng sẽ phải nhập mật khẩu mới khi kết nối lại.
+
+### Bảo mật
+- **Header HTTP:** CSP chặt (chỉ chạy script của chính app, không cho nhúng iframe), `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS khi chạy qua HTTPS. Font Inter tự host, không tải gì từ bên thứ ba.
+- **Origin:** chỉ trang cùng domain (hoặc khai báo trong `CORS_ORIGIN`) mới mở được kết nối — trang web lạ không thể dùng trình duyệt của người chơi để vào app.
+- **Giới hạn tài nguyên:** giới hạn tần suất mỗi kết nối (chat ~1 tin/giây), tối đa 30 kết nối và 30 danh tính mới/giờ mỗi IP, 200 phòng mỗi server, gói tin ≤ 16 KB; danh tính không hoạt động 24 giờ được dọn khỏi bộ nhớ.
+- **Xáo bài kiểm chứng được:** Fisher–Yates + bộ sinh số ngẫu nhiên an toàn mật mã (Web Crypto, loại bỏ modulo bias). Mỗi ván Poker / Tá lả / Sâm lốc, server công bố **mã cam kết SHA-256** của bộ bài (từng lá có muối riêng) trước khi chia; hết ván công bố các lá để trình duyệt tự kiểm tra bộ bài không bị đổi giữa chừng — huy hiệu 🛡 dưới bàn chơi. Poker chỉ công bố các lá người xem được phép thấy, bài bỏ của người khác vẫn kín.
+- **CI/CD:** GitHub Actions gắn theo commit SHA, `npm audit` trong CI, Dependabot cập nhật thư viện hằng tuần, container chạy user thường + `--read-only --cap-drop ALL`.
+- Nên bật trong **Settings** của repo: *Code security → Secret scanning / Push protection*, và *Branches → Branch protection* cho `main` (bắt buộc CI xanh trước khi merge).
 
 ### Nhiều server (mỗi server một mật khẩu)
 Đặt `APP_SERVERS` là JSON dạng `{"tên server": "mật khẩu"}`, ví dụ:

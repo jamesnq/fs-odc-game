@@ -1,4 +1,6 @@
 import { TalaGame } from '@game/shared/tala';
+import { randInt } from '@game/shared/cards';
+import { DeckCommitments } from './fairness.js';
 
 const clampInt = (v, min, max, def) => {
   const n = Math.floor(Number(v));
@@ -7,6 +9,7 @@ const clampInt = (v, min, max, def) => {
 
 export class TalaHandler {
   constructor(room, options) {
+    this.fair = new DeckCommitments();
     this.room = room;
     this.options = {
       maxSeats: clampInt(options.maxSeats, 2, 4, 4),
@@ -65,7 +68,7 @@ export class TalaHandler {
     this.gameSeats = seated;
     const players = seated.map((i) => this.seats[i]);
     let first = players.findIndex((p) => p.id === this.lastWinnerId);
-    if (first < 0) first = Math.floor(Math.random() * players.length);
+    if (first < 0) first = randInt(players.length);
     this.game = new TalaGame(players, first);
     this.left.clear();
     this.gameNo++;
@@ -142,7 +145,9 @@ export class TalaHandler {
   }
 
   view(viewerId) {
+    this.fair.track(this.game?.initialDeck);
     return {
+      fair: this.fair.view(!this.isPlaying()),
       config: this.options,
       seats: this.seats.map((s) => s && { ...s, total: this.totals.get(s.id) || 0, left: this.left.has(s.id), online: this.room.isOnline(s.id) }),
       gameSeats: this.gameSeats,

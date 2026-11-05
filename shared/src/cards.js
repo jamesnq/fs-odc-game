@@ -16,19 +16,26 @@ export function newDeck() {
   return d;
 }
 
-function randInt(n) {
+/**
+ * Số nguyên ngẫu nhiên đều trong [0, n) từ bộ sinh số ngẫu nhiên an toàn mật mã (CSPRNG)
+ * của hệ điều hành (Web Crypto — có sẵn trong Node ≥ 19 và mọi trình duyệt).
+ * Dùng rejection sampling để loại bỏ modulo bias: mọi giá trị có xác suất đúng bằng 1/n.
+ * Không có CSPRNG thì báo lỗi thay vì lùi về Math.random (đoán trước được).
+ */
+export function randInt(n) {
+  if (!Number.isInteger(n) || n < 1 || n > 0x100000000) throw new RangeError('randInt: n không hợp lệ');
   const c = globalThis.crypto;
-  if (c && c.getRandomValues) {
-    // Loại bỏ modulo bias
-    const max = Math.floor(0x100000000 / n) * n;
-    const buf = new Uint32Array(1);
-    do c.getRandomValues(buf); while (buf[0] >= max);
-    return buf[0] % n;
-  }
-  return Math.floor(Math.random() * n);
+  if (!c || typeof c.getRandomValues !== 'function') throw new Error('Không có bộ sinh số ngẫu nhiên an toàn (crypto.getRandomValues)');
+  const max = Math.floor(0x100000000 / n) * n;
+  const buf = new Uint32Array(1);
+  do c.getRandomValues(buf); while (buf[0] >= max);
+  return buf[0] % n;
 }
 
-/** Fisher–Yates */
+/**
+ * Fisher–Yates (Durstenfeld) dùng randInt ở trên: mỗi trong 52! hoán vị có xác suất như nhau.
+ * Đi kèm cơ chế cam kết–công bố (commit–reveal) ở server để người chơi kiểm chứng bộ bài không bị đổi giữa ván.
+ */
 export function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
