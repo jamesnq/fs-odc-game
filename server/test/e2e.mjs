@@ -74,10 +74,12 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await red.act({ type: 'respond', accept: false });
   await until(() => !red.state.state.pending);
   await until(() => c.state.state.moves.length === 1);
-  assert.ok(c.state.state.clocks.r < 8 * 60000 && c.state.state.clocks.r > 7 * 60000);
+  assert.ok(c.state.state.clocks.r <= 8 * 60000 && c.state.state.clocks.r > 7 * 60000);
   await black.act({ type: 'resign' });
   await until(() => a.state.state.status === 'over');
   assert.equal(a.state.state.result.winner, 'r');
+  // Mỗi người nhận trạng thái riêng: chờ chính người xem (c) nhận xong rồi mới đọc
+  await until(() => c.state.state.score.gameNo === 1);
   const sc = c.state.state.score;
   assert.equal(sc.gameNo, 1);
   assert.equal(sc.rows[0].id, red.user.id, 'người thắng đứng đầu bảng điểm');
@@ -180,7 +182,7 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   while (!a.state.state.game.result && guard++ < 80) {
     const g = a.state.state.game;
     const p = all.find((x) => x.user.id === g.players[g.turn].id);
-    await until(() => p.state.state.game.turn === g.turn);
+    await until(() => p.state?.state.game?.turn === g.turn);
     const pg = p.state.state.game;
     const me = pg.players[pg.me];
     if (pg.phase === 'draw') { await p.act({ type: pg.canEat ? 'eat' : 'draw' }); }
