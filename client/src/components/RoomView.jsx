@@ -149,14 +149,15 @@ export default function RoomView() {
               <Game room={room} state={room.state} />
             </div>
             {copied && <div className="room-flash" role="status"><Check size={14} aria-hidden /> Đã chép link phòng</div>}
-            {panel !== 'chat' && <ChatPeek chat={room.chat} me={user.id} onOpen={() => setPanel('chat')} />}
           </div>
           {panel && <div className="rp-scrim" onClick={() => setPanel(null)} aria-hidden />}
+          {/* Nằm trên cả ngăn bên (khi đang mở tab khác) để không bị che */}
+          {panel !== 'chat' && <ChatPeek chat={room.chat} me={user.id} onOpen={() => setPanel('chat')} />}
           <aside className={`room-panel ${panel ? 'open' : ''}`} aria-label="Ngăn thông tin" inert={panel ? undefined : ''}>
             <div className="rp-tabs" role="tablist">
               {PANEL_TABS.map(([tab, label, Icon]) => (
-                <button key={tab} role="tab" aria-selected={panel === tab} className={`rp-tab ${panel === tab ? 'active' : ''}`} onClick={() => setPanel(tab)}>
-                  <Icon size={16} aria-hidden /> {label}
+                <button key={tab} role="tab" aria-selected={panel === tab} className={`rp-tab ${panel === tab ? 'active' : ''}`} onClick={() => setPanel(tab)} aria-label={label} title={label}>
+                  <Icon size={16} aria-hidden /> <span className="rp-label">{label}</span>
                   {tab === 'chat' && unread > 0 && <span className="unread" aria-hidden>{unread > 9 ? '9+' : unread}</span>}
                 </button>
               ))}
