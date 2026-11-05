@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { colLabel } from '@game/shared/caro';
 import { useApp } from '../store.jsx';
-import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
-import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.jsx';
+import { useHotkeys } from '../hooks.js';
+import Scoreboard, { ScoreLine } from '../components/Scoreboard.jsx';
+import { PlayerBar, MoveList } from '../components/DuelPanels.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import { RequestOverlay, ResultOverlay, BoardActions } from '../components/BoardRequests.jsx';
 
@@ -51,7 +52,7 @@ export default function CaroGame({ room, state: s }) {
   return (
     <div className="bg caro">
       <div className="bg-col caro-main">
-        <PlayerBar color="o" s={s} room={room} />
+        <CaroPlayer side="o" s={s} room={room} />
         <div className="bg-board">
         <svg className="caro-board" viewBox={`0 0 ${W} ${W}`} onMouseLeave={() => setHover(null)}>
           <rect x="0" y="0" width={W} height={W} rx="10" className="caro-bg" />
@@ -90,14 +91,14 @@ export default function CaroGame({ room, state: s }) {
           <ScoreLine score={s.score} a={s.seats.x} b={s.seats.o} />
         </ResultOverlay>
         </div>
-        <PlayerBar color="x" s={s} room={room} />
+        <CaroPlayer side="x" s={s} room={room} />
         <BoardActions s={s} my={my} opp={opp} sitLabel="bấm “Ngồi” ở ghế trống để chơi" rematchLabel="Chơi lại (đổi lượt đi)" />
       </div>
 
       <GameInfo>
         <Scoreboard room={room} score={s.score} playing={s.status === 'playing'}
           sides={{ x: { label: 'X', cls: 'c-x' }, o: { label: 'O', cls: 'c-o' } }} />
-        <MoveList moves={s.moves} />
+        <MoveList moves={s.moves} sides={["x", "o"]} />
         <div className="muted small">
           Bàn {n}×{n} · 5 quân liên tiếp là thắng{s.options.blockTwoEnds ? ' · bị chặn hai đầu không tính' : ''} · {s.options.minutes} phút mỗi bên, hết giờ là thua. X đi trước. Xin đi lại / cầu hòa cần đối thủ đồng ý.
         </div>
@@ -122,56 +123,6 @@ function Mark({ p, x, y, ghost }) {
   );
 }
 
-function PlayerBar({ color, s, room }) {
-  const { call, user } = useApp();
-  const my = s.myColor;
-  const seat = s.seats[color];
-  const running = s.running && s.turn === color;
-  const ms = useCountdown(s.clocks[color], room.receivedAt, running);
-  const member = seat && room.members.find((m) => m.id === seat.id);
-  return (
-    <div className={`xq-player ${running ? 'active' : ''}`}>
-      <span className={`caro-chip ${color}`}>{NAME[color]}</span>
-      {seat ? (
-        <span className="pname">
-          {seat.name}{seat.id === user.id && ' (bạn)'}
-          {s.score?.gameNo > 0 && (
-            <span className="score-chip" title="Điểm trong phòng: thắng 1, hòa ½, thua 0">{fmtPts(pointsOf(s.score, seat.id) ?? 0)} điểm</span>
-          )}
-          {member && !member.online && <span className="muted"> (mất kết nối)</span>}
-          {s.status === 'waiting' && s.ready[color] && <span className="ready"> ✔ sẵn sàng</span>}
-          {s.status === 'over' && s.rematch[color] && <span className="ready"> ↻ muốn chơi lại</span>}
-        </span>
-      ) : (
-        <span className="pname muted">
-          Ghế trống {!my && s.status !== 'playing' && (
-            <button className="btn primary sm" onClick={() => call('room:sit', { seat: color })}>Ngồi {NAME[color]}</button>
-          )}
-        </span>
-      )}
-      <span className={`clock ${running ? 'running' : ''} ${ms < 60000 && running ? 'low' : ''}`}>{fmtClock(ms)}</span>
-    </div>
-  );
-}
-
-function MoveList({ moves }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [moves.length]);
-  const rows = [];
-  for (let i = 0; i < moves.length; i += 2) rows.push([i / 2 + 1, moves[i], moves[i + 1]]);
-  return (
-    <div className="panel moves">
-      <h4>Biên bản ({moves.length} nước)</h4>
-      <div className="move-list" ref={ref}>
-        {rows.length === 0 && <div className="muted small">Chưa có nước đi</div>}
-        {rows.map(([k, a, b]) => (
-          <div key={k} className="move-row">
-            <span className="muted">{k}.</span>
-            <span className="c-x">{a?.san}</span>
-            <span className="c-o">{b?.san || ''}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function CaroPlayer({ side, s, room }) {
+  return <PlayerBar side={side} s={s} room={room} chip={<span className={`caro-chip ${side}`}>{NAME[side]}</span>} sitLabel={`Ngồi ${NAME[side]}`} />;
 }

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { legalMovesFrom, colorOf, typeOf, PIECE_CHAR, rowOf, colOf, idx } from '@game/shared/xiangqi';
 import { useApp } from '../store.jsx';
-import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
-import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.jsx';
+import { useHotkeys } from '../hooks.js';
+import Scoreboard, { ScoreLine } from '../components/Scoreboard.jsx';
+import { PlayerBar, MoveList } from '../components/DuelPanels.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import { RequestOverlay, ResultOverlay, BoardActions } from '../components/BoardRequests.jsx';
 
@@ -57,7 +58,7 @@ export default function XiangqiGame({ room, state: s }) {
   return (
     <div className="bg xq">
       <div className="bg-col xq-main">
-        <PlayerBar color={topColor} s={s} room={room} />
+        <XiangqiPlayer side={topColor} s={s} room={room} />
         <div className="bg-board">
         <svg className="xq-board" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Bàn cờ tướng">
           <BoardDefs />
@@ -114,7 +115,7 @@ export default function XiangqiGame({ room, state: s }) {
           <ScoreLine score={s.score} a={s.seats.r} b={s.seats.b} />
         </ResultOverlay>
         </div>
-        <PlayerBar color={bottomColor} s={s} room={room} />
+        <XiangqiPlayer side={bottomColor} s={s} room={room} />
         <BoardActions s={s} my={my} opp={opp} sitLabel="bấm “Ngồi” ở ghế trống để chơi" rematchLabel="Chơi lại (đổi màu)"
           extra={<button className="btn ghost ba-icon" onClick={() => setManualFlip((f) => !f)} title="Lật bàn cờ (F)" aria-label="Lật bàn cờ"><ArrowUpDown size={16} aria-hidden /></button>} />
       </div>
@@ -122,66 +123,15 @@ export default function XiangqiGame({ room, state: s }) {
       <GameInfo>
         <Scoreboard room={room} score={s.score} playing={s.status === 'playing'}
           sides={{ r: { label: 'Đỏ', cls: 'c-r' }, b: { label: 'Đen', cls: 'c-b' } }} />
-        <MoveList moves={s.moves} />
+        <MoveList moves={s.moves} sides={["r", "b"]} />
         <div className="muted small">Thời gian: {s.options.minutes} phút mỗi bên. Hết giờ là thua. Xin đi lại / cầu hòa cần đối thủ đồng ý.</div>
       </GameInfo>
     </div>
   );
 }
 
-function PlayerBar({ color, s, room }) {
-  const { call, user } = useApp();
-  const my = s.myColor;
-  const seat = s.seats[color];
-  const running = s.running && s.turn === color;
-  const ms = useCountdown(s.clocks[color], room.receivedAt, running);
-  const low = ms < 60000;
-  const member = seat && room.members.find((m) => m.id === seat.id);
-  return (
-    <div className={`xq-player ${running ? 'active' : ''}`}>
-      <span className={`xq-chip ${color}`}>{PIECE_CHAR[color].K}</span>
-      {seat ? (
-        <span className="pname">
-          {seat.name}{seat.id === user.id && ' (bạn)'}
-          {s.score?.gameNo > 0 && (
-            <span className="score-chip" title="Điểm trong phòng: thắng 1, hòa ½, thua 0">{fmtPts(pointsOf(s.score, seat.id) ?? 0)} điểm</span>
-          )}
-          {member && !member.online && <span className="muted"> (mất kết nối)</span>}
-          {s.status === 'waiting' && s.ready[color] && <span className="ready"> ✔ sẵn sàng</span>}
-          {s.status === 'over' && s.rematch[color] && <span className="ready"> ↻ muốn chơi lại</span>}
-        </span>
-      ) : (
-        <span className="pname muted">
-          Ghế trống {!my && s.status !== 'playing' && (
-            <button className="btn primary sm" onClick={() => call('room:sit', { seat: color })}>Ngồi {COLOR_NAME[color]}</button>
-          )}
-        </span>
-      )}
-      <span className={`clock ${running ? 'running' : ''} ${low && running ? 'low' : ''}`}>{fmtClock(ms)}</span>
-    </div>
-  );
-}
-
-function MoveList({ moves }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [moves.length]);
-  const rows = [];
-  for (let i = 0; i < moves.length; i += 2) rows.push([i / 2 + 1, moves[i], moves[i + 1]]);
-  return (
-    <div className="panel moves">
-      <h4>Biên bản ({moves.length} nước)</h4>
-      <div className="move-list" ref={ref}>
-        {rows.length === 0 && <div className="muted small">Chưa có nước đi</div>}
-        {rows.map(([n, a, b]) => (
-          <div key={n} className="move-row">
-            <span className="muted">{n}.</span>
-            <span className="c-r">{a?.san}</span>
-            <span className="c-b">{b?.san || ''}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function XiangqiPlayer({ side, s, room }) {
+  return <PlayerBar side={side} s={s} room={room} chip={<span className={`xq-chip ${side}`}>{PIECE_CHAR[side].K}</span>} sitLabel={`Ngồi ${COLOR_NAME[side]}`} />;
 }
 
 /** Gradient gỗ, mặt quân và bóng đổ (có độ lệch) cho bàn cờ. */

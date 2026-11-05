@@ -6,63 +6,30 @@ import Card from '../components/Card.jsx';
 import CardTable from '../components/CardTable.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import { ResultOverlay } from '../components/BoardRequests.jsx';
+import { WaitingRoom, NextGameActions } from '../components/CardTableParts.jsx';
+import { fmtSigned } from '../format.js';
 import { Timer, ArrowDownUp } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
 
 const PHASE_VI = { draw: 'Bốc hoặc ăn bài', discard: 'Đánh bài', lay: 'Hạ phỏm / gửi bài rồi đánh lá cuối', done: 'Kết thúc' };
-const fmt = (n) => (n > 0 ? '+' : '') + Number(n || 0).toLocaleString('vi-VN');
 
 const sortCards = (cards, mode) => cards.slice().sort((a, b) => (mode === 'suit'
   ? a[1].localeCompare(b[1]) || rankOf(a) - rankOf(b)
   : rankOf(a) - rankOf(b) || a[1].localeCompare(b[1])));
 
 export default function TalaGame({ room, state: s }) {
-  const { act, call } = useApp();
+  const { act } = useApp();
   const g = s.game;
   const inGame = g && g.me >= 0;
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, !!s.turnLeft);
 
-  if (!g || (!s.playing && !g.result)) return <Waiting s={s} act={act} call={call} />;
+  if (!g || (!s.playing && !g.result)) return <WaitingRoom s={s} title="Bàn Tá lả" startLabel="Bắt đầu ván" rules={<Rules />} />;
 
   return (
     <div className="tl">
       <Table s={s} g={g} act={act} timeLeft={timeLeft} inGame={inGame} />
-      {g.result && <Result s={s} g={g} act={act} call={call} />}
+      {g.result && <Result s={s} g={g} />}
       <GameInfo><div className="panel"><Rules open /></div></GameInfo>
-    </div>
-  );
-}
-
-function Waiting({ s, act, call }) {
-  const seated = s.seats.filter(Boolean).length;
-  useHotkeys({ n: () => s.mySeat >= 0 && seated >= 2 && act({ type: 'start' }) });
-  return (
-    <div className="tl-wait panel">
-      <h3>Bàn Tá lả — cược {s.config.unit}/đơn vị</h3>
-      <div className="tl-seats">
-        {s.seats.map((seat, i) => (
-          <div key={i} className={`tl-seat-box ${seat ? '' : 'empty'}`}>
-            {seat ? (
-              <>
-                <b>{seat.name}</b>
-                <div className={seat.total >= 0 ? 'pos' : 'neg'}>{fmt(seat.total)}</div>
-              </>
-            ) : s.mySeat < 0 ? (
-              <button className="btn sm" onClick={() => call('room:sit', { seat: i })}>Ngồi đây</button>
-            ) : <span className="muted">Trống</span>}
-          </div>
-        ))}
-      </div>
-      <div className="row">
-        {s.mySeat >= 0 ? (
-          <>
-            <button className="btn cta" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Bắt đầu ván</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
-          </>
-        ) : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
-      </div>
-      {seated < 2 && <div className="muted small">Cần ít nhất 2 người để bắt đầu.</div>}
-      <Rules />
     </div>
   );
 }
@@ -176,7 +143,7 @@ function Table({ s, g, act, timeLeft, inGame }) {
             {i === g.first && <span className="badge">Đi đầu</span>}
             {seat?.left && <span className="badge warn">Đã rời</span>}
             {seat && !seat.online && !seat.left && <span className="badge warn">Mất kết nối</span>}
-            <span className={`tl-score ${p.score >= 0 ? 'pos' : 'neg'}`}>{fmt(p.score)}</span>
+            <span className={`tl-score ${p.score >= 0 ? 'pos' : 'neg'}`}>{fmtSigned(p.score)}</span>
             {/* Đồng hồ luôn giữ chỗ (ẩn khi không tới lượt) → dòng tên không đổi chiều cao */}
             <span className={`tl-timer ${isTurn ? '' : 'off'}`} aria-hidden={!isTurn}><Timer size={13} aria-hidden /> {isTurn ? Math.ceil(timeLeft / 1000) : 0}s</span>
           </div>
@@ -274,10 +241,9 @@ function Table({ s, g, act, timeLeft, inGame }) {
   );
 }
 
-function Result({ s, g, act, call }) {
+function Result({ s, g }) {
   const r = g.result;
   const rankName = ['Nhất', 'Nhì', 'Ba', 'Bét'];
-  useHotkeys({ n: () => s.mySeat >= 0 && act({ type: 'start' }) });
   return (
     <ResultOverlay over peek="Xem bàn" resetKey={s.gameNo} title={r.type === 'u' ? `${g.players[r.winner].name} Ù!` : `${g.players[r.winner].name} về Nhất`}
       detail={r.type === 'u' && r.den !== null && r.den !== undefined ? `${g.players[r.den].name} đền làng` : null}>
@@ -290,25 +256,12 @@ function Result({ s, g, act, call }) {
               <td>{r.type === 'u' ? (k === 0 ? 'Ù' : '—') : r.mom[p] ? 'Móm' : rankName[k]}</td>
               <td>{g.players[p].name}</td>
               <td>{r.points[p]}</td>
-              <td className={r.scores[p] >= 0 ? 'pos' : 'neg'}>{fmt(r.scores[p] * s.config.unit)}</td>
+              <td className={r.scores[p] >= 0 ? 'pos' : 'neg'}>{fmtSigned(r.scores[p] * s.config.unit)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="row">
-        {s.mySeat >= 0 ? (
-          <>
-            <button className="btn cta" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
-          </>
-        ) : (
-          s.seats.some((x) => !x) && <span className="muted">Có ghế trống — </span>
-        )}
-        {s.mySeat < 0 && s.seats.map((x, i) => !x && (
-          <button key={i} className="btn sm" onClick={() => call('room:sit', { seat: i })}>Ngồi ghế {i + 1}</button>
-        ))}
-      </div>
-      <div className="small muted">Tổng điểm: {s.seats.filter(Boolean).map((x) => `${x.name}: ${fmt(x.total)}`).join(' · ')}</div>
+      <NextGameActions s={s} />
     </div>
     </ResultOverlay>
   );

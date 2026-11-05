@@ -6,9 +6,9 @@ import { useCountdown, useHotkeys } from '../hooks.js';
 import PokerHandLog from './PokerHandLog.jsx';
 import Modal from '../components/Modal.jsx';
 import GameInfo from '../components/GameInfo.jsx';
+import { fmtNum } from '../format.js';
 
 const STREET_VI = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
-const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
 
 export default function PokerGame({ room, state: s }) {
   const { act, call, user } = useApp();
@@ -50,11 +50,11 @@ export default function PokerGame({ room, state: s }) {
                     : <div key={i} className="card-slot" />;
               })}
             </div>
-            {h && <div className="pk-pot">Pot: <b>{fmt(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
+            {h && <div className="pk-pot">Pot: <b>{fmtNum(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
             {h?.result && (
               <div className="pk-result">
                 {h.result.pots.map((p, k) => (
-                  <div key={k}>🏆 {p.winners.map((w) => s.seats[w]?.name || '?').join(', ')} thắng {fmt(p.amount)}{p.hand ? ` — ${p.hand}` : ''}</div>
+                  <div key={k}>🏆 {p.winners.map((w) => s.seats[w]?.name || '?').join(', ')} thắng {fmtNum(p.amount)}{p.hand ? ` — ${p.hand}` : ''}</div>
                 ))}
               </div>
             )}
@@ -64,16 +64,16 @@ export default function PokerGame({ room, state: s }) {
               </div>
             ) : null}
             <div className="muted small">
-              Blind {fmt(s.smallBlind)}/{fmt(s.bigBlind)}
+              Blind {fmtNum(s.smallBlind)}/{fmtNum(s.bigBlind)}
               {isOwner && <button className="link pk-blind-edit" title="Đổi blind" aria-label="Đổi blind" onClick={() => setEditBlinds(true)}><Pencil size={14} aria-hidden /></button>}
             </div>
             {mySeat >= 0 && s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
-              <button className="btn cta sm" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmt(s.config.buyIn)} chip</button>
+              <button className="btn cta sm" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmtNum(s.config.buyIn)} chip</button>
             )}
             {mySeat >= 0 && s.seats[mySeat].sitOut && (
               <button className="btn sm" onClick={() => act({ type: 'sitout' })}>Quay lại chơi</button>
             )}
-            {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmt(s.nextBlinds.smallBlind)}/{fmt(s.nextBlinds.bigBlind)}</div>}
+            {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmtNum(s.nextBlinds.smallBlind)}/{fmtNum(s.nextBlinds.bigBlind)}</div>}
           </div>
 
           {s.seats.map((seat, i) => {
@@ -100,13 +100,13 @@ export default function PokerGame({ room, state: s }) {
                   <div className="pk-name">
                     {seat.name}{seat.left && ' (rời)'}{seat.sitOut && ' (nghỉ)'}
                   </div>
-                  <div className="pk-chips">💰 {fmt(seat.chips)}</div>
+                  <div className="pk-chips">💰 {fmtNum(seat.chips)}</div>
                   {seat.lastAction && <div className="pk-act">{seat.lastAction}</div>}
                   {shown && <div className="pk-hand">{shown.hand}</div>}
                   {toAct && <div className="timebar"><div style={{ width: `${(timeLeft / s.turnTotal) * 100}%` }} /></div>}
                 </div>
                 {h && h.street !== 'done' && h.dealer === i && <div className="pk-dealer">D</div>}
-                {seat.bet > 0 && <div className="pk-bet">{fmt(seat.bet)}</div>}
+                {seat.bet > 0 && <div className="pk-bet">{fmtNum(seat.bet)}</div>}
               </div>
             );
           })}
@@ -189,12 +189,12 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
       <div className="row wrap">
         <button className="btn danger" disabled={!o} onClick={doFold}><kbd>F</kbd> Bỏ bài</button>
         <button className="btn" disabled={!o} onClick={doCall}>
-          <kbd>C</kbd> {!o ? 'Theo' : o.canCheck ? 'Check' : `Theo ${fmt(o.toCall)}`}
+          <kbd>C</kbd> {!o ? 'Theo' : o.canCheck ? 'Check' : `Theo ${fmtNum(o.toCall)}`}
         </button>
         <button className="btn primary" disabled={!canBR} onClick={doBR}>
-          <kbd>{o?.canBet ? 'B' : 'R'}</kbd> {!canBR ? 'Tố' : amount >= o.maxTo ? 'All-in' : o.canBet ? 'Cược' : 'Tố lên'} {canBR ? fmt(amount) : ''}
+          <kbd>{o?.canBet ? 'B' : 'R'}</kbd> {!canBR ? 'Tố' : amount >= o.maxTo ? 'All-in' : o.canBet ? 'Cược' : 'Tố lên'} {canBR ? fmtNum(amount) : ''}
         </button>
-        <button className="btn warn" disabled={!o} onClick={doAllIn}><kbd>A</kbd> All-in {o ? fmt((o.allInTo ?? o.maxTo) - o.myBet) : ''}</button>
+        <button className="btn warn" disabled={!o} onClick={doAllIn}><kbd>A</kbd> All-in {o ? fmtNum((o.allInTo ?? o.maxTo) - o.myBet) : ''}</button>
       </div>
       <div className={`row wrap pk-sizing ${canBR ? '' : 'off'}`} aria-hidden={!canBR}>
         <input type="range" min={o?.minTo ?? 0} max={o?.maxTo ?? 1} step={1} value={canBR ? amount : 0} disabled={!canBR}
@@ -225,7 +225,7 @@ function BlindsDialog({ s, act, onClose }) {
   const inHand = s.hand && s.hand.street !== 'done';
   const sbN = Math.floor(Number(sb)), bbN = Math.floor(Number(bb));
   const error = !(bbN >= 2) ? 'Big blind tối thiểu là 2'
-    : bbN > s.config.buyIn ? `Big blind không được lớn hơn buy-in (${fmt(s.config.buyIn)})`
+    : bbN > s.config.buyIn ? `Big blind không được lớn hơn buy-in (${fmtNum(s.config.buyIn)})`
     : !(sbN >= 1) ? 'Small blind tối thiểu là 1'
     : sbN > bbN ? 'Small blind không được lớn hơn big blind' : null;
   const preset = (f) => { const b = Math.max(2, Math.round(cur.bigBlind * f)); setBb(b); setSb(Math.max(1, Math.floor(b / 2))); };

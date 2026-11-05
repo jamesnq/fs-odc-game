@@ -12,7 +12,7 @@
 - Đặt tên người chơi (lưu trên trình duyệt, tự kết nối lại khi F5 / rớt mạng, giữ ghế 60 giây)
 - Tạo / vào / rời / xóa phòng, đặt và đổi tên phòng, lọc và tìm phòng theo trò chơi
 - Vào chơi hoặc chỉ **xem**, ngồi / đứng dậy, chủ phòng mời người ra, chat trong phòng, chia sẻ link phòng
-- Chủ phòng rời thì quyền chủ phòng tự chuyển cho người khác; phòng trống tự xóa
+- Chủ phòng rời thì quyền chủ phòng tự chuyển cho người khác đang kết nối; người cuối cùng rời phòng thì phòng tự xóa ngay (người mất kết nối được giữ chỗ 60 giây để vào lại)
 - **Báo bản deploy mới:** khi server được deploy bản mới, người đang mở app thấy thông báo "Đã có phiên bản mới" kèm nút **Tải lại** (tải lại vẫn giữ chỗ trong phòng). Phiên bản hiện tại xem ở `/health`
 
 **Cờ tướng**
@@ -188,13 +188,23 @@ shared/src/       Luật chơi thuần JS (dùng cho cả server và client)
   xiangqi.js      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
   caro.js         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
   wordchain.js    Nối từ: chuẩn hóa âm tiết, lượt, mạng, phản đối
-server/src/data/  Từ điển âm tiết tiếng Việt cho Nối từ (MIT, xem README trong thư mục)
   poker.js        Chấm bài, ván cược, side pot
   samloc.js       Sâm lốc: phân loại bộ, chặn, báo Sâm, báo 1, tới trắng, tính tiền
   tala.js         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
 shared/test/      Unit test (node --test)
-server/src/       Express + Socket.IO, quản lý user, phòng, đồng hồ
+server/src/       Express + Socket.IO
+  index.js        Khởi động: ghép các phần bên dưới
+  config.js       Đọc biến môi trường, giới hạn tài nguyên
+  http.js         Header bảo mật, /health, phục vụ client đã build
+  auth.js         Mật khẩu, phiên đăng nhập, khóa IP đoán mật khẩu
+  rateLimit.js    Token bucket, bộ đếm theo IP
+  lobby.js        Người dùng, phòng: vào / ra / xóa phòng
+  connection.js   Các sự kiện socket của một kết nối
+  voice.js        Voice chat: STUN/TURN, hạn mức, lọc tín hiệu
 server/src/games/ Lớp điều phối từng game (ghế, hẹn giờ, quyền thao tác)
+  duel.js         Khung chung cờ 2 người có đồng hồ (Cờ tướng, Cờ caro)
+  cardTable.js    Khung chung bài đánh theo lượt (Tá lả, Sâm lốc)
+server/src/data/  Từ điển tiếng Việt cho Nối từ (MIT, xem README trong thư mục)
 client/src/       React UI: sảnh, phòng, bàn cờ, bàn bài, phím tắt
 ```
 
