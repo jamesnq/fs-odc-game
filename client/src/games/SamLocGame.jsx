@@ -3,6 +3,8 @@ import { classify, beats, valueOf, COMBO_VI, SAM_RULES } from '@game/shared/saml
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import CardTable from '../components/CardTable.jsx';
+import GameInfo from '../components/GameInfo.jsx';
+import { ResultOverlay } from '../components/BoardRequests.jsx';
 import { Timer, Flame, Check } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
 
@@ -18,6 +20,7 @@ export default function SamLocGame({ room, state: s }) {
     <div className="sl">
       <Table s={s} g={g} act={act} timeLeft={timeLeft} />
       {g.result && <Result s={s} g={g} act={act} call={call} />}
+      <GameInfo><div className="panel"><Rules open /></div></GameInfo>
     </div>
   );
 }
@@ -46,7 +49,7 @@ function Waiting({ s, act, call }) {
         {s.mySeat >= 0 ? (
           <>
             <button className="btn cta" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Chia bài</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
           </>
         ) : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
       </div>
@@ -56,9 +59,9 @@ function Waiting({ s, act, call }) {
   );
 }
 
-function Rules() {
+function Rules({ open = false }) {
   return (
-    <details className="rules">
+    <details className="rules" open={open}>
       <summary>Luật Sâm lốc tóm tắt</summary>
       <ul>
         <li>2–5 người, mỗi người 10 lá. Thứ tự: 3 &lt; 4 &lt; … &lt; K &lt; A &lt; 2 (heo). <b>Không xét chất</b> — cùng số không chặn được nhau.</li>
@@ -224,11 +227,11 @@ function Result({ s, g, act, call }) {
   const r = g.result;
   useHotkeys({ n: () => s.mySeat >= 0 && act({ type: 'start' }) });
   const title = r.type === 'samFail'
-    ? `💥 ${g.players[r.samBy].name} bị ${g.players[r.winner].name} chặn Sâm!`
-    : `🏆 ${g.players[r.winner].name} — ${r.text}`;
+    ? `${g.players[r.samBy].name} bị ${g.players[r.winner].name} chặn Sâm!`
+    : `${g.players[r.winner].name} — ${r.text}`;
   return (
-    <div className="tl-result panel">
-      <h3>{title}</h3>
+    <ResultOverlay over peek="Xem bàn" resetKey={s.gameNo} title={title}>
+    <div className="tl-result">
       <table className="result-table">
         <thead><tr><th>Người chơi</th><th>Bài còn lại</th><th>Chi tiết</th><th>Thắng/thua</th></tr></thead>
         <tbody>
@@ -252,7 +255,7 @@ function Result({ s, g, act, call }) {
         {s.mySeat >= 0 ? (
           <>
             <button className="btn cta" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
           </>
         ) : s.seats.map((x, i) => !x && (
           <button key={i} className="btn sm" onClick={() => call('room:sit', { seat: i })}>Ngồi ghế {i + 1}</button>
@@ -260,5 +263,6 @@ function Result({ s, g, act, call }) {
       </div>
       <div className="small muted">Tổng điểm: {s.seats.filter(Boolean).map((x) => `${x.name}: ${fmt(x.total)}`).join(' · ')}</div>
     </div>
+    </ResultOverlay>
   );
 }

@@ -4,6 +4,8 @@ import { isMeld, bestArrangement } from '@game/shared/tala';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import CardTable from '../components/CardTable.jsx';
+import GameInfo from '../components/GameInfo.jsx';
+import { ResultOverlay } from '../components/BoardRequests.jsx';
 import { Timer, ArrowDownUp } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
 
@@ -26,6 +28,7 @@ export default function TalaGame({ room, state: s }) {
     <div className="tl">
       <Table s={s} g={g} act={act} timeLeft={timeLeft} inGame={inGame} />
       {g.result && <Result s={s} g={g} act={act} call={call} />}
+      <GameInfo><div className="panel"><Rules open /></div></GameInfo>
     </div>
   );
 }
@@ -54,7 +57,7 @@ function Waiting({ s, act, call }) {
         {s.mySeat >= 0 ? (
           <>
             <button className="btn cta" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Bắt đầu ván</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
           </>
         ) : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
       </div>
@@ -64,9 +67,9 @@ function Waiting({ s, act, call }) {
   );
 }
 
-function Rules() {
+function Rules({ open = false }) {
   return (
-    <details className="rules">
+    <details className="rules" open={open}>
       <summary>Luật chơi tóm tắt</summary>
       <ul>
         <li>Người đi đầu 10 lá, còn lại 9 lá. Mỗi lượt <b>bốc</b> 1 lá hoặc <b>ăn</b> lá người trước vừa đánh (nếu tạo phỏm), rồi <b>đánh</b> 1 lá.</li>
@@ -276,9 +279,9 @@ function Result({ s, g, act, call }) {
   const rankName = ['Nhất', 'Nhì', 'Ba', 'Bét'];
   useHotkeys({ n: () => s.mySeat >= 0 && act({ type: 'start' }) });
   return (
-    <div className="tl-result panel">
-      <h3>{r.type === 'u' ? `🎉 ${g.players[r.winner].name} Ù!` : `🏆 ${g.players[r.winner].name} về Nhất`}</h3>
-      {r.type === 'u' && r.den !== null && r.den !== undefined && <div className="muted">{g.players[r.den].name} đền làng</div>}
+    <ResultOverlay over peek="Xem bàn" resetKey={s.gameNo} title={r.type === 'u' ? `${g.players[r.winner].name} Ù!` : `${g.players[r.winner].name} về Nhất`}
+      detail={r.type === 'u' && r.den !== null && r.den !== undefined ? `${g.players[r.den].name} đền làng` : null}>
+    <div className="tl-result">
       <table className="result-table">
         <thead><tr><th>Hạng</th><th>Người chơi</th><th>Điểm bài</th><th>Thắng/thua</th></tr></thead>
         <tbody>
@@ -296,7 +299,7 @@ function Result({ s, g, act, call }) {
         {s.mySeat >= 0 ? (
           <>
             <button className="btn cta" disabled={s.seats.filter(Boolean).length < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
           </>
         ) : (
           s.seats.some((x) => !x) && <span className="muted">Có ghế trống — </span>
@@ -307,5 +310,6 @@ function Result({ s, g, act, call }) {
       </div>
       <div className="small muted">Tổng điểm: {s.seats.filter(Boolean).map((x) => `${x.name}: ${fmt(x.total)}`).join(' · ')}</div>
     </div>
+    </ResultOverlay>
   );
 }

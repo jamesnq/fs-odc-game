@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Hand, Hourglass, Clock } from 'lucide-react';
+import { Hand, Hourglass } from 'lucide-react';
 
 /** Ai đang tới lượt, cho từng trò. Trả về null khi chưa có ván đang chơi. */
 export function turnInfo(room, userId) {
@@ -39,11 +39,8 @@ export function turnInfo(room, userId) {
   }
 }
 
-/**
- * Thanh báo lượt: luôn giữ chỗ (không nhảy layout), dính dưới header khi cuộn.
- * Tới lượt mình: nền vàng nổi bật + đổi tiêu đề tab + rung nhẹ trên điện thoại (một lần mỗi lượt).
- */
-export default function TurnBanner({ info }) {
+/** Hiệu ứng khi tới lượt mình: đổi tiêu đề tab + rung nhẹ trên điện thoại (một lần mỗi lượt). */
+export function TurnEffects({ info }) {
   const mine = !!info?.mine;
   const prev = useRef(false);
   useEffect(() => {
@@ -55,24 +52,23 @@ export default function TurnBanner({ info }) {
     prev.current = mine;
     return () => { document.title = base; };
   }, [mine]);
+  return null;
+}
 
-  let content;
-  if (!info) {
-    content = <span className="tb-text"><Clock size={16} aria-hidden /> Chưa có ván đang chơi</span>;
-  } else if (mine) {
-    content = <span className="tb-text"><Hand size={18} aria-hidden /> <b>{info.text || 'Đến lượt bạn!'}</b></span>;
-  } else {
-    content = (
-      <span className="tb-text">
-        {info.who
-          ? <><span className="tb-avatar" aria-hidden>{info.who.trim()[0]?.toUpperCase()}</span> Lượt của <b>{info.who}</b></>
-          : <><Hourglass size={16} aria-hidden /> {info.text}</>}
-      </span>
-    );
-  }
+/**
+ * Báo lượt gọn trong đầu phòng (thay cho thanh riêng chiếm một hàng):
+ * nằm ngay dưới tên phòng, cùng chỗ với dòng "Tên trò · #mã" khi chưa có ván.
+ * Tới lượt mình: viên thuốc vàng nổi bật + khung bàn chơi phát sáng (CSS .game-area.my-turn).
+ */
+export function TurnPill({ info, sub }) {
+  if (!info) return <span className="muted small room-sub">{sub}</span>;
+  const mine = !!info.mine;
   return (
-    <div className={`turn-banner ${!info ? 'idle' : mine ? 'mine' : 'other'}`} role="status" aria-live="polite">
-      {content}
-    </div>
+    <span className={`turn-pill ${mine ? 'mine' : 'other'}`} role="status" aria-live="polite">
+      {mine ? <Hand size={14} aria-hidden /> : info.who ? <span className="tb-dot" aria-hidden /> : <Hourglass size={13} aria-hidden />}
+      <span className="tp-text">
+        {mine ? <b>{info.text || 'Đến lượt bạn!'}</b> : info.who ? <>Lượt của <b>{info.who}</b></> : info.text}
+      </span>
+    </span>
   );
 }

@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Flag, RotateCcw, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle } from 'lucide-react';
 import { useApp } from '../store.jsx';
+import GameInfo from '../components/GameInfo.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useCountdown } from '../hooks.js';
 
 export default function WordChainGame({ room, state: s }) {
   const { act, call, user } = useApp();
+  const [giveup, setGiveup] = useState(false);
   const g = s.game;
   const me = s.myId;
   const playing = s.status === 'playing';
@@ -80,13 +83,9 @@ export default function WordChainGame({ room, state: s }) {
           )}
         </div>
 
-        {g && <Chain g={g} history={s.history || []} me={me} />}
-      </div>
-
-      <div className="wc-side">
-        <div className="panel">
+        <div className="board-actions">
           {me ? (
-            <div className="xq-actions">
+            <>
               {!playing && (
                 <button className={`btn ${s.ready.includes(me) ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })}
                   disabled={s.seats.length < 2}>
@@ -94,24 +93,30 @@ export default function WordChainGame({ room, state: s }) {
                 </button>
               )}
               {playing && meInGame && !meInGame.out && (
-                <button className="btn danger" onClick={() => confirm('Chịu thua ván này?') && act({ type: 'giveup' })}><Flag size={16} aria-hidden /> Chịu thua</button>
+                <button className="btn danger" onClick={() => setGiveup(true)}><Flag size={16} aria-hidden /> Chịu thua</button>
               )}
-              {!playing && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>}
-            </div>
+              {!playing && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>}
+            </>
           ) : (
-            <div className="muted small">
+            <span className="muted small ba-note">
               Bạn đang xem.{' '}
               {!playing && s.seats.length < s.options.maxSeats && (
                 <button className="btn primary sm" onClick={() => call('room:sit', {})}>Vào chơi</button>
               )}
-            </div>
+            </span>
           )}
-          {!playing && s.seats.length >= 2 && (
-            <div className="muted small" style={{ marginTop: 8 }}>
-              Sẵn sàng: {s.ready.length}/{s.seats.length}
-            </div>
-          )}
+          {!playing && s.seats.length >= 2 && <span className="muted small ba-note">Sẵn sàng: {s.ready.length}/{s.seats.length}</span>}
         </div>
+        {giveup && (
+          <ConfirmDialog title="Chịu thua ván này?" danger okLabel="Chịu thua" icon={<Flag size={22} />}
+            onOk={() => act({ type: 'giveup' })} onClose={() => setGiveup(false)}>
+            Bạn sẽ bị loại khỏi ván này.
+          </ConfirmDialog>
+        )}
+      </div>
+
+      <GameInfo>
+        {g && <Chain g={g} history={s.history || []} me={me} />}
         <Wins wins={s.wins} me={user.id} />
         <div className="panel small muted wc-rules">
           <b>Luật chơi</b>
@@ -125,7 +130,7 @@ export default function WordChainGame({ room, state: s }) {
             <li>Người cuối cùng còn lại thắng.</li>
           </ul>
         </div>
-      </div>
+      </GameInfo>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Card from '../components/Card.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
 import PokerHandLog from './PokerHandLog.jsx';
 import Modal from '../components/Modal.jsx';
+import GameInfo from '../components/GameInfo.jsx';
 
 const STREET_VI = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
 const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
@@ -66,6 +67,12 @@ export default function PokerGame({ room, state: s }) {
               Blind {fmt(s.smallBlind)}/{fmt(s.bigBlind)}
               {isOwner && <button className="link pk-blind-edit" title="Đổi blind" aria-label="Đổi blind" onClick={() => setEditBlinds(true)}><Pencil size={14} aria-hidden /></button>}
             </div>
+            {mySeat >= 0 && s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
+              <button className="btn cta sm" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmt(s.config.buyIn)} chip</button>
+            )}
+            {mySeat >= 0 && s.seats[mySeat].sitOut && (
+              <button className="btn sm" onClick={() => act({ type: 'sitout' })}>Quay lại chơi</button>
+            )}
             {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmt(s.nextBlinds.smallBlind)}/{fmt(s.nextBlinds.bigBlind)}</div>}
           </div>
 
@@ -109,23 +116,22 @@ export default function PokerGame({ room, state: s }) {
       {mySeat >= 0 && (
         <ActionBar s={s} o={o} act={act} myTurn={!!o} timeLeft={timeLeft} />
       )}
-      {mySeat >= 0 && (
-        <div className="row pk-mybar">
-          {s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
-            <button className="btn primary" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmt(s.config.buyIn)} chip</button>
-          )}
-          <button className="btn ghost sm" onClick={() => act({ type: 'sitout' })}>{s.seats[mySeat].sitOut ? 'Quay lại chơi' : 'Nghỉ ván sau'}</button>
-          <button className="btn ghost sm" onClick={() => call('room:stand')}>Đứng dậy xem</button>
-        </div>
-      )}
-      {mySeat < 0 && <div className="muted center small">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
-      {h && (
-        <details className="panel pk-log">
-          <summary>Diễn biến ván #{h.no}</summary>
-          {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
-        </details>
-      )}
-      <PokerHandLog s={s} />
+      {mySeat < 0 && <div className="muted center small pk-watch">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
+      <GameInfo>
+        {mySeat >= 0 && (
+          <div className="panel row wrap pk-mybar">
+            <button className="btn sm" onClick={() => act({ type: 'sitout' })}>{s.seats[mySeat].sitOut ? 'Quay lại chơi' : 'Nghỉ ván sau'}</button>
+            <button className="btn ghost sm" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+          </div>
+        )}
+        {h && (
+          <details className="panel pk-log" open>
+            <summary>Diễn biến ván #{h.no}</summary>
+            {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
+          </details>
+        )}
+        <PokerHandLog s={s} />
+      </GameInfo>
       {editBlinds && <BlindsDialog s={s} act={act} onClose={() => setEditBlinds(false)} />}
     </div>
   );
@@ -134,8 +140,10 @@ export default function PokerGame({ room, state: s }) {
 function ActionBar({ s, o, act, myTurn, timeLeft }) {
   const bb = s.bigBlind;
   const [amount, setAmount] = useState(o ? o.minTo : 0);
+  // Chuỗi đang gõ trong ô số tiền (null = hiển thị amount). Tách riêng để xóa hết được số cũ, kể cả số 0.
+  const [draft, setDraft] = useState(null);
   const key = o ? `${s.hand?.no}:${o.currentBet}:${o.minTo}` : '';
-  useEffect(() => { if (o) setAmount(o.minTo); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (o) { setAmount(o.minTo); setDraft(null); } }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canBR = o && (o.canBet || o.canRaise);
   const clamp = (v) => (o ? Math.max(o.minTo, Math.min(o.maxTo, Math.round(v))) : v);
@@ -143,6 +151,7 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
     if (!o) return;
     const toCall = o.currentBet - o.myBet;
     setAmount(clamp(o.currentBet + f * (o.pot + toCall)));
+    setDraft(null);
   };
 
   const doFold = () => o && act({ type: 'act', action: 'fold' });
@@ -150,7 +159,10 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
   const doCheck = () => o && o.canCheck && act({ type: 'act', action: 'check' });
   const doBR = () => {
     if (!canBR) return;
-    act({ type: 'act', action: amount >= o.maxTo ? 'allin' : o.canBet ? 'bet' : 'raise', amount });
+    const v = clamp(amount);
+    setAmount(v);
+    setDraft(null);
+    act({ type: 'act', action: v >= o.maxTo ? 'allin' : o.canBet ? 'bet' : 'raise', amount: v });
   };
   const doAllIn = () => o && act({ type: 'act', action: 'allin' });
 
@@ -162,8 +174,8 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
     r: doBR,
     a: doAllIn,
     Enter: doBR,
-    ArrowUp: (e) => canBR && setAmount((v) => clamp(v + (e.shiftKey ? 10 : 1) * bb)),
-    ArrowDown: (e) => canBR && setAmount((v) => clamp(v - (e.shiftKey ? 10 : 1) * bb)),
+    ArrowUp: (e) => { if (canBR) { setDraft(null); setAmount((v) => clamp(v + (e.shiftKey ? 10 : 1) * bb)); } },
+    ArrowDown: (e) => { if (canBR) { setDraft(null); setAmount((v) => clamp(v - (e.shiftKey ? 10 : 1) * bb)); } },
     1: () => preset(1 / 3),
     2: () => preset(1 / 2),
     3: () => preset(3 / 4),
@@ -182,13 +194,19 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
         <button className="btn primary" disabled={!canBR} onClick={doBR}>
           <kbd>{o?.canBet ? 'B' : 'R'}</kbd> {!canBR ? 'Tố' : amount >= o.maxTo ? 'All-in' : o.canBet ? 'Cược' : 'Tố lên'} {canBR ? fmt(amount) : ''}
         </button>
-        <button className="btn warn" disabled={!o} onClick={doAllIn}><kbd>A</kbd> All-in {o ? fmt(o.maxTo - o.myBet) : ''}</button>
+        <button className="btn warn" disabled={!o} onClick={doAllIn}><kbd>A</kbd> All-in {o ? fmt((o.allInTo ?? o.maxTo) - o.myBet) : ''}</button>
       </div>
       <div className={`row wrap pk-sizing ${canBR ? '' : 'off'}`} aria-hidden={!canBR}>
         <input type="range" min={o?.minTo ?? 0} max={o?.maxTo ?? 1} step={1} value={canBR ? amount : 0} disabled={!canBR}
-          onChange={(e) => setAmount(Number(e.target.value))} />
-        <input type="number" className="num" min={o?.minTo} max={o?.maxTo} value={canBR ? amount : ''} disabled={!canBR}
-          onChange={(e) => setAmount(Number(e.target.value))} onBlur={() => setAmount(clamp(amount))}
+          onChange={(e) => { setAmount(Number(e.target.value)); setDraft(null); }} />
+        <input type="text" inputMode="numeric" className="num" aria-label="Số tiền cược" value={canBR ? (draft ?? String(amount)) : ''} disabled={!canBR}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => {
+            const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 12);
+            setDraft(d);
+            if (d) setAmount(Number(d));
+          }}
+          onBlur={() => { setAmount(clamp(amount)); setDraft(null); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); doBR(); } }} />
         {[['1', '⅓', 1 / 3], ['2', '½', 1 / 2], ['3', '¾', 3 / 4], ['4', 'Pot', 1]].map(([k, l, f]) => (
           <button key={k} className="btn sm" disabled={!canBR} onClick={() => preset(f)}><kbd>{k}</kbd> {l}</button>

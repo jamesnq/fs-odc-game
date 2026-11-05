@@ -209,3 +209,26 @@ test('Rabbit hunt: lật đúng các lá lẽ ra sẽ chia (có đốt bài)', (
   assert.throws(() => s.g.rabbitHunt('a'), /đủ 5 lá/);
   assert.throws(() => new PokerGame().rabbitHunt('a'), /kết thúc/);
 });
+
+test('all-in khi đối thủ ít tiền hơn: chỉ đặt đúng phần cần theo, không báo lỗi', () => {
+  const g = table([1000, 300]); // heads-up: p0 là dealer/SB
+  g.startHand();
+  g.act('p0', 'call');
+  g.act('p1', 'allin'); // p1 all-in tới 300
+  const o = g.options(0);
+  assert.ok(!o.canRaise);
+  assert.equal(o.allInTo, 300);
+  g.act('p0', 'allin'); // trước đây: "Bạn không được tố thêm lúc này"
+  const total = g.seats.filter(Boolean).reduce((a, s) => a + s.chips, 0);
+  assert.equal(total, 1300);
+  assert.ok(g.seats[0].chips >= 700); // p0 chỉ mất tối đa 300
+});
+
+test('all-in bị giới hạn ở mức đối thủ còn theo được', () => {
+  const g = table([1000, 250]);
+  g.startHand();
+  const o = g.options(0); // p0 (SB) đi trước, p1 còn 230 sau BB
+  assert.equal(o.allInTo, 250);
+  g.act('p0', 'allin');
+  assert.equal(g.hand.players[0].bet, 250);
+});

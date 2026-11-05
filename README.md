@@ -135,6 +135,17 @@ docker run -p 3001:3001 game-lobby
 | `APP_SERVERS` | _(trống)_ | Chia app thành nhiều server, mỗi server một mật khẩu (JSON). Có biến này thì `APP_PASSWORD` bị bỏ qua |
 | `TRUST_PROXY` | _(trống)_ | Số reverse proxy đứng trước server (thường là `1`). IP thật = phần tử thứ N tính từ **cuối** `X-Forwarded-For` — phần đầu do client tự điền nên không tin được. Để trống khi không có proxy |
 | `DEBUG_IP` | _(trống)_ | Đặt `1` để in IP và `X-Forwarded-For` của mỗi kết nối ra log — dùng để kiểm tra `TRUST_PROXY` đúng chưa |
+| `VOICE_ENABLED` | `1` | Đặt `0` để tắt hẳn voice chat |
+| `VOICE_SERVERS` | `B4` | Chỉ bật voice chat cho các server (tên trong `APP_SERVERS`, cách nhau dấu phẩy, không phân biệt hoa thường). `*` = mọi server. Chạy một server không đặt tên thì không bị giới hạn |
+| `VOICE_MAX_PER_ROOM` | `6` | Số người tối đa trong kênh thoại mỗi phòng |
+| `VOICE_TURN_ENABLED` | `0` | Đặt `1` để dùng TURN Cloudflare (đang **tắt**: voice chat chỉ dùng STUN miễn phí) |
+| `CF_TURN_KEY_ID`, `CF_TURN_KEY_API_TOKEN` | _(trống)_ | TURN của Cloudflare cho voice chat (giúp kết nối qua 4G). Trống = chỉ dùng STUN miễn phí |
+| `CF_ACCOUNT_ID`, `CF_ANALYTICS_TOKEN` | _(trống)_ | Để server tự theo dõi dung lượng TURN đã dùng trong tháng (token quyền *Account Analytics: Read*) |
+| `VOICE_TURN_QUOTA_GB` | `900` | Ngưỡng GB/tháng (gói miễn phí 1.000 GB) |
+| `VOICE_QUOTA_ACTION` | `disable` | Chạm ngưỡng thì `disable` (tắt voice chat tới đầu tháng sau) hoặc `stun` (vẫn chạy, bỏ TURN) |
+
+### Voice chat
+Bấm nút 🎧 **Thoại** ở đầu phòng để vào kênh thoại của phòng (trình duyệt hỏi quyền micro; không có micro thì vẫn nghe được). Âm thanh đi thẳng giữa các trình duyệt bằng WebRTC (mã hóa đầu-cuối), server chỉ chuyển tín hiệu kết nối, không ghi âm. Chi tiết thiết kế: [docs/voice-chat-plan.md](docs/voice-chat-plan.md).
 
 ### Auth gate (mật khẩu vào app)
 Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật khẩu, nếu không sẽ bị từ chối. Người dùng thấy màn hình nhập mật khẩu; nhập đúng thì server cấp một **phiên đăng nhập** (ký HMAC, hạn 30 ngày, tự gia hạn khi vào) để trình duyệt nhớ — bản thân mật khẩu **không** được lưu trên máy người chơi. Nút **⇄ Đổi server** xóa phiên (đăng xuất).

@@ -249,6 +249,12 @@ export class PokerGame {
     const maxTo = p.bet + chips;
     const canRaise = !p.acted && othersCanAct && maxTo > h.currentBet;
     const minTo = Math.min(maxTo, h.currentBet === 0 ? this.bigBlind : h.currentBet + h.minRaise);
+    // All-in thực tế: không đặt quá mức đối thủ còn theo được (phần dư vô nghĩa), và nếu không được tố thì chỉ theo
+    let reach = h.currentBet;
+    for (const [k, q] of Object.entries(h.players)) {
+      if (q !== p && !q.folded) reach = Math.max(reach, q.bet + (q.allIn ? 0 : this.seats[k].chips));
+    }
+    const allInTo = canRaise ? Math.min(maxTo, Math.max(reach, minTo)) : Math.min(maxTo, h.currentBet);
     return {
       toCall: Math.min(toCall, chips),
       canCheck: toCall === 0,
@@ -257,6 +263,7 @@ export class PokerGame {
       canRaise: canRaise && h.currentBet > 0,
       minTo,
       maxTo,
+      allInTo: Math.max(p.bet, allInTo),
       currentBet: h.currentBet,
       myBet: p.bet,
       pot: this.pot,
@@ -303,16 +310,22 @@ export class PokerGame {
       case 'bet':
       case 'raise':
       case 'allin': {
-        let to = action === 'allin' ? o.maxTo : Math.floor(Number(amount));
+        let to = action === 'allin' ? o.allInTo : Math.floor(Number(amount));
         if (!Number.isFinite(to)) throw new Error('Số chip không hợp lệ');
         if (to >= o.maxTo) to = o.maxTo;
         if (to <= h.currentBet) {
-          // all-in để theo (không đủ/đúng bằng mức cược)
+          // all-in để theo: không đủ tiền, hoặc không được tố thêm → chỉ đặt đúng phần cần theo
           if (action !== 'allin') throw new Error(`Phải đặt lớn hơn ${h.currentBet}`);
           const add = to - p.bet;
+          if (add <= 0) { // không phải bỏ thêm gì → coi như check
+            p.lastAction = 'Check';
+            this._log(`${name} check`);
+            this._record(seat, 'check');
+            break;
+          }
           this._put(seat, add);
-          p.lastAction = 'All-in';
-          this._log(`${name} all-in ${to}`);
+          p.lastAction = p.allIn ? 'All-in' : 'Theo';
+          this._log(`${name} ${p.allIn ? 'all-in' : 'theo'} ${add}`);
           this._record(seat, 'call', add);
           break;
         }

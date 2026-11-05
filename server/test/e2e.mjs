@@ -426,6 +426,58 @@ if (OTHER_PASSWORD) {
   console.log('✔ Nối từ OK');
 }
 
+// ---------- Voice chat: vào/rời kênh, chuyển tín hiệu WebRTC, tắt mic ----------
+{
+  const h = await fetch(URL + '/health');
+  assert.match(h.headers.get('permissions-policy') || '', /microphone=\(self\)/, 'cho phép micro trên trang mình');
+  // Chỉ server có tên trong VOICE_SERVERS mới có voice chat (CI: VOICE_SERVERS="Bên A")
+  if (OTHER_PASSWORD) {
+    const o = client('Ngoài', OTHER_PASSWORD);
+    await o.ready;
+    const hello = await o.req('hello', { name: 'Ngoài' });
+    assert.equal(hello.voice.enabled, false, 'server không có trong VOICE_SERVERS thì không có voice');
+    const r = await o.req('room:create', { name: 'x', game: 'caro' });
+    await assert.rejects(() => o.req('voice:join', {}), /không bật/);
+    await o.req('room:delete', { roomId: r.roomId });
+    o.s.close();
+  }
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Voice test', game: 'caro' });
+  await b.req('room:join', { roomId, mode: 'watch' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  const ja = await a.req('voice:join', { muted: false });
+  assert.ok(Array.isArray(ja.iceServers) && ja.iceServers.length, 'có ICE server');
+  assert.deepEqual(ja.peers, []);
+  const jb = await b.req('voice:join', { muted: true });
+  assert.deepEqual(jb.peers, [a.user.id]);
+  await until(() => c.state?.voice?.length === 2);
+  assert.equal(c.state.voice.find((v) => v.id === b.user.id).muted, true);
+  // Tín hiệu đi đúng người nhận
+  const got = new Promise((res) => b.s.once('voice:signal', res));
+  await a.req('voice:signal', { to: b.user.id, data: { description: { type: 'offer', sdp: 'v=0' } } });
+  const sig = await got;
+  assert.equal(sig.from, a.user.id);
+  assert.equal(sig.data.description.type, 'offer');
+  // Người ngoài kênh thoại không gửi / nhận được; dữ liệu rác bị từ chối
+  let leaked = false;
+  c.s.once('voice:signal', () => { leaked = true; });
+  await c.req('voice:signal', { to: a.user.id, data: { candidate: null } });
+  await assert.rejects(() => a.req('voice:signal', { to: b.user.id, data: { evil: 1 } }));
+  await a.req('voice:signal', { to: c.user.id, data: { candidate: null } });
+  await wait(100);
+  assert.equal(leaked, false, 'người ngoài kênh không nhận tín hiệu');
+  await b.req('voice:mute', { muted: false });
+  await until(() => c.state.voice.find((v) => v.id === b.user.id)?.muted === false);
+  await b.req('voice:leave');
+  await until(() => c.state.voice.length === 1);
+  // Rời phòng → tự ra khỏi kênh thoại
+  await a.req('room:leave');
+  await until(() => c.state.voice.length === 0);
+  console.log('✔ Voice chat OK (kênh thoại, chuyển tín hiệu, tắt mic)');
+  await b.req('room:leave');
+  await c.req('room:leave');
+}
+
 // ---------- Tá lả ----------
 {
   a.state = b.state = c.state = d.state = null;

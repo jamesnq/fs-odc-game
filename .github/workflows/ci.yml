@@ -26,6 +26,6 @@ jobs:
         run: npm run build
       - name: Kiểm thử tích hợp (server + socket)
         run: |
-          PORT=3001 TRUST_PROXY=1 APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
+          PORT=3001 TRUST_PROXY=1 VOICE_SERVERS='Bên A' APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
           npx --yes wait-on -t 20000 http://localhost:3001/health
           TRUST_PROXY=1 APP_PASSWORD=ci-secret OTHER_PASSWORD=ci-secret-b npm run test:e2e -- http://localhost:3001

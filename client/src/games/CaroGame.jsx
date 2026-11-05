@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Undo2, Handshake, Flag, RotateCcw, ArrowUpDown } from 'lucide-react';
 import { colLabel } from '@game/shared/caro';
 import { useApp } from '../store.jsx';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.jsx';
+import GameInfo from '../components/GameInfo.jsx';
+import { RequestOverlay, ResultOverlay, BoardActions } from '../components/BoardRequests.jsx';
 
 const CELL = 36;
 const PAD = 26;
 const NAME = { x: 'X', o: 'O' };
 
 export default function CaroGame({ room, state: s }) {
-  const { act, call } = useApp();
+  const { act } = useApp();
   const n = s.size;
   const W = n * CELL + PAD * 2;
   const my = s.myColor;
@@ -19,7 +20,6 @@ export default function CaroGame({ room, state: s }) {
   const [hover, setHover] = useState(null);
   const [cursor, setCursor] = useState(() => Math.floor(n / 2) * n + Math.floor(n / 2));
   const [showCursor, setShowCursor] = useState(false);
-  const pending = s.pending;
   const winLine = new Set(s.result?.line || []);
 
   useEffect(() => { setHover(null); }, [s.moves.length]);
@@ -49,9 +49,10 @@ export default function CaroGame({ room, state: s }) {
   const xy = (i) => [PAD + (i % n) * CELL, PAD + Math.floor(i / n) * CELL];
 
   return (
-    <div className="xq caro">
-      <div className="xq-main caro-main">
+    <div className="bg caro">
+      <div className="bg-col caro-main">
         <PlayerBar color="o" s={s} room={room} />
+        <div className="bg-board">
         <svg className="caro-board" viewBox={`0 0 ${W} ${W}`} onMouseLeave={() => setHover(null)}>
           <rect x="0" y="0" width={W} height={W} rx="10" className="caro-bg" />
           {Array.from({ length: n }, (_, k) => (
@@ -79,78 +80,28 @@ export default function CaroGame({ room, state: s }) {
             return <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} className="caro-cursor" />;
           })()}
         </svg>
+        {s.status === 'waiting' && (
+          <div className="board-strip" role="status">{s.seats.x && s.seats.o ? 'Chờ hai bên bấm Sẵn sàng…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
+        )}
+        <RequestOverlay s={s} my={my} opp={opp} />
+        <ResultOverlay over={s.status === 'over' && !!s.result} resetKey={s.score?.gameNo}
+          title={s.result?.winner ? `${s.seats[s.result.winner]?.name || NAME[s.result.winner]} (${NAME[s.result.winner]}) thắng${my && s.result.winner === my ? ' — bạn thắng!' : ''}` : 'Hòa'}
+          detail={s.result?.text}>
+          <ScoreLine score={s.score} a={s.seats.x} b={s.seats.o} />
+        </ResultOverlay>
+        </div>
         <PlayerBar color="x" s={s} room={room} />
+        <BoardActions s={s} my={my} opp={opp} sitLabel="bấm “Ngồi” ở ghế trống để chơi" rematchLabel="Chơi lại (đổi lượt đi)" />
       </div>
 
-      <div className="xq-side">
-        <div className="panel">
-          {s.status === 'waiting' && (
-            <div className="xq-status" role="status" aria-live="polite">{s.seats.x && s.seats.o ? 'Chờ hai bên sẵn sàng…' : 'Đang chờ người chơi…'}</div>
-          )}
-          {s.status === 'playing' && (
-            <div className="xq-status" role="status" aria-live="polite">
-              Lượt: <b className={`c-${s.turn}`}>{NAME[s.turn]}</b>
-              {myTurn && <span className="your-turn"> — tới lượt bạn</span>}
-            </div>
-          )}
-          {s.status === 'over' && s.result && (
-            <div className="xq-result">
-              <div className="big">
-                {s.result.winner ? <>{s.seats[s.result.winner]?.name || NAME[s.result.winner]} ({NAME[s.result.winner]}) thắng{my && s.result.winner === my ? ' 🎉' : ''}</> : 'Hòa'}
-              </div>
-              <div className="muted">{s.result.text}</div>
-              <ScoreLine score={s.score} a={s.seats.x} b={s.seats.o} />
-            </div>
-          )}
-
-          {pending && my && pending.from === opp && (
-            <div className="request">
-              <b>{s.seats[opp]?.name}</b> {pending.type === 'draw' ? 'xin cầu hòa' : 'xin đi lại'}.
-              <div className="row">
-                <button className="btn primary sm" onClick={() => act({ type: 'respond', accept: true })}>Đồng ý</button>
-                <button className="btn sm" onClick={() => act({ type: 'respond', accept: false })}>Từ chối</button>
-              </div>
-            </div>
-          )}
-          {pending && my && pending.from === my && (
-            <div className="request mine">
-              Đang chờ đối thủ trả lời {pending.type === 'draw' ? 'cầu hòa' : 'xin đi lại'}…
-              <button className="btn sm" onClick={() => act({ type: 'cancelRequest' })}>Hủy</button>
-            </div>
-          )}
-          {pending && !my && <div className="muted small">{NAME[pending.from]} đang {pending.type === 'draw' ? 'cầu hòa' : 'xin đi lại'}…</div>}
-
-          {my && (
-            <div className="xq-actions">
-              {s.status === 'waiting' && (
-                <button className={`btn ${s.ready[my] ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })} disabled={!s.seats[opp]}>
-                  {s.ready[my] ? 'Hủy sẵn sàng' : <><Check size={16} aria-hidden /> Sẵn sàng</>}
-                </button>
-              )}
-              {s.status === 'playing' && (
-                <>
-                  <button className="btn" disabled={!!pending} onClick={() => act({ type: 'requestUndo' })}><Undo2 size={16} aria-hidden /> Xin đi lại</button>
-                  <button className="btn" disabled={!!pending} onClick={() => act({ type: 'offerDraw' })}><Handshake size={16} aria-hidden /> Cầu hòa</button>
-                  <button className="btn danger" onClick={() => confirm('Bạn chắc chắn muốn xin thua?') && act({ type: 'resign' })}><Flag size={16} aria-hidden /> Xin thua</button>
-                </>
-              )}
-              {s.status === 'over' && (
-                <button className="btn primary" disabled={s.rematch[my] || !s.seats[opp]} onClick={() => act({ type: 'rematch' })}>
-                  {s.rematch[my] ? 'Đang chờ đối thủ…' : s.rematch[opp] ? <><RotateCcw size={16} aria-hidden /> Đồng ý chơi lại</> : <><RotateCcw size={16} aria-hidden /> Chơi lại (đổi lượt đi)</>}
-                </button>
-              )}
-              {s.status !== 'playing' && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>}
-            </div>
-          )}
-          {!my && <div className="muted small">Bạn đang xem. Ngồi vào ghế trống để chơi.</div>}
-        </div>
+      <GameInfo>
         <Scoreboard room={room} score={s.score} playing={s.status === 'playing'}
           sides={{ x: { label: 'X', cls: 'c-x' }, o: { label: 'O', cls: 'c-o' } }} />
         <MoveList moves={s.moves} />
         <div className="muted small">
-          Bàn {n}×{n} · 5 quân liên tiếp là thắng{s.options.blockTwoEnds ? ' · bị chặn hai đầu không tính' : ''} · {s.options.minutes} phút mỗi bên, hết giờ là thua. X đi trước.
+          Bàn {n}×{n} · 5 quân liên tiếp là thắng{s.options.blockTwoEnds ? ' · bị chặn hai đầu không tính' : ''} · {s.options.minutes} phút mỗi bên, hết giờ là thua. X đi trước. Xin đi lại / cầu hòa cần đối thủ đồng ý.
         </div>
-      </div>
+      </GameInfo>
     </div>
   );
 }
