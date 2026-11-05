@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
+import PokerHandLog from './PokerHandLog.jsx';
 
 const STREET_VI = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
 const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
@@ -105,11 +106,11 @@ export default function PokerGame({ room, state: s }) {
       {mySeat < 0 && <div className="muted center small">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
       {h && (
         <details className="panel pk-log">
-          <summary>Lịch sử ván #{h.no}</summary>
+          <summary>Diễn biến ván #{h.no}</summary>
           {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
         </details>
       )}
-      {user && null}
+      <PokerHandLog s={s} />
     </div>
   );
 }

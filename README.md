@@ -38,7 +38,8 @@
 **Poker (Texas Hold'em No-Limit)**
 - Dealer / SB / BB xoay vòng, luật heads-up, side pot, chia pot hòa, all-in không đủ mức raise không mở lại quyền raise (luật TDA)
 - Đếm giờ mỗi lượt (hết giờ tự check / bỏ), nạp thêm chip, nghỉ ván
-- **Phím tắt:** `F` bỏ bài · `C` theo/check · `K` check · `B` cược · `R` tố · `A` all-in · `↑/↓` ±1 BB (`Shift` ±10 BB) · `1–4` mức ⅓, ½, ¾ pot, pot · `Enter` xác nhận
+- **Hands log:** 50 ván gần nhất của bàn — stack đầu ván, D/SB/BB, từng hành động theo vòng (preflop / flop / turn / river), showdown, các pot và lời/lỗ của từng người; chuyển ván bằng `←/→`, sao chép ván dạng text. Chỉ thấy bài tẩy của mình và bài đã lật ở showdown, bài bỏ không bao giờ bị lộ
+- **Phím tắt:** `F` bỏ bài · `C` theo/check · `K` check · `B` cược · `R` tố · `A` all-in · `↑/↓` ±1 BB (`Shift` ±10 BB) · `1–4` mức ⅓, ½, ¾ pot, pot · `Enter` xác nhận · `H` mở Hands log
 
 **Tá lả (Phỏm)**
 - Bốc / ăn / đánh, ăn phải tạo phỏm, lá đã ăn bị khóa, hai lá ăn không chung phỏm

@@ -70,6 +70,8 @@ export class PokerGame {
     this.dealer = -1;
     this.hand = null;
     this.handNo = 0;
+    this.history = []; // Hands log: các ván đã kết thúc (mới nhất ở cuối)
+    this.historyMax = 50;
   }
 
   get inHand() {
@@ -128,7 +130,7 @@ export class PokerGame {
     this.dealer = this._nextSeat(this.dealer < 0 ? -1 : this.dealer, eligible);
     const players = {};
     for (const i of participants) {
-      players[i] = { seat: i, id: this.seats[i].id, name: this.seats[i].name, hole: [], bet: 0, total: 0, folded: false, allIn: false, acted: false, lastAction: null };
+      players[i] = { seat: i, id: this.seats[i].id, name: this.seats[i].name, startChips: this.seats[i].chips, hole: [], bet: 0, total: 0, folded: false, allIn: false, acted: false, lastAction: null };
     }
     const heads = participants.length === 2;
     const sb = heads ? this.dealer : this._nextSeat(this.dealer, (i) => !!players[i]);
@@ -147,11 +149,15 @@ export class PokerGame {
       toAct: -1,
       result: null,
       log: [],
+      actions: [], // { street, seat, type, amount, to, allIn } — dùng cho Hands log
+      startedAt: Date.now(),
     };
     this._put(sb, Math.min(this.smallBlind, this.seats[sb].chips));
     this._put(bb, Math.min(this.bigBlind, this.seats[bb].chips));
     players[sb].lastAction = 'SB';
     players[bb].lastAction = 'BB';
+    this._record(sb, 'sb', players[sb].bet);
+    this._record(bb, 'bb', players[bb].bet);
     this.hand.currentBet = Math.max(players[sb].bet, players[bb].bet, this.bigBlind);
     // Chia 2 lá, bắt đầu từ SB
     for (let r = 0; r < 2; r++) {
@@ -164,6 +170,13 @@ export class PokerGame {
     this._log(`Ván #${this.handNo} bắt đầu. Dealer: ${this.seats[this.dealer].name}`);
     this.hand.toAct = bb; // tìm người kế tiếp sau BB
     this._advance(true);
+  }
+
+  /** Ghi một hành động có cấu trúc cho Hands log. amount = số chip bỏ thêm, to = mức cược sau hành động. */
+  _record(seat, type, amount = 0) {
+    const h = this.hand;
+    const p = h.players[seat];
+    h.actions.push({ street: h.street, seat, type, amount, to: p.bet, allIn: p.allIn });
   }
 
   _log(msg) {
@@ -240,21 +253,25 @@ export class PokerGame {
         p.folded = true;
         p.lastAction = 'Bỏ';
         this._log(`${name} bỏ bài`);
+        this._record(seat, 'fold');
         break;
       case 'check':
         if (!o.canCheck) throw new Error('Không thể check, phải theo hoặc bỏ');
         p.lastAction = 'Check';
         this._log(`${name} check`);
+        this._record(seat, 'check');
         break;
       case 'call':
         if (!o.canCall) { // không có gì để theo -> coi như check
           p.lastAction = 'Check';
           this._log(`${name} check`);
+          this._record(seat, 'check');
           break;
         }
         this._put(seat, o.toCall);
         p.lastAction = p.allIn ? 'All-in' : 'Theo';
         this._log(`${name} theo ${o.toCall}`);
+        this._record(seat, 'call', o.toCall);
         break;
       case 'bet':
       case 'raise':
@@ -265,16 +282,19 @@ export class PokerGame {
         if (to <= h.currentBet) {
           // all-in để theo (không đủ/đúng bằng mức cược)
           if (action !== 'allin') throw new Error(`Phải đặt lớn hơn ${h.currentBet}`);
-          this._put(seat, to - p.bet);
+          const add = to - p.bet;
+          this._put(seat, add);
           p.lastAction = 'All-in';
           this._log(`${name} all-in ${to}`);
+          this._record(seat, 'call', add);
           break;
         }
         if (!o.canBet && !o.canRaise) throw new Error('Bạn không được tố thêm lúc này (chỉ theo hoặc bỏ)');
         if (to < o.minTo && to < o.maxTo) throw new Error(`Mức tối thiểu là ${o.minTo}`);
         const raiseSize = to - h.currentBet;
         const full = raiseSize >= h.minRaise || (h.currentBet === 0 && to >= this.bigBlind);
-        this._put(seat, to - p.bet);
+        const add = to - p.bet;
+        this._put(seat, add);
         if (full) {
           h.minRaise = Math.max(h.minRaise, raiseSize);
           for (const q of Object.values(h.players)) if (q !== p) q.acted = false;
@@ -283,6 +303,7 @@ export class PokerGame {
         h.currentBet = to;
         p.lastAction = p.allIn ? 'All-in' : wasBet ? 'Cược' : 'Tố';
         this._log(`${name} ${p.allIn ? 'all-in' : wasBet ? 'cược' : 'tố lên'} ${to}`);
+        this._record(seat, wasBet ? 'bet' : 'raise', add);
         break;
       }
       default:
@@ -299,6 +320,7 @@ export class PokerGame {
     p.acted = true;
     p.lastAction = 'Bỏ';
     this._log(`${p.name} bỏ bài (rời bàn)`);
+    this._record(seat, 'fold');
     if (h.toAct === seat || this._active().length <= 1) this._advance(false);
   }
 
@@ -401,8 +423,50 @@ export class PokerGame {
       if (st && st.id === h.players[seat].id) st.chips += amt;
     }
     h.result = { winnings, shown, pots: potsOut };
+    const showdown = active.length > 1;
     h.street = 'done';
     h.toAct = -1;
+    this._archive(showdown);
+  }
+
+  /** Lưu ván vừa kết thúc vào Hands log. Bài tẩy được lưu đủ, view sẽ lọc theo người xem. */
+  _archive(showdown) {
+    const h = this.hand;
+    const r = h.result;
+    this.history.push({
+      no: h.no,
+      startedAt: h.startedAt,
+      endedAt: Date.now(),
+      smallBlind: this.smallBlind,
+      bigBlind: this.bigBlind,
+      dealer: h.dealer, sb: h.sb, bb: h.bb,
+      board: h.board.slice(),
+      showdown,
+      players: Object.values(h.players).map((p) => ({
+        seat: p.seat, id: p.id, name: p.name, startChips: p.startChips, hole: p.hole.slice(),
+        invested: p.total, won: r.winnings[p.seat] || 0, net: (r.winnings[p.seat] || 0) - p.total, folded: p.folded,
+      })),
+      actions: h.actions.slice(),
+      shown: Object.fromEntries(Object.entries(r.shown).map(([s, v]) => [s, { hole: v.hole.slice(), hand: v.hand }])),
+      pots: r.pots.map((pt) => ({ amount: pt.amount, winners: pt.winners.slice(), hand: pt.hand })),
+      pot: Object.values(h.players).reduce((a, p) => a + p.total, 0),
+    });
+    if (this.history.length > this.historyMax) this.history.shift();
+  }
+
+  /**
+   * Hands log cho người xem: chỉ lộ bài tẩy của chính mình và bài đã lật ở showdown.
+   * Bài đã bỏ (muck) của người khác luôn bị ẩn.
+   */
+  historyView(viewerId, limit = this.historyMax) {
+    return this.history.slice(-limit).reverse().map((e) => ({
+      ...e,
+      players: e.players.map(({ hole, ...p }) => ({
+        ...p,
+        hole: p.id === viewerId ? hole : e.shown[p.seat] ? e.shown[p.seat].hole : null,
+        me: p.id === viewerId,
+      })),
+    }));
   }
 
   /** Dữ liệu gửi cho client, ẩn bài tẩy của người khác. */

@@ -165,8 +165,31 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   // Người xem không thấy bài tẩy người khác
   const hidden = a.state.state.seats.filter((x) => x && x.id !== a.user.id).every((x) => !x.hole || x.hole.every((h) => h === '??') || a.state.state.hand.street === 'done');
   assert.ok(hidden, 'không lộ bài');
+  // Hands log: chơi tiếp cho hết ván (người đầu tiên tới lượt bỏ bài, còn lại theo/check)
+  let folded = false;
+  while (!a.state.state.handLogCount) {
+    await until(() => players.some((p) => p.state.state.options) || a.state.state.handLogCount, 8000);
+    if (a.state.state.handLogCount) break;
+    const p = players.find((x) => x.state.state.options);
+    await p.act({ type: 'act', action: folded ? 'call' : 'fold' }).catch(() => {});
+    folded = true;
+    await wait(30);
+  }
+  for (const p of players) {
+    const { data } = await p.req('game:query', { type: 'handLog' });
+    assert.equal(data.length, 1);
+    const e = data[0];
+    assert.equal(e.no, 1);
+    assert.equal(e.players.reduce((s, x) => s + x.net, 0), 0, 'tổng lời/lỗ bằng 0');
+    assert.ok(e.actions.length >= 3);
+    for (const x of e.players) {
+      const visible = x.id === p.user.id || !!e.shown[x.seat];
+      assert.equal(!!x.hole, visible, `${p.name} chỉ thấy bài của mình và bài đã lật`);
+    }
+    assert.ok(e.players.some((x) => x.folded && x.id !== p.user.id ? x.hole === null : true));
+  }
   await a.req('room:delete', { roomId });
-  console.log('✔ Poker OK');
+  console.log('✔ Poker OK (Hands log)');
 }
 
 // ---------- Tá lả ----------

@@ -361,6 +361,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Truy vấn dữ liệu lớn của game theo yêu cầu (vd: Hands log của Poker) thay vì gửi kèm mỗi lần cập nhật
+  on('game:query', (q) => {
+    const room = rooms.get(user.roomId);
+    if (!room) throw new Error('Bạn chưa vào phòng');
+    if (typeof room.handler.query !== 'function') throw new Error('Trò chơi không hỗ trợ');
+    return { data: room.handler.query(user.id, q) };
+  });
+
   socket.on('disconnect', () => {
     if (!user) return;
     const u = user;

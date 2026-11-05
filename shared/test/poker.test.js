@@ -98,3 +98,52 @@ test('mô phỏng ngẫu nhiên giữ bảo toàn chip', () => {
     }
   }
 });
+
+test('Hands log: ghi hành động, lời/lỗ và ẩn bài đã bỏ', () => {
+  const g = new PokerGame({ smallBlind: 10, bigBlind: 20, maxSeats: 3 });
+  g.sit(0, 'a', 'A', 1000);
+  g.sit(1, 'b', 'B', 1000);
+  g.sit(2, 'c', 'C', 1000);
+  g.startHand();
+  // Ai tới lượt: lần lượt raise, rồi các người còn lại bỏ bài
+  const who = () => g.seats[g.hand.toAct].id;
+  const raiser = who();
+  g.act(raiser, 'raise', 60);
+  g.act(who(), 'fold');
+  g.act(who(), 'fold');
+  assert.equal(g.inHand, false);
+  assert.equal(g.history.length, 1);
+  const e = g.history[0];
+  assert.equal(e.no, 1);
+  assert.equal(e.showdown, false);
+  assert.deepEqual(e.actions.map((x) => x.type), ['sb', 'bb', 'raise', 'fold', 'fold']);
+  assert.equal(e.actions[2].to, 60);
+  assert.equal(e.players.reduce((s, p) => s + p.net, 0), 0, 'tổng lời/lỗ = 0');
+  assert.ok(e.players.find((p) => p.id === raiser).net > 0);
+
+  // Người xem chỉ thấy bài của mình; không có showdown nên không lộ bài ai khác
+  const v = g.historyView('b')[0];
+  for (const p of v.players) {
+    if (p.id === 'b') assert.equal(p.hole.length, 2);
+    else assert.equal(p.hole, null);
+  }
+  assert.ok(g.historyView('zzz')[0].players.every((p) => p.hole === null), 'người ngoài không thấy bài nào');
+});
+
+test('Hands log: showdown lộ bài người lật, giới hạn số ván', () => {
+  const g = new PokerGame({ smallBlind: 1, bigBlind: 2, maxSeats: 2 });
+  g.historyMax = 3;
+  g.sit(0, 'a', 'A', 100000);
+  g.sit(1, 'b', 'B', 100000);
+  for (let k = 0; k < 5; k++) {
+    g.startHand();
+    while (g.inHand) g.act(g.seats[g.hand.toAct].id, 'call'); // check/call tới showdown
+  }
+  assert.equal(g.history.length, 3);
+  assert.deepEqual(g.historyView('a').map((e) => e.no), [5, 4, 3], 'mới nhất trước');
+  const e = g.historyView('zzz')[0];
+  assert.equal(e.showdown, true);
+  assert.equal(e.board.length, 5);
+  assert.ok(e.players.every((p) => p.hole && p.hole.length === 2), 'showdown: thấy bài cả hai');
+  assert.deepEqual([...new Set(e.actions.map((x) => x.street))], ['preflop', 'flop', 'turn', 'river']);
+});

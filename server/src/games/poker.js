@@ -137,10 +137,18 @@ export class PokerHandler {
     }, delay);
   }
 
+  query(viewerId, q) {
+    if (q.type === 'handLog') return this.game.historyView(viewerId);
+    throw new Error('Truy vấn không hợp lệ');
+  }
+
   view(viewerId) {
     const v = this.game.view(viewerId);
+    const last = this.game.history[this.game.history.length - 1];
     return {
       ...v,
+      handLogCount: this.game.history.length,
+      handLogLast: last ? last.no : 0,
       config: this.options,
       turnLeft: this.deadline ? Math.max(0, this.deadline - Date.now()) : 0,
       turnTotal: this.options.turnSeconds * 1000,
