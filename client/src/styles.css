@@ -1119,7 +1119,7 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
   .game-fit > .pk > .pk-table { flex: 1 1 0; min-width: 0; width: auto; padding: 28px 8px 34px; }
   .game-fit > .pk > .pk-actions { flex: 0 0 300px; width: 300px; }
   .game-fit > .pk > .pk-watch { flex-basis: 100%; }
-  .pk-felt { aspect-ratio: auto; height: calc(100cqh - 70px); }
+  .pk-felt { aspect-ratio: auto; height: calc(100cqh - 84px); }
   .pk-actions .pk-turn { display: none; }
   .pk-actions .btn { padding: 0 8px; font-size: 12.5px; }
   .pk-sizing input[type=range] { flex-basis: 100%; min-width: 0; }
