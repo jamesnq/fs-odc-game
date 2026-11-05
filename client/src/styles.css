@@ -838,7 +838,6 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 @media (max-width: 640px) {
   .tl-actions > .your-turn, .tl-actions > .muted:first-child { flex-basis: 100%; text-align: center; }
 }
-=======
 /* Huy hiệu xáo bài kiểm chứng được */
 .fair-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px; font-size: 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); cursor: pointer; font: inherit; font-size: 12px; }
 .fair-badge:hover { background: rgba(255,255,255,.08); }
