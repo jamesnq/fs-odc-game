@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Palette, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Palette, MessagesSquare, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -11,6 +11,7 @@ export const GAME_META = {
   caro: { name: 'Cờ caro', Icon: Grid3x3, desc: '2 người, 5 quân liên tiếp là thắng' },
   wordchain: { name: 'Nối từ', Icon: WholeWord, desc: '2–8 người, nối từ tiếng Việt theo lượt' },
   scribble: { name: 'Vẽ đoán', Icon: Palette, desc: '2–12 người, một người vẽ, cả bàn đoán chữ' },
+  telephone: { name: 'Tam sao thất bản', Icon: MessagesSquare, desc: '3–12 người, viết → vẽ → đoán → vẽ… rồi xem câu chuyện thất bản' },
 };
 
 /** Icon SVG của trò chơi (bộ Lucide), màu theo từng trò. */

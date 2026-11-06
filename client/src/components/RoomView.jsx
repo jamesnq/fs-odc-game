@@ -14,10 +14,11 @@ import CaroGame from '../games/CaroGame.jsx';
 import SamLocGame from '../games/SamLocGame.jsx';
 import WordChainGame from '../games/WordChainGame.jsx';
 import ScribbleGame from '../games/ScribbleGame.jsx';
+import TelephoneGame from '../games/TelephoneGame.jsx';
 import FairnessBadge from './FairnessBadge.jsx';
 import { useHotkeys } from '../hooks.js';
 
-const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame, scribble: ScribbleGame };
+const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame, scribble: ScribbleGame, telephone: TelephoneGame };
 
 export const SHORTCUTS = {
   poker: [
@@ -41,6 +42,10 @@ export const SHORTCUTS = {
   wordchain: [['Enter', 'Gửi từ'], ['Gõ', 'Khi tới lượt, ô nhập tự focus — chỉ cần gõ chữ thứ hai']],
   scribble: [
     ['Enter', 'Gửi câu đoán'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi đang vẽ)'], ['Z', 'Hoàn tác nét vừa vẽ'], ['1 – 5', 'Cỡ nét'],
+  ],
+  telephone: [
+    ['Enter', 'Nộp câu chữ'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi vẽ)'], ['Z', 'Hoàn tác'], ['1 – 5', 'Cỡ nét'],
+    ['→ / Space', 'Lật phần tiếp theo khi xem lại (chủ phòng)'],
   ],
   caro: [['Click', 'Đánh vào ô'], ['← ↑ → ↓', 'Di chuyển con trỏ trên bàn'], ['Enter / Space', 'Đánh vào ô có con trỏ'], ['Esc', 'Ẩn con trỏ']],
 };

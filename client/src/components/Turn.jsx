@@ -37,6 +37,12 @@ export function turnInfo(room, userId) {
       if (s.phase === 'draw') return mine ? { mine, text: 'Đến lượt bạn vẽ!' } : { mine, text: `${name} đang vẽ — đoán đi!` };
       return null;
     }
+    case 'telephone': {
+      if (s.status === 'reveal') return { mine: false, text: 'Đang xem lại các câu chuyện' };
+      if (s.status !== 'playing') return null;
+      if (s.task && !s.task.done) return { mine: true, text: s.kind === 'draw' ? 'Vẽ đi!' : s.step === 0 ? 'Viết một câu!' : 'Đoán tranh!' };
+      return { mine: false, text: `Chờ mọi người (${s.players.filter((p) => p.done).length}/${s.players.filter((p) => !p.gone).length})` };
+    }
     case 'wordchain': {
       const g = s.game;
       if (s.status !== 'playing' || !g) return null;

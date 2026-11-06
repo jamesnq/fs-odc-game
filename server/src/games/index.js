@@ -5,6 +5,7 @@ import { CaroHandler } from './caro.js';
 import { SamLocHandler } from './samloc.js';
 import { WordChainHandler } from './wordchain.js';
 import { ScribbleHandler } from './scribble.js';
+import { TelephoneHandler } from './telephone.js';
 
 /**
  * Các trò chơi. Mỗi Handler điều khiển một bàn trong một phòng và cần có:
@@ -21,6 +22,7 @@ export const GAMES = {
   samloc: { name: 'Sâm lốc', Handler: SamLocHandler },
   wordchain: { name: 'Nối từ', Handler: WordChainHandler },
   scribble: { name: 'Vẽ đoán', Handler: ScribbleHandler },
+  telephone: { name: 'Tam sao thất bản', Handler: TelephoneHandler },
 };
 
 export const isGame = (game) => typeof game === 'string' && Object.hasOwn(GAMES, game);

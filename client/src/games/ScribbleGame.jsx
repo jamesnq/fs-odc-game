@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Eraser, PaintBucket, Undo2, Trash2, Timer, Check, Trophy, CircleStop } from 'lucide-react';
-import { PALETTE, BRUSH_SIZES } from '@game/shared/scribble';
+import { Pencil, Timer, Check, Trophy, CircleStop } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import { useCountdown, useHotkeys } from '../hooks.js';
+import { useCountdown } from '../hooks.js';
 import ScribbleCanvas from './ScribbleCanvas.jsx';
-
-const TOOLS = [['pen', 'Bút', Pencil, 'b'], ['eraser', 'Tẩy', Eraser, 'e'], ['fill', 'Đổ màu', PaintBucket, 'f']];
+import DrawTools, { useDrawTools } from './DrawTools.jsx';
 
 export default function ScribbleGame({ room, state: s }) {
   const { act, call, user } = useApp();
@@ -19,16 +17,9 @@ export default function ScribbleGame({ room, state: s }) {
   const isOwner = room.ownerId === user.id;
   const timeLeft = useCountdown(s.phaseLeft, room.receivedAt, playing && !!s.phaseLeft);
   const nameOf = (id) => s.seats.find((x) => x.id === id)?.name || s.scores.find((x) => x.id === id)?.name || '?';
-  const [tool, setTool] = useState('pen');
-  const [color, setColor] = useState(1);
-  const [size, setSize] = useState(1);
   const [stop, setStop] = useState(false);
   const canvas = useRef(null);
-
-  useHotkeys({
-    b: () => setTool('pen'), e: () => setTool('eraser'), f: () => setTool('fill'), z: () => canvas.current?.undo(),
-    1: () => setSize(0), 2: () => setSize(1), 3: () => setSize(2), 4: () => setSize(3), 5: () => setSize(4),
-  }, canDraw);
+  const t = useDrawTools(canvas, canDraw);
 
   return (
     <div className="sc">
@@ -43,35 +34,10 @@ export default function ScribbleGame({ room, state: s }) {
 
         <div className="sc-board">
           <div className={`sc-stage ${canDraw ? 'my-turn' : ''}`}>
-            <ScribbleCanvas ref={canvas} turn={s.turnNo} canDraw={canDraw} tool={tool} color={color} size={BRUSH_SIZES[size]} />
+            <ScribbleCanvas ref={canvas} turn={s.turnNo} canDraw={canDraw} tool={t.tool} color={t.color} size={t.brush} />
             <StageOverlay s={s} isDrawer={isDrawer} nameOf={nameOf} act={act} />
           </div>
-          {canDraw && (
-            <div className="sc-tools" role="toolbar" aria-label="Công cụ vẽ">
-              <div className="sc-palette">
-                {PALETTE.map((c, i) => (
-                  <button key={c} className={`sc-color ${color === i && tool !== 'eraser' ? 'on' : ''}`} style={{ background: c }}
-                    onClick={() => { setColor(i); if (tool === 'eraser') setTool('pen'); }} aria-label={`Màu ${c}`} aria-pressed={color === i} />
-                ))}
-              </div>
-              <div className="sc-sizes">
-                {BRUSH_SIZES.map((w, i) => (
-                  <button key={w} className={`sc-size ${size === i ? 'on' : ''}`} onClick={() => setSize(i)} aria-label={`Cỡ nét ${w}`} title={`Cỡ ${i + 1}`}>
-                    <span style={{ width: Math.min(24, w), height: Math.min(24, w), background: PALETTE[color] }} />
-                  </button>
-                ))}
-              </div>
-              <div className="sc-toolbtns">
-                {TOOLS.map(([k, label, Icon, key]) => (
-                  <button key={k} className={`btn sm ${tool === k ? 'primary' : 'ghost'}`} onClick={() => setTool(k)} title={`${label} (${key.toUpperCase()})`} aria-pressed={tool === k}>
-                    <Icon size={16} aria-hidden /><span className="hide-sm"> {label}</span>
-                  </button>
-                ))}
-                <button className="btn sm ghost" onClick={() => canvas.current?.undo()} title="Hoàn tác (Z)"><Undo2 size={16} aria-hidden /><span className="hide-sm"> Hoàn tác</span></button>
-                <button className="btn sm ghost danger-text" onClick={() => canvas.current?.clear()} title="Xóa hết"><Trash2 size={16} aria-hidden /><span className="hide-sm"> Xóa</span></button>
-              </div>
-            </div>
-          )}
+          {canDraw && <DrawTools t={t} canvas={canvas} />}
         </div>
 
         <div className="board-actions">

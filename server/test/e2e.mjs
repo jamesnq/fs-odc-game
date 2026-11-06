@@ -166,7 +166,7 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await assert.rejects(b.act({ type: 'resetScore' }), /chủ phòng/);
   await b.act({ type: 'rematch' });
   await a.act({ type: 'start' });
-  await until(() => a.state.state.status === 'playing');
+  await until(() => a.state.state.status === 'playing' && red.state.state.status === 'playing');
   assert.notEqual(red.state.state.myColor, 'r', 'đổi màu khi chơi lại');
   await c.req('room:leave');
   await a.req('room:delete', { roomId });
@@ -205,7 +205,7 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await b.act({ type: 'ready' });
   await until(() => a.state.state.ready[b.state.state.myColor]);
   await a.act({ type: 'start' });
-  await until(() => a.state.state.status === 'playing');
+  await until(() => a.state.state.status === 'playing' && o.state.state.status === 'playing');
   assert.equal(o.state.state.myColor, 'x', 'đổi lượt đi khi chơi lại');
   await o.act({ type: 'offerDraw' });
   await x.act({ type: 'respond', accept: true });
@@ -511,6 +511,70 @@ if (OTHER_PASSWORD) {
   assert.equal(c.state.state.wins.find((w) => w.id === guesser.user.id).wins, 1);
   await a.req('room:delete', { roomId });
   console.log('✔ Vẽ đoán OK');
+}
+
+// ---------- Tam sao thất bản ----------
+{
+  // Client mới (giới hạn tần suất tính theo kết nối — An / Bình… đã thao tác nhiều ở các phần trên)
+  const [a, b, c, d] = await Promise.all(['Tư', 'Năm', 'Sáu', 'Bảy'].map((n) => client(n).ready));
+  const { roomId } = await a.req('room:create', { name: 'Tam sao test', game: 'telephone', options: { writeSeconds: 30, drawSeconds: 60 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await d.req('room:join', { roomId, mode: 'watch' });
+  await until(() => d.state?.state.seats.length === 2);
+  await b.act({ type: 'ready' });
+  await assert.rejects(a.act({ type: 'start' }), /ít nhất 3/);
+  await c.req('room:join', { roomId, mode: 'play' });
+  await c.act({ type: 'ready' });
+  await a.act({ type: 'start' });
+  const ps = [a, b, c];
+  await until(() => ps.every((p) => p.state.state.task?.kind === 'text'));
+  assert.equal(d.state.state.task, null, 'người xem không có việc');
+  // Bước 1: viết câu (nháp rồi nộp)
+  const sentence = { [a.user.id]: 'con mèo đi xe đạp', [b.user.id]: 'ông già câu cá', [c.user.id]: 'máy bay trên biển' };
+  await assert.rejects(a.act({ type: 'text', text: '  ', done: true }), /viết một câu/);
+  await a.act({ type: 'text', text: sentence[a.user.id], done: false });
+  await b.act({ type: 'text', text: sentence[b.user.id], done: true });
+  await c.act({ type: 'text', text: sentence[c.user.id], done: true });
+  await wait(50);
+  assert.equal(d.state.state.step, 0, 'chưa đủ người nộp thì chưa sang bước');
+  await a.act({ type: 'done', done: true });
+  // Bước 2: vẽ câu của người khác (không phải câu của mình)
+  await until(() => ps.every((p) => p.state.state.task?.kind === 'draw'));
+  for (const p of ps) {
+    const t = p.state.state.task;
+    assert.ok(Object.values(sentence).includes(t.prev.text) && t.prev.text !== sentence[p.user.id], 'vẽ câu của người khác');
+    p.s.emit('game:stream', { turn: p.state.state.turnNo, ops: [{ k: 'l', id: 1, c: 1, w: 6, p: [10, 10, 100, 100] }] });
+  }
+  await wait(80);
+  assert.equal((await a.req('game:query', { type: 'canvas' })).data.ops.length, 1, 'bản nháp bức vẽ được lưu');
+  for (const p of ps) await p.act({ type: 'done', done: true });
+  // Bước 3: đoán tranh — chỉ xem được tranh được giao
+  await until(() => ps.every((p) => p.state.state.task?.kind === 'text' && p.state.state.task.prev?.kind === 'draw'));
+  const mine = a.state.state.task.prev.drawId;
+  const { data } = await a.req('game:query', { type: 'drawing', id: mine });
+  assert.equal(data.ops.length, 1);
+  const other = b.state.state.task.prev.drawId;
+  await assert.rejects(a.req('game:query', { type: 'drawing', id: other }), /Không xem được/);
+  await assert.rejects(d.req('game:query', { type: 'drawing', id: mine }), /Không xem được/);
+  for (const p of ps) await p.act({ type: 'text', text: 'một bức tranh', done: true });
+  // Xem lại: chủ phòng lật từng phần
+  await until(() => d.state.state.status === 'reveal');
+  assert.deepEqual(d.state.state.albums.map((x) => x.entries.length), [1, 0, 0]);
+  await assert.rejects(b.act({ type: 'next' }), /chủ phòng/);
+  for (let k = 0; k < 8; k++) { await a.act({ type: 'next' }); await wait(80); }
+  await until(() => d.state.state.albums[2].entries.length === 3);
+  assert.equal(d.state.state.status, 'reveal');
+  await a.act({ type: 'next' });
+  await until(() => d.state.state.status === 'over');
+  for (const al of d.state.state.albums) {
+    assert.equal(new Set(al.entries.map((e) => e.by)).size, 3, 'mỗi câu chuyện qua đủ 3 người');
+    assert.deepEqual(al.entries.map((e) => e.kind), ['text', 'draw', 'text']);
+    assert.equal(al.entries[0].name, al.owner);
+  }
+  await d.req('game:query', { type: 'drawing', id: other }); // hết ván: ai cũng xem được
+  await a.req('room:delete', { roomId });
+  for (const p of [a, b, c, d]) p.s.close();
+  console.log('✔ Tam sao thất bản OK');
 }
 
 // ---------- Voice chat: vào/rời kênh, chuyển tín hiệu WebRTC, tắt mic ----------

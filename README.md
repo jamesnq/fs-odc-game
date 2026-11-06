@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán
+# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -47,6 +47,12 @@
 - Bút 16 màu, 5 cỡ nét, tẩy, đổ màu, hoàn tác, xóa. Nét vẽ truyền trực tiếp tới mọi người; vào xem / tải lại giữa lượt vẫn thấy cả bức vẽ
 - Chat của phòng chặn tin nhắn lộ đáp án; người vào giữa ván được đoán ngay và tới lượt thì vẽ; chủ phòng có thể dừng ván. Có bảng thắng qua các ván
 - **Phím tắt (khi vẽ):** `B` bút · `E` tẩy · `F` đổ màu · `Z` hoàn tác · `1–5` cỡ nét
+
+**Tam sao thất bản (vẽ)** (3–12 người)
+- Mọi người làm **cùng lúc**: mỗi người viết một câu → người sau **vẽ** lại câu đó → người sau nữa nhìn tranh **đoán bằng lời** → lại vẽ… Mỗi câu chuyện đi qua đủ mọi người đúng một lần (thứ tự ngẫu nhiên, đề bài không lộ tên người trước)
+- Thời gian viết 15–120 giây, vẽ 30–240 giây; bấm **Xong** để nộp sớm (bấm lại để sửa), hết giờ thì phần đang làm dở vẫn được tính. Bước đầu có nút lấy gợi ý nếu bí ý tưởng
+- Cuối ván chủ phòng bấm **Tiếp** (`→` / `Space`) để lật từng phần của từng câu chuyện cho cả bàn cùng xem; xong ván ai cũng xem lại được mọi câu chuyện
+- Tranh chỉ lộ đúng lúc: khi đang chơi mỗi người chỉ xem được tranh mình được giao. Người rời giữa ván thì phần của họ để trống, câu chuyện vẫn đi tiếp; người xem có thể ngồi chờ ván sau
 
 **Bảng điểm (Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người

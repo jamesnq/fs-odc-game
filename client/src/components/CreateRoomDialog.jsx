@@ -11,6 +11,7 @@ const DEFAULTS = {
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
   scribble: { maxSeats: 8, rounds: 3, drawSeconds: 80, hints: true, customWords: '', onlyCustom: false },
+  telephone: { maxSeats: 8, writeSeconds: 40, drawSeconds: 90, suggest: true },
 };
 
 const FIELDS = {
@@ -47,6 +48,12 @@ const FIELDS = {
     ['hints', 'Gợi ý dần vài chữ cái khi hết gần nửa thời gian', 'bool'],
     ['customWords', 'Từ tự thêm (cách nhau dấu phẩy, không bắt buộc)', 'text'],
     ['onlyCustom', 'Chỉ dùng từ tự thêm (cần ít nhất 10 từ)', 'bool'],
+  ],
+  telephone: [
+    ['maxSeats', 'Số người chơi tối đa', 3, 12],
+    ['writeSeconds', 'Thời gian viết / đoán mỗi bước (giây)', 15, 120],
+    ['drawSeconds', 'Thời gian vẽ mỗi bước (giây)', 30, 240],
+    ['suggest', 'Cho lấy gợi ý ở bước viết câu đầu tiên', 'bool'],
   ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],

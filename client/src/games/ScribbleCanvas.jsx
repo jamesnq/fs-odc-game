@@ -66,6 +66,13 @@ function applyOp(ctx, op) {
   else if (op.k === 'f') floodFill(ctx, op.p[0], op.p[1], op.c);
 }
 
+/** Vẽ lại toàn bộ bức vẽ từ danh sách thao tác (nền trắng). */
+export function renderOps(ctx, list) {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  for (const op of list) applyOp(ctx, op);
+}
+
 /**
  * props: turn (số lượt — đổi lượt thì xóa khung và tải lại), canDraw, tool ('pen'|'eraser'|'fill'), color, size
  * ref: { undo(), clear() } cho thanh công cụ
@@ -82,10 +89,7 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
   const ctx = () => canvas.current?.getContext('2d', { willReadFrequently: true });
   const redraw = useCallback(() => {
     const c = ctx();
-    if (!c) return;
-    c.fillStyle = '#ffffff';
-    c.fillRect(0, 0, W, H);
-    for (const op of ops.current) applyOp(c, op);
+    if (c) renderOps(c, ops.current);
   }, []);
 
   // Nhận một thao tác (từ server hoặc của chính mình) vào bức vẽ
