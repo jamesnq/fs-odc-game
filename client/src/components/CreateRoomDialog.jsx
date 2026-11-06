@@ -19,7 +19,7 @@ const FIELDS = {
     ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 60],
     ['lives', 'Số mạng mỗi người', 1, 3],
     ['dictionary', 'Kiểm tra từ điển (mỗi chữ phải là tiếng Việt)', 'bool'],
-    ['strict', 'Chặt: cả từ phải có trong từ điển (~48.000 từ). Tắt = thoáng, từ lạ chỉ bị gắn cờ', 'bool'],
+    ['strict', 'Chặt: cả từ phải có trong từ điển (~62.000 từ). Tắt = thoáng, từ lạ chỉ bị gắn cờ', 'bool'],
   ],
   caro: [
     ['size', 'Kích thước bàn (ô mỗi cạnh)', 10, 20],

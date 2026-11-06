@@ -4,11 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { WordChainGame, makeSyllableChecker, makeWordChecker } from '@game/shared/wordchain';
 import { bool, clampInt } from './options.js';
 
-// Từ điển (xem server/src/data/README.md): âm tiết tiếng Việt và từ ghép 2 chữ (~48.000 từ)
+// Từ điển (xem server/src/data/README.md): âm tiết tiếng Việt và từ ghép 2 chữ (~62.000 từ, gộp từ 3 nguồn)
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data');
 const readLines = (file) => fs.readFileSync(path.join(DATA_DIR, file), 'utf8').split('\n').filter(Boolean);
 const isValidSyllable = makeSyllableChecker(readLines('vi-syllables.txt'));
-const isKnownWord = makeWordChecker(readLines('vi-words.txt'));
+export const isKnownWord = makeWordChecker(
+  ['vi-words.txt', 'vi-words-noitu.txt', 'vi-words-common.txt'].flatMap(readLines),
+);
 
 const HISTORY_MAX = 10;
 
