@@ -106,7 +106,7 @@ export default function XiangqiGame({ room, state: s }) {
         </svg>
         {s.status === 'playing' && s.inCheck && <div className="board-strip check" role="status">Chiếu tướng!</div>}
         {s.status === 'waiting' && (
-          <div className="board-strip" role="status">{s.seats.r && s.seats.b ? 'Chờ hai bên bấm Sẵn sàng…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
+          <div className="board-strip" role="status">{s.seats.r && s.seats.b ? 'Chờ sẵn sàng — chủ phòng bấm Bắt đầu…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
         )}
         <RequestOverlay s={s} my={my} opp={opp} />
         <ResultOverlay over={s.status === 'over' && !!s.result} resetKey={s.score?.gameNo}

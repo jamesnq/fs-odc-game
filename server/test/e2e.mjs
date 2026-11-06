@@ -130,8 +130,13 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await c.req('room:join', { roomId, mode: 'watch' });
   await until(() => c.state?.members.length === 3);
   assert.equal(c.state.state.myColor, null, 'người xem không có màu');
-  await a.act({ type: 'ready' });
+  // Không tự bắt đầu: sẵn sàng rồi chủ phòng (a) bấm bắt đầu
+  await assert.rejects(a.act({ type: 'start' }), /Chờ Bình sẵn sàng/);
   await b.act({ type: 'ready' });
+  await wait(50);
+  assert.equal(a.state.state.status, 'waiting', 'mọi người sẵn sàng vẫn chưa tự bắt đầu');
+  await assert.rejects(b.act({ type: 'start' }), /chủ phòng/);
+  await a.act({ type: 'start' });
   await until(() => a.state.state.status === 'playing');
   const red = a.state.state.myColor === 'r' ? a : b;
   const black = red === a ? b : a;
@@ -159,8 +164,8 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   assert.equal(sc.rows[0].id, red.user.id, 'người thắng đứng đầu bảng điểm');
   assert.deepEqual([sc.rows[0].wins, sc.rows[0].points, sc.rows[1].losses, sc.rows[1].points], [1, 1, 1, 0]);
   await assert.rejects(b.act({ type: 'resetScore' }), /chủ phòng/);
-  await a.act({ type: 'rematch' });
   await b.act({ type: 'rematch' });
+  await a.act({ type: 'start' });
   await until(() => a.state.state.status === 'playing');
   assert.notEqual(red.state.state.myColor, 'r', 'đổi màu khi chơi lại');
   await c.req('room:leave');
@@ -176,8 +181,8 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'watch' });
   await until(() => c.state?.members.length === 3);
-  await a.act({ type: 'ready' });
   await b.act({ type: 'ready' });
+  await a.act({ type: 'start' });
   await until(() => a.state.state.status === 'playing');
   assert.equal(a.state.state.size, 15);
   const x = a.state.state.myColor === 'x' ? a : b;
@@ -197,8 +202,9 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   await until(() => c.state.state.status === 'over');
   assert.equal(c.state.state.result.winner, 'x');
   assert.equal(c.state.state.result.line.length, 5);
-  await a.act({ type: 'rematch' });
-  await b.act({ type: 'rematch' });
+  await b.act({ type: 'ready' });
+  await until(() => a.state.state.ready[b.state.state.myColor]);
+  await a.act({ type: 'start' });
   await until(() => a.state.state.status === 'playing');
   assert.equal(o.state.state.myColor, 'x', 'đổi lượt đi khi chơi lại');
   await o.act({ type: 'offerDraw' });
@@ -222,6 +228,12 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   const { roomId } = await a.req('room:create', { name: 'Poker test', game: 'poker', options: { smallBlind: 5, bigBlind: 20, buyIn: 1000, maxSeats: 6 } });
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'play' });
+  await until(() => a.state?.state.seats.filter(Boolean).length === 3);
+  assert.equal(a.state.state.started, false, 'poker không tự chia');
+  await assert.rejects(a.act({ type: 'start' }), /sẵn sàng/);
+  await b.act({ type: 'ready' });
+  await c.act({ type: 'ready' });
+  await a.act({ type: 'start' });
   await until(() => a.state?.state.hand?.street === 'preflop', 5000);
   assert.deepEqual([a.state.state.smallBlind, a.state.state.bigBlind], [5, 20], 'small blind nhập riêng');
   const players = [a, b, c];
@@ -280,6 +292,9 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   const { roomId } = await a.req('room:create', { name: 'Rabbit test', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2 } });
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => a.state?.state.seats.filter(Boolean).length === 2);
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' });
   await until(() => a.state?.state.hand?.street === 'preflop' && b.state?.state.hand?.street === 'preflop', 5000);
   await until(() => c.state?.state.fair?.commit);
   const commitSeen = c.state.state.fair.commit;
@@ -303,6 +318,9 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   // Bàn tắt rabbit hunt
   const { roomId: r2 } = await a.req('room:create', { name: 'No rabbit', game: 'poker', options: { bigBlind: 20, buyIn: 1000, maxSeats: 2, rabbitHunt: false } });
   await b.req('room:join', { roomId: r2, mode: 'play' });
+  await until(() => a.state?.state.seats.filter(Boolean).length === 2 && !a.state.state.started);
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' });
   await until(() => a.state?.state.hand?.street === 'preflop' && a.state.state.hand && b.state?.state.hand?.street === 'preflop', 5000);
   await [a, b].find((x) => x.state.state.options).act({ type: 'act', action: 'fold' });
   await until(() => a.state.state.hand.street === 'done');
@@ -339,14 +357,22 @@ if (OTHER_PASSWORD) {
 // ---------- Sâm lốc ----------
 {
   a.state = b.state = c.state = d.state = null;
-  const { roomId } = await a.req('room:create', { name: 'Sâm test', game: 'samloc', options: { maxSeats: 3, unit: 10 } });
+  const { roomId } = await a.req('room:create', { name: 'Sâm test', game: 'samloc', options: { maxSeats: 4, unit: 10 } });
   await b.req('room:join', { roomId, mode: 'play' });
   await c.req('room:join', { roomId, mode: 'play' });
   await d.req('room:join', { roomId, mode: 'watch' });
   await until(() => d.state?.state.seats.filter(Boolean).length === 3);
-  await assert.rejects(d.act({ type: 'start' }), /xem/);
+  await assert.rejects(d.act({ type: 'start' }), /chủ phòng/);
+  await assert.rejects(a.act({ type: 'start' }), /sẵn sàng/);
+  await b.act({ type: 'ready' });
+  await c.act({ type: 'ready' });
   await a.act({ type: 'start' });
   await until(() => [a, b, c, d].every((p) => p.state?.state.game));
+  // Người xem được ngồi chờ ngay khi ván đang diễn ra, vào chơi từ ván sau
+  await d.req('room:sit', {});
+  await until(() => d.state.state.mySeat >= 0);
+  assert.equal(d.state.state.game.me, -1, 'ngồi chờ: không chơi ván đang diễn ra');
+  assert.equal(d.state.state.gameSeats.length, 3);
   const samCommit = d.state.state.fair.commit;
   const players = [a, b, c];
   const g0 = d.state.state.game;
@@ -379,6 +405,11 @@ if (OTHER_PASSWORD) {
   assert.equal(verifyFair(samCommit, d.state.state.fair), 52, 'hết ván công bố cả bộ bài');
   const totals = d.state.state.seats.filter(Boolean).map((x) => x.total);
   assert.equal(totals.reduce((x, y) => x + y, 0), 0);
+  // Ván sau có cả người vừa ngồi chờ
+  for (const p of [b, c, d]) await p.act({ type: 'ready' });
+  await a.act({ type: 'start' });
+  await until(() => d.state.state.playing && d.state.state.game.me >= 0);
+  assert.equal(d.state.state.game.players.length, 4);
   await a.req('room:delete', { roomId });
   console.log('✔ Sâm lốc OK —', r.text);
 }
@@ -391,7 +422,10 @@ if (OTHER_PASSWORD) {
   await c.req('room:join', { roomId, mode: 'play' });
   await d.req('room:join', { roomId, mode: 'watch' });
   await until(() => d.state?.state.seats.length === 3);
-  for (const p of [a, b, c]) await p.act({ type: 'ready' });
+  for (const p of [b, c]) await p.act({ type: 'ready' });
+  await wait(50);
+  assert.equal(d.state.state.status, 'waiting', 'không tự bắt đầu');
+  await a.act({ type: 'start' });
   await until(() => d.state.state.status === 'playing');
   // Người ra từ đầu tiên là ngẫu nhiên: xếp lại x/y/z theo thứ tự lượt thực tế
   const order = [a, b, c];
@@ -403,6 +437,7 @@ if (OTHER_PASSWORD) {
   await assert.rejects(x.act({ type: 'word', text: 'con xyzq' }), /từ điển/);
   await assert.rejects(x.act({ type: 'word', text: 'tành mui' }), /"tành mui" không có trong từ điển/);
   await assert.rejects(d.act({ type: 'word', text: 'đắng cay' }), /xem/);
+  await assert.rejects(x.act({ type: 'word', text: 'ao chuôm' }), /quá khó/);
   await x.act({ type: 'word', text: 'Đắng Cay' });
   await until(() => d.state.state.game.required === 'cay');
   await assert.rejects(y.act({ type: 'word', text: 'con chó' }), /bắt đầu bằng "cay"/);
@@ -424,6 +459,58 @@ if (OTHER_PASSWORD) {
   assert.deepEqual(d.state.state.history[0].words.map((w) => w.s.join(' ')), ['đắng cay', 'cay cực', 'cực khổ'], 'lịch sử lưu cả chuỗi từ của ván');
   await a.req('room:delete', { roomId });
   console.log('✔ Nối từ OK');
+}
+
+// ---------- Vẽ đoán ----------
+{
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Vẽ test', game: 'scribble', options: { rounds: 1, drawSeconds: 60, customWords: 'bánh bao, nón lá' } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => c.state?.state.seats.length === 2);
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' });
+  await until(() => c.state.state.status === 'playing' && c.state.state.phase === 'choose');
+  const drawer = [a, b].find((p) => p.user.id === c.state.state.drawerId);
+  const guesser = drawer === a ? b : a;
+  await until(() => drawer.state.state.choices?.length === 3);
+  assert.equal(guesser.state.state.choices, null, 'người đoán không thấy các từ để chọn');
+  await assert.rejects(guesser.act({ type: 'choose', index: 0 }), /lượt/);
+  const word = drawer.state.state.choices[0];
+  await drawer.act({ type: 'choose', index: 0 });
+  await until(() => guesser.state.state.phase === 'draw' && drawer.state.state.phase === 'draw');
+  assert.equal(drawer.state.state.word, word);
+  assert.equal(guesser.state.state.word, null, 'người đoán không thấy đáp án');
+  assert.equal(guesser.state.state.mask.replace(/_/g, 'x').length, word.length);
+  // Nét vẽ: chuyển thẳng cho người khác (cả người xem), lưu lại cho người vào sau
+  const turn = drawer.state.state.turnNo;
+  const recv = Promise.all([guesser, c].map((p) => new Promise((res) => p.s.once('game:stream', res))));
+  drawer.s.emit('game:stream', { turn, ops: [{ k: 'l', id: 1, c: 1, w: 6, p: [10, 10, 50, 60] }, { k: 'x' }] });
+  const [g1, c1] = await recv;
+  assert.deepEqual(g1.ops, [{ k: 'l', id: 1, c: 1, w: 6, p: [10, 10, 50, 60] }]);
+  assert.deepEqual(c1, g1);
+  guesser.s.emit('game:stream', { turn, ops: [{ k: 'c' }] }); // người đoán không vẽ được
+  await wait(50);
+  assert.equal((await c.req('game:query', { type: 'canvas' })).data.ops.length, 1);
+  // Không được nhắc đáp án trong chat; người xem không đoán
+  await assert.rejects(drawer.req('room:chat', { text: `đáp án là ${word}` }), /lộ đáp án/);
+  await assert.rejects(c.act({ type: 'guess', text: word }), /Người xem/);
+  await assert.rejects(drawer.act({ type: 'guess', text: word }), /đang vẽ/);
+  await guesser.act({ type: 'guess', text: 'zzzz' });
+  await until(() => c.state.state.feed.some((f) => f.kind === 'guess' && f.text === 'zzzz'));
+  // Đoán đúng không cần dấu → mọi người đã đoán đúng → lộ đáp án
+  await guesser.act({ type: 'guess', text: word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toUpperCase() });
+  await until(() => c.state.state.phase === 'reveal');
+  assert.equal(c.state.state.word, word);
+  const sc = Object.fromEntries(c.state.state.scores.map((x) => [x.id, x.score]));
+  assert.ok(sc[guesser.user.id] > 0 && sc[drawer.user.id] === 60, 'người đoán và người vẽ đều được điểm');
+  await assert.rejects(b.act({ type: 'stop' }), /chủ phòng/);
+  await a.act({ type: 'stop' });
+  await until(() => c.state.state.status === 'over');
+  assert.equal(c.state.state.last.ranking[0].id, guesser.user.id);
+  assert.equal(c.state.state.wins.find((w) => w.id === guesser.user.id).wins, 1);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Vẽ đoán OK');
 }
 
 // ---------- Voice chat: vào/rời kênh, chuyển tín hiệu WebRTC, tắt mic ----------
@@ -484,6 +571,7 @@ if (OTHER_PASSWORD) {
   const { roomId } = await a.req('room:create', { name: 'Phỏm test', game: 'tala', options: { maxSeats: 4, unit: 10 } });
   for (const p of [b, c, d]) await p.req('room:join', { roomId, mode: 'play' });
   await until(() => a.state?.state.seats.filter(Boolean).length === 4);
+  for (const p of [b, c, d]) await p.act({ type: 'ready' });
   await a.act({ type: 'start' });
   const all = [a, b, c, d];
   await until(() => a.state.state.game);

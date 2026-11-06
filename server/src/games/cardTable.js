@@ -2,6 +2,7 @@
 // ghế, điểm tích lũy, người rời bàn giữa ván được máy đánh hộ, đồng hồ lượt, cam kết bộ bài.
 import { randInt } from '@game/shared/cards';
 import { DeckCommitments } from './fairness.js';
+import { ReadyGate } from './ready.js';
 
 const AUTO_PLAY_MS = 2000; // người rời bàn / mất kết nối: máy đánh hộ sau 2 giây
 
@@ -24,6 +25,7 @@ export class CardTableHandler {
     this.game = null;
     this.gameSeats = []; // chỉ số ghế theo thứ tự người chơi trong ván
     this.left = new Set(); // người rời bàn khi đang chơi → máy đánh hộ
+    this.ready = new ReadyGate(room);
     this.lastWinnerId = null;
     this.timer = null;
     this.deadline = 0;
@@ -45,9 +47,9 @@ export class CardTableHandler {
     if (this.game) for (const p of this.game.players) if (p.id === id) p.name = name;
   }
 
+  /** Ngồi vào ghế trống — kể cả khi ván đang diễn ra (ngồi chờ, vào chơi từ ván sau). */
   sit(user, seat) {
     if (this.seatOf(user.id) >= 0) throw new Error('Bạn đã ngồi rồi');
-    if (this.isPlaying()) throw new Error('Ván đang diễn ra, hãy đợi ván sau');
     const s = Number.isInteger(seat) ? seat : this.seats.findIndex((x) => !x);
     if (s < 0 || s >= this.seats.length || this.seats[s]) throw new Error('Không còn ghế trống');
     this.seats[s] = { id: user.id, name: user.name };
@@ -64,7 +66,11 @@ export class CardTableHandler {
       return; // giữ ghế đến hết ván
     }
     this.seats[s] = null;
+    this.ready.delete(id);
   }
+
+  /** Người đang ngồi bàn (theo thứ tự ghế). */
+  _seated() { return this.seats.filter(Boolean); }
 
   onLeave(id) { this.stand(id); }
 
@@ -77,6 +83,7 @@ export class CardTableHandler {
     if (first < 0) first = randInt(players.length);
     this.game = this._createGame(players, first);
     this.left.clear();
+    this.ready.clear();
     this.gameNo++;
     this.turnKey = '';
     this.room.system(this._startMessage(players, first));
@@ -85,9 +92,14 @@ export class CardTableHandler {
 
   action(id, a) {
     if (a.type === 'start') {
-      if (this.seatOf(id) < 0) throw new Error('Bạn đang ở chế độ xem');
       if (this.isPlaying()) throw new Error('Ván đang diễn ra');
+      this.ready.check(id, this._seated());
       return this._start();
+    }
+    if (a.type === 'ready') {
+      if (this.seatOf(id) < 0) throw new Error('Bạn đang ở chế độ xem');
+      if (this.isPlaying() && this.game.indexOf(id) >= 0) throw new Error('Ván đang diễn ra');
+      return this.ready.toggle(id);
     }
     const g = this.game;
     if (!g || g.result) throw new Error('Chưa có ván nào');
@@ -110,6 +122,7 @@ export class CardTableHandler {
     for (const id of this.left) {
       const s = this.seatOf(id);
       if (s >= 0) this.seats[s] = null;
+      this.ready.delete(id);
     }
     this.left.clear();
   }
@@ -157,6 +170,7 @@ export class CardTableHandler {
       turnTotal: this.deadlineTotal || this.options.turnSeconds * 1000,
       mySeat: this.seatOf(viewerId),
       gameNo: this.gameNo,
+      ...this.ready.view(this._seated().map((x) => x.id)),
     };
   }
 

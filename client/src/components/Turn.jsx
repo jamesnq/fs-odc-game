@@ -29,6 +29,14 @@ export function turnInfo(room, userId) {
       }
       return g.turn >= 0 ? { mine: g.turn === g.me, who: g.players[g.turn]?.name } : null;
     }
+    case 'scribble': {
+      if (s.status !== 'playing' || !s.drawerId) return null;
+      const name = s.seats.find((x) => x.id === s.drawerId)?.name || '?';
+      const mine = s.drawerId === userId;
+      if (s.phase === 'choose') return mine ? { mine, text: 'Chọn từ để vẽ!' } : { mine, text: `${name} đang chọn từ` };
+      if (s.phase === 'draw') return mine ? { mine, text: 'Đến lượt bạn vẽ!' } : { mine, text: `${name} đang vẽ — đoán đi!` };
+      return null;
+    }
     case 'wordchain': {
       const g = s.game;
       if (s.status !== 'playing' || !g) return null;

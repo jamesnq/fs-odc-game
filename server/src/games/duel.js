@@ -1,6 +1,7 @@
 // Khung chung cho game cờ đối kháng 2 người có đồng hồ (Cờ tướng, Cờ caro):
 // ngồi / sẵn sàng / chơi lại, đồng hồ mỗi bên, cầu hòa, xin đi lại, xin thua, bảng điểm.
 import { Scoreboard } from './scoreboard.js';
+import { ReadyGate } from './ready.js';
 
 const BASE_REASONS = {
   timeout: 'Hết giờ',
@@ -27,8 +28,7 @@ export class DuelHandler {
     const [a, b] = this.constructor.SIDES;
     this.sides = [a, b];
     this.seats = { [a]: null, [b]: null }; // { id, name }
-    this.ready = this._noOne();
-    this.rematch = this._noOne();
+    this.ready = new ReadyGate(room); // sẵn sàng → chủ phòng bấm bắt đầu (cả ván đầu lẫn chơi lại)
     this.status = 'waiting'; // waiting | playing | over
     this.game = this._newGame();
     this.clocks = this._fullClocks();
@@ -46,7 +46,6 @@ export class DuelHandler {
   sideOf(id) { return this.sides.find((c) => this.seats[c]?.id === id) || null; }
   other(side) { return side === this.sides[0] ? this.sides[1] : this.sides[0]; }
 
-  _noOne() { return Object.fromEntries(this.sides.map((c) => [c, false])); }
   _fullClocks() { return Object.fromEntries(this.sides.map((c) => [c, this.options.minutes * 60000])); }
   _label(side) { return this.seats[side]?.name || this.constructor.LABELS[side]; }
   _resultDetails() { return {}; }
@@ -63,8 +62,6 @@ export class DuelHandler {
     if (!side || this.seats[side]) throw new Error('Bàn đã đủ người');
     if (this.status === 'playing') throw new Error('Ván đang diễn ra');
     this.seats[side] = { id: user.id, name: user.name };
-    this.ready = this._noOne();
-    this.rematch = this._noOne();
   }
 
   stand(id) {
@@ -72,22 +69,25 @@ export class DuelHandler {
     if (!c) return;
     if (this.status === 'playing') this._end(this.other(c), 'leave');
     this.seats[c] = null;
-    this.ready = this._noOne();
-    this.rematch = this._noOne();
+    this.ready.delete(id);
     if (this.status === 'over' && !this.playerIds().length) this.status = 'waiting';
   }
 
   onLeave(id) { this.stand(id); }
 
   _start() {
+    // Chơi lại sau một ván: đổi bên đi trước
+    if (this.status === 'over') {
+      const [x, y] = this.sides;
+      [this.seats[x], this.seats[y]] = [this.seats[y], this.seats[x]];
+    }
     this.game = this._newGame();
     this.clocks = this._fullClocks();
     this.turnStart = Date.now();
     this.status = 'playing';
     this.pending = null;
     this.result = null;
-    this.ready = this._noOne();
-    this.rematch = this._noOne();
+    this.ready.clear();
     this.gameNo++;
     const [a, b] = this.sides;
     const { LABELS } = this.constructor;
@@ -143,26 +143,21 @@ export class DuelHandler {
 
   action(id, a) {
     if (a.type === 'resetScore') return this._resetScore(id);
+    if (a.type === 'start') {
+      if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+      if (!this.sides.every((s) => this.seats[s])) throw new Error('Cần đủ 2 người ngồi bàn');
+      this.ready.check(id, this.sides.map((s) => this.seats[s]));
+      return this._start();
+    }
     const c = this.sideOf(id);
     if (!c) throw new Error('Bạn đang ở chế độ xem');
     const opp = this.other(c);
     switch (a.type) {
-      case 'ready': {
-        if (this.status === 'playing') throw new Error('Ván đang diễn ra');
-        if (this.status === 'over') return this.action(id, { type: 'rematch' });
-        this.ready[c] = !this.ready[c];
-        if (this.sides.every((s) => this.ready[s] && this.seats[s])) this._start();
-        return;
-      }
+      case 'ready':
       case 'rematch': {
-        if (this.status !== 'over') throw new Error('Ván chưa kết thúc');
-        if (!this.seats[opp]) throw new Error('Chưa có đối thủ');
-        this.rematch[c] = true;
-        if (this.sides.every((s) => this.rematch[s])) {
-          const [x, y] = this.sides;
-          [this.seats[x], this.seats[y]] = [this.seats[y], this.seats[x]]; // đổi bên đi trước
-          this._start();
-        } else this.room.system(`${this.seats[c].name} muốn chơi lại`);
+        if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+        this.ready.toggle(id);
+        if (this.status === 'over' && this.ready.has(id)) this.room.system(`${this.seats[c].name} muốn chơi lại`);
         return;
       }
       case 'move': {
@@ -241,8 +236,9 @@ export class DuelHandler {
     return {
       options: this.options,
       seats: this.seats,
-      ready: this.ready,
-      rematch: this.rematch,
+      // Bên nào đã sẵn sàng (chủ phòng không cần bấm) và còn chờ ai
+      ready: Object.fromEntries(this.sides.map((c) => [c, !!this.seats[c] && this.ready.has(this.seats[c].id)])),
+      waitingFor: this.ready.waitingFor(this.playerIds()),
       status: this.status,
       ...this._boardView(),
       clocks,

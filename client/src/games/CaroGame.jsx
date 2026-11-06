@@ -82,7 +82,7 @@ export default function CaroGame({ room, state: s }) {
           })()}
         </svg>
         {s.status === 'waiting' && (
-          <div className="board-strip" role="status">{s.seats.x && s.seats.o ? 'Chờ hai bên bấm Sẵn sàng…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
+          <div className="board-strip" role="status">{s.seats.x && s.seats.o ? 'Chờ sẵn sàng — chủ phòng bấm Bắt đầu…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
         )}
         <RequestOverlay s={s} my={my} opp={opp} />
         <ResultOverlay over={s.status === 'over' && !!s.result} resetKey={s.score?.gameNo}

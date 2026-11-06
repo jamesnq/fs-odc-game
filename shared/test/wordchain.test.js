@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WordChainGame, parseWord, syllableKey, makeSyllableChecker, makeWordChecker } from '../src/wordchain.js';
+import { WordChainGame, parseWord, syllableKey, makeSyllableChecker, makeWordChecker, makeDictionary } from '../src/wordchain.js';
 
 const P = [{ id: 'a', name: 'An' }, { id: 'b', name: 'Bình' }, { id: 'c', name: 'Chi' }];
 
@@ -55,7 +55,7 @@ test('hết giờ mất mạng, hết mạng bị loại, người cuối thắn
   assert.equal(g.players[1].out, true);
   assert.equal(g.current.id, 'c');
   g.eliminate('a'); // a bỏ cuộc khi không phải lượt mình
-  assert.deepEqual(g.result, { winner: 'c', ranking: ['c', 'a', 'b'] });
+  assert.deepEqual(g.result, { winner: 'c', ranking: ['c', 'a', 'b'], reason: 'last' });
   assert.throws(() => g.submit('c', 'mèo con'), /kết thúc/);
 });
 
@@ -100,4 +100,41 @@ test('từ điển từ ghép: chế độ chặt chặn từ vô nghĩa, chế 
   loose.submit('b', 'tập tành');
   loose.submit('c', 'tành mui');
   assert.deepEqual(loose.chain.map((w) => w.known), [true, true, false], 'từ lạ được gắn cờ');
+});
+
+test('từ điển có chỉ mục: bỏ mục không phải tiếng Việt, đếm từ nối tiếp', () => {
+  const ok = makeSyllableChecker(['con', 'mèo', 'đường', 'cá', 'mập']);
+  const d = makeDictionary(['con mèo', 'con đường', 'mèo con', 'acid amin', 'cá mập', 'con mèo'], ok);
+  assert.equal(d.size, 4);
+  assert.equal(d.has(parseWord('acid amin')), false);
+  assert.equal(d.countNext(syllableKey('con')), 2);
+  assert.equal(d.countNext(syllableKey('con'), new Set(['con0 meo1'])), 1);
+  assert.equal(d.countNext(syllableKey('mập')), 0);
+});
+
+test('từ mở đầu không được quá khó; nối từ cụt thì thắng luôn', () => {
+  // "x y" có nhiều từ nối tiếp, "y z" thì "z" không có từ nào nối tiếp
+  const list = ['x y', 'y z', 'y a', 'y b', 'y c', 'a z', 'z'];
+  const d = makeDictionary(list);
+  const g = new WordChainGame(P, { isKnownWord: d.has, strict: true, countNext: d.countNext, firstMinNext: 3 });
+  assert.throws(() => g.submit('a', 'y z'), /quá khó/);
+  g.submit('a', 'x y');
+  assert.equal(g.result, null);
+  g.submit('b', 'y z');
+  assert.equal(g.result.winner, 'b');
+  assert.equal(g.result.reason, 'deadEnd');
+  assert.deepEqual(g.result.ranking, ['b', 'c', 'a']);
+  assert.throws(() => g.submit('c', 'z a'), /kết thúc/);
+});
+
+test('từ cụt chỉ thắng khi hết từ chưa dùng; từ không có trong từ điển không được thắng luôn', () => {
+  const d = makeDictionary(['a b', 'b a', 'b c', 'c b']);
+  const g = new WordChainGame(P, { isKnownWord: d.has, countNext: d.countNext, firstMinNext: 1 });
+  g.submit('a', 'a b');
+  g.submit('b', 'b a'); // còn "a b"? đã dùng → không còn từ nào bắt đầu bằng "a"
+  assert.equal(g.result?.winner, 'b');
+  const g2 = new WordChainGame(P, { isKnownWord: d.has, countNext: d.countNext, firstMinNext: 1 });
+  g2.submit('a', 'c b');
+  g2.submit('b', 'b x'); // chế độ thoáng: "b x" lạ, "x" không có từ nối tiếp nhưng không thắng
+  assert.equal(g2.result, null);
 });

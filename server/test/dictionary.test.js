@@ -16,3 +16,11 @@ test('từ điển nối từ có các từ ghép thông dụng', () => {
 test('từ vô nghĩa vẫn bị coi là không có trong từ điển', () => {
   for (const w of ['mèo bàn', 'ghế trâu', 'cơm xoài']) assert.equal(known(w), false, w);
 });
+
+test('chỉ mục từ điển: từ cụt và từ mở đầu dễ nối', async () => {
+  const { dictionary } = await import('../src/games/wordchain.js');
+  const { syllableKey, FIRST_MIN_NEXT } = await import('@game/shared/wordchain');
+  assert.equal(dictionary.countNext(syllableKey('chuôm')), 0, '"ao chuôm" là từ cụt');
+  for (const s of ['cay', 'con', 'học', 'nhà']) assert.ok(dictionary.countNext(syllableKey(s)) >= FIRST_MIN_NEXT, s);
+  assert.equal(dictionary.has(parseWord('ad hoc')), false, 'bỏ mục không phải tiếng Việt');
+});

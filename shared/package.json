@@ -10,7 +10,8 @@
     "./samloc": "./src/samloc.js",
     "./wordchain": "./src/wordchain.js",
     "./poker": "./src/poker.js",
-    "./tala": "./src/tala.js"
+    "./tala": "./src/tala.js",
+    "./scribble": "./src/scribble.js"
   },
   "scripts": {
     "test": "node --test"

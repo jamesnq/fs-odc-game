@@ -10,6 +10,7 @@ const DEFAULTS = {
   poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
+  scribble: { maxSeats: 8, rounds: 3, drawSeconds: 80, hints: true, customWords: '', onlyCustom: false },
 };
 
 const FIELDS = {
@@ -38,6 +39,14 @@ const FIELDS = {
     ['maxSeats', 'Số người chơi tối đa', 2, 5],
     ['unit', 'Mức cược / đơn vị', 1, 1000000],
     ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 120],
+  ],
+  scribble: [
+    ['maxSeats', 'Số người chơi tối đa', 2, 12],
+    ['rounds', 'Số vòng (mỗi vòng ai cũng vẽ một lần)', 1, 6],
+    ['drawSeconds', 'Thời gian vẽ mỗi lượt (giây)', 30, 180],
+    ['hints', 'Gợi ý dần vài chữ cái khi hết gần nửa thời gian', 'bool'],
+    ['customWords', 'Từ tự thêm (cách nhau dấu phẩy, không bắt buộc)', 'text'],
+    ['onlyCustom', 'Chỉ dùng từ tự thêm (cần ít nhất 10 từ)', 'bool'],
   ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],
@@ -75,7 +84,13 @@ export default function CreateRoomDialog({ game: initialGame, onClose }) {
         <label>Tên phòng</label>
         <input autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)}
           placeholder={`Bàn ${GAME_META[game].name} của ${user.name}`} />
-        {FIELDS[game].map(([key, label, min, max]) => min === 'bool' ? (
+        {FIELDS[game].map(([key, label, min, max]) => min === 'text' ? (
+          <div key={key}>
+            <label htmlFor={`opt-${key}`}>{label}</label>
+            <textarea id={`opt-${key}`} rows={3} maxLength={4000} value={opts[game][key]} placeholder="vd: bánh bao, cái nón lá, con trâu"
+              onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.value } })} />
+          </div>
+        ) : min === 'bool' ? (
           <label key={key} className="check">
             <input type="checkbox" checked={!!opts[game][key]}
               onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.checked } })} />
