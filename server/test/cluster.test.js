@@ -42,6 +42,25 @@ test('directory filters logical servers and places new rooms only on available s
   assert.deepEqual(cluster.onlineList('public'), []);
 });
 
+test('lease renewal proceeds while a metadata tick is blocked on identity storage', async () => {
+  const cluster = new Cluster({ url: 'redis://localhost', nodeId: 'a', nodes: ['a'] });
+  cluster.ready = true;
+  cluster.lobby = { users: new Map([['u', { token: 't', sockets: new Set(['s']) }]]), rooms: new Map(), broadcast() {} };
+  let release;
+  cluster.saveIdentity = () => new Promise((resolve) => { release = resolve; });
+  cluster.client = { eval: async () => 1, set: async () => {}, mGet: async () => [] };
+  let renewals = 0;
+  cluster.leaseClient = { eval: async () => { renewals++; return 1; } };
+  const tick = cluster.tick();
+  assert.equal(cluster.ticking, true);
+  await cluster.renewLease();
+  await cluster.renewLease();
+  assert.equal(renewals, 2);
+  assert.ok(cluster.renewedAt > 0);
+  release();
+  await tick;
+});
+
 test('duplicate shard owners are rejected by Redis; identities and transfer use compare-and-set', { skip: !process.env.TEST_REDIS_URL }, async (t) => {
   const namespace = `test:${Date.now()}:${process.pid}`;
   const make = (id) => new Cluster({ url: process.env.TEST_REDIS_URL, nodeId: id, nodes: ['a', 'b'], namespace });

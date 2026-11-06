@@ -30,7 +30,13 @@ export class Cluster {
     await this.client.connect();
     const acquired = await this.client.set(this.key(`lease:${this.nodeId}`), this.owner, { NX: true, EX: 15 });
     if (!acquired) throw new Error(`Shard ${this.nodeId} already has an owner; wait for lease expiry`);
+    this.leaseClient = this.client.duplicate();
+    this.leaseClient.on('error', (error) => console.error('[redis lease]', error.message));
+    await this.leaseClient.connect();
     this.ready = true;
+    await this.renewLease();
+    this.leaseTimer = setInterval(() => this.renewLease().catch((error) => this.fence(error)), 2000);
+    this.leaseTimer.unref();
     await this.tick();
     this.timer = setInterval(() => this.tick().catch((error) => this.fence(error)), 2000);
     this.timer.unref();
@@ -40,9 +46,16 @@ export class Cluster {
     if (this.ticking || !this.ready) return;
     this.ticking = true;
     try {
-      const valid = await this.client.eval(RENEW, { keys: [this.key(`lease:${this.nodeId}`)], arguments: [this.owner, '15'] });
-      if (!valid) throw new Error('Lost shard ownership');
-      this.renewedAt = Date.now();
+      if (!this.identitiesRenewedAt || Date.now() - this.identitiesRenewedAt > 60_000) {
+        const users = [...this.lobby.users.values()].filter((user) => !user.transferred && (user.sockets.size || user.roomId));
+        for (let offset = 0; offset < users.length; offset += 50) {
+          await Promise.all(users.slice(offset, offset + 50).map(async (user) => {
+            await this.saveIdentity(user);
+            await this.client.eval(RENEW, { keys: [this.routeKey(user.token)], arguments: [this.nodeId, '86400'] });
+          }));
+        }
+        this.identitiesRenewedAt = Date.now();
+      }
       const rooms = [...this.lobby.rooms.values()].map((room) => ({ ...room.summary(), server: room.server, nodeId: this.nodeId }));
       const online = this.lobby.localOnlineList ? this.lobby.localOnlineList() : [];
       await this.client.set(this.key(`node:${this.nodeId}`), JSON.stringify({ id: this.nodeId, owner: this.owner, rooms, online, draining: !!this.lobby.draining }), { EX: 10 });
@@ -52,6 +65,18 @@ export class Cluster {
       this.directory = next;
       if (changed) for (const server of new Set([...this.lobby.users.values()].map((u) => u.server))) this.lobby.broadcast(server);
     } finally { this.ticking = false; }
+  }
+
+  renewLease() {
+    if (this.renewing) return this.renewing;
+    if (!this.ready) return Promise.resolve();
+    this.renewing = this.leaseClient.eval(RENEW, {
+      keys: [this.key(`lease:${this.nodeId}`)], arguments: [this.owner, '15'],
+    }).then((valid) => {
+      if (!valid) throw new Error('Lost shard ownership');
+      this.renewedAt = Date.now();
+    }).finally(() => { this.renewing = null; });
+    return this.renewing;
   }
 
   fence(error) {
@@ -119,8 +144,11 @@ export class Cluster {
 
   async close() {
     clearInterval(this.timer);
+    clearInterval(this.leaseTimer);
     const wasReady = this.ready;
     this.ready = false;
+    await this.renewing;
+    if (this.leaseClient?.isOpen) await this.leaseClient.quit();
     if (this.client.isOpen) {
       if (wasReady) {
         // Release the directory before the lease; another owner can then safely start.
