@@ -461,6 +461,48 @@ if (OTHER_PASSWORD) {
   console.log('✔ Nối từ OK');
 }
 
+// ---------- Nối thú ----------
+{
+  const { findMove } = await import('@game/shared/onet');
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Nối thú test', game: 'onet', options: { rows: 5, cols: 5, minutes: 2, hints: 1, shuffles: 1 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => c.state?.state.seats.length === 2);
+  assert.equal(c.state.state.options.cols, 6, 'tổng số ô lẻ thì tự thêm cột');
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' });
+  await until(() => c.state.state.status === 'playing');
+  const mine = (p) => p.state.state.players.find((x) => x.id === p.user.id);
+  await until(() => mine(a) && mine(b));
+  assert.deepEqual(mine(a).grid, mine(b).grid, 'mọi người cùng một bàn');
+  assert.equal(c.state.state.players[0].hintsLeft, undefined, 'người xem không thấy lượt gợi ý');
+  await assert.rejects(c.act({ type: 'match', a: [0, 0], b: [0, 1] }), /xem/);
+  await assert.rejects(a.act({ type: 'match', a: [0, 0], b: [9, 9] }), /không hợp lệ/);
+  // Gợi ý: trả về một cặp nối được, lần 2 hết lượt
+  await a.act({ type: 'hint' });
+  await until(() => mine(a).hint);
+  await assert.rejects(a.act({ type: 'hint' }), /Hết lượt gợi ý/);
+  // a nối hết bàn theo cách tìm nước đi (giống người chơi giỏi)
+  for (let i = 0; i < 40 && mine(a).left > 0; i++) {
+    const seq = mine(a).seq;
+    const mv = findMove(mine(a).grid);
+    await a.act({ type: 'match', a: mv[0], b: mv[1] });
+    await until(() => mine(a).seq > seq);
+    await wait(80); // giới hạn tần suất ~15 thao tác/giây
+  }
+  assert.ok(mine(a).done && mine(a).finishedAt != null, 'a dọn sạch bàn');
+  await assert.rejects(a.act({ type: 'hint' }), /dọn xong/);
+  assert.equal(c.state.state.status, 'playing', 'b còn chơi thì ván chưa xong');
+  await b.act({ type: 'giveup' });
+  await until(() => c.state.state.status === 'over');
+  assert.equal(c.state.state.result.winner, a.user.id);
+  assert.deepEqual(c.state.state.result.ranking, [a.user.id, b.user.id]);
+  assert.equal(c.state.state.wins[0].id, a.user.id);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Nối thú OK');
+}
+
 // ---------- Vẽ đoán ----------
 {
   a.state = b.state = c.state = null;

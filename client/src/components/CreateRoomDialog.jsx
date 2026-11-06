@@ -12,6 +12,7 @@ const DEFAULTS = {
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
   scribble: { maxSeats: 8, rounds: 3, drawSeconds: 80, hints: true, customWords: '', onlyCustom: false },
   telephone: { maxSeats: 8, writeSeconds: 40, drawSeconds: 90, suggest: true },
+  onet: { maxSeats: 4, rows: 9, cols: 16, minutes: 8, hints: 3, shuffles: 3, gravity: false },
 };
 
 const FIELDS = {
@@ -54,6 +55,15 @@ const FIELDS = {
     ['writeSeconds', 'Thời gian viết / đoán mỗi bước (giây)', 15, 120],
     ['drawSeconds', 'Thời gian vẽ mỗi bước (giây)', 30, 240],
     ['suggest', 'Cho lấy gợi ý ở bước viết câu đầu tiên', 'bool'],
+  ],
+  onet: [
+    ['maxSeats', 'Số người chơi tối đa (1 = chơi một mình)', 1, 8],
+    ['rows', 'Số hàng', 4, 10],
+    ['cols', 'Số cột (tổng số ô phải chẵn)', 4, 18],
+    ['minutes', 'Thời gian mỗi ván (phút)', 1, 30],
+    ['hints', 'Số lượt gợi ý', 0, 20],
+    ['shuffles', 'Số lượt đổi hình (xáo bàn)', 0, 20],
+    ['gravity', 'Trọng lực: nối xong các hình rơi xuống lấp chỗ trống (khó hơn)', 'bool'],
   ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],
