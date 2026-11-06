@@ -55,3 +55,18 @@ mà hai nguồn trên còn thiếu. Thêm từ mới vào tệp này (mỗi dòn
 
 Khi cần, chủ phòng vẫn có thể tắt chế độ chặt để chuyển sang chế độ thoáng
 (chỉ kiểm tra từng chữ, từ lạ bị gắn cờ ⚠ để người chơi phản đối).
+
+---
+
+# Trò Đố vui và Đoán chữ (tự soạn cho dự án này)
+
+## `quiz-vi.json` — bộ câu hỏi Đố vui có sẵn (215 câu)
+
+Soạn tay cho trò chơi này, 9 chủ đề (xem `QUIZ_CATEGORIES` trong `shared/src/quiz.js`).
+Mỗi mục: `{ "c": chủ đề, "q": câu hỏi, "a": đáp án đúng, "w": [đáp án sai] }`; câu Đúng/Sai có `a`/`w` là "Đúng"/"Sai".
+Tránh các dữ kiện dễ đổi (ví dụ tên tỉnh sau đợt sáp nhập năm 2025). Thấy câu sai thì sửa thẳng trong tệp.
+
+## `vi-words-doanchu.txt` — đáp án của trò Đoán chữ (639 từ)
+
+Từ 2 chữ thông dụng, soạn tay theo chủ đề (gia đình, đồ vật, món ăn, con vật, thiên nhiên…).
+Mọi từ đều phải có trong từ điển ở trên (từ nào thiếu thì thêm vào `vi-words-common.txt`).

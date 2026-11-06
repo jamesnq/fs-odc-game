@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../store.jsx';
 import Modal from './Modal.jsx';
 import { GAME_META, GameIcon } from './Lobby.jsx';
+import { QUIZ_CATEGORIES } from '@game/shared/quiz';
 
 const DEFAULTS = {
   xiangqi: { minutes: 8 },
@@ -9,6 +10,8 @@ const DEFAULTS = {
   wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true, strict: true, bot: '', bots: 1 },
   poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
+  quiz: { category: 'all', questions: 10, seconds: 20, maxSeats: 20 },
+  wordguess: { mode: 'race', minutes: 5, maxSeats: 6, daily: false, strict: true },
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
 };
 
@@ -17,6 +20,18 @@ const BOT_OPTIONS = [['', 'Không — chơi với người'], ['easy', 'Máy D�
 
 // [khóa, nhãn, min, max] · [khóa, nhãn, 'bool'] · [khóa, nhãn, 'select', các lựa chọn]
 const FIELDS = {
+  quiz: [
+    ['category', 'Chủ đề (bộ câu hỏi có sẵn)', 'select', [['all', 'Tất cả chủ đề'], ...QUIZ_CATEGORIES.map((c) => [c, c])]],
+    ['questions', 'Số câu mỗi ván', 3, 30],
+    ['seconds', 'Thời gian mỗi câu (giây)', 5, 60],
+    ['maxSeats', 'Số người chơi tối đa', 1, 30],
+  ],
+  wordguess: [
+    ['mode', 'Chế độ', 'select', [['race', 'Đua — mỗi người một bàn, cùng một từ'], ['coop', 'Cùng đoán — cả phòng chung một bàn']]],
+    ['daily', 'Từ của ngày (mọi người cùng một từ, mỗi ngày đổi)', 'bool'],
+    ['minutes', 'Thời gian mỗi ván (phút)', 1, 15],
+    ['maxSeats', 'Số người chơi tối đa', 1, 10],
+  ],
   xiangqi: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
   wordchain: [
     ['maxSeats', 'Số người chơi tối đa', 2, 8],

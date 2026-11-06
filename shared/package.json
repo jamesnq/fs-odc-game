@@ -12,6 +12,8 @@
     "./wordchain": "./src/wordchain.js",
     "./wordchainBot": "./src/wordchainBot.js",
     "./poker": "./src/poker.js",
+    "./quiz": "./src/quiz.js",
+    "./wordguess": "./src/wordguess.js",
     "./tala": "./src/tala.js"
   },
   "scripts": {

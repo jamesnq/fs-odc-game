@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, Lightbulb, SpellCheck } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -10,6 +10,8 @@ export const GAME_META = {
   xiangqi: { name: 'Cờ tướng', Icon: Castle, desc: '2 người, mỗi bên 8 phút, có chế độ xem' },
   caro: { name: 'Cờ caro', Icon: Grid3x3, desc: '2 người, 5 quân liên tiếp là thắng' },
   wordchain: { name: 'Nối từ', Icon: WholeWord, desc: '2–8 người, nối từ tiếng Việt theo lượt' },
+  quiz: { name: 'Đố vui', Icon: Lightbulb, desc: 'Kiểu Kahoot, 1–30 người, có bộ câu hỏi sẵn hoặc tự soạn' },
+  wordguess: { name: 'Đoán chữ', Icon: SpellCheck, desc: 'Đoán từ 2 chữ trong 6 lượt, đua hoặc cùng đoán' },
 };
 
 /** Icon SVG của trò chơi (bộ Lucide), màu theo từng trò. */
@@ -137,10 +139,24 @@ function Avatar({ p, size = 34 }) {
  * Người đang online cùng server (trừ mình), chia hai nhóm: ở sảnh (dễ rủ chơi) và đang trong phòng (bấm để vào cùng).
  * Trên điện thoại khung thu gọn thành một dòng avatar, chạm để mở.
  */
+const OPEN_KEY = 'gl_online_open';
+
 function OnlinePanel() {
   const { online, user, call } = useApp();
   const [q, setQ] = useState('');
-  const [open, setOpen] = useState(false);
+  // Ẩn / hiện danh sách, nhớ lựa chọn trên trình duyệt. Lần đầu: màn rộng mở sẵn, màn hẹp thu gọn.
+  const [open, setOpenState] = useState(() => {
+    try {
+      const v = localStorage.getItem(OPEN_KEY);
+      if (v !== null) return v === '1';
+    } catch { /* không có localStorage */ }
+    return !!window.matchMedia?.('(min-width: 1100px)').matches;
+  });
+  const setOpen = (f) => setOpenState((v) => {
+    const next = f(v);
+    try { localStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* bỏ qua */ }
+    return next;
+  });
   const others = online.filter((p) => p.id !== user.id);
   const match = (p) => !q || p.name.toLowerCase().includes(q.toLowerCase());
   const byName = (a, b) => a.name.localeCompare(b.name, 'vi');
@@ -173,7 +189,8 @@ function OnlinePanel() {
 
   return (
     <aside className={`online-panel ${open ? 'open' : ''}`} aria-labelledby="online-title">
-      <button type="button" className="op-head" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="online-content">
+      <button type="button" className="op-head" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="online-content"
+        title={open ? 'Ẩn danh sách' : 'Hiện danh sách người đang online'}>
         <h2 id="online-title"><span className="dot on" aria-hidden />Đang online</h2>
         <span className="op-stack" aria-hidden>
           {others.slice(0, 4).map((p) => <Avatar key={p.id} p={p} size={24} />)}
@@ -219,6 +236,8 @@ function describeOptions(r) {
   if (r.game === 'xiangqi') return `${o.minutes} phút/bên`;
   if (r.game === 'caro') return `${o.size}×${o.size} · ${o.minutes} phút/bên${o.blockTwoEnds ? ' · chặn 2 đầu' : ''}`;
   if (r.game === 'wordchain') return `${o.turnSeconds} giây/lượt · ${o.lives} mạng${o.dictionary ? (o.strict ? ' · từ điển chặt' : ' · từ điển thoáng') : ''}`;
+  if (r.game === 'quiz') return `${o.category === 'all' ? 'Tất cả chủ đề' : o.category} · ${o.questions} câu · ${o.seconds} giây/câu`;
+  if (r.game === 'wordguess') return `${o.mode === 'coop' ? 'Cùng đoán' : 'Đua'}${o.daily ? ' · Từ của ngày' : ''} · ${o.minutes} phút`;
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
   if (r.game === 'samloc') return `Cược ${o.unit}/đơn vị · ${o.turnSeconds} giây/lượt`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;

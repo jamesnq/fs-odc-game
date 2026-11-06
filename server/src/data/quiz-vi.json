@@ -1,0 +1,2140 @@
+[
+{
+"c": "Địa lý",
+"q": "Thủ đô của Việt Nam là thành phố nào?",
+"a": "Hà Nội",
+"w": [
+"Huế",
+"Đà Nẵng",
+"TP. Hồ Chí Minh"
+]
+},
+{
+"c": "Địa lý",
+"q": "Đỉnh núi cao nhất Việt Nam là đỉnh nào?",
+"a": "Fansipan",
+"w": [
+"Bạch Mã",
+"Ngọc Linh",
+"Bà Đen"
+]
+},
+{
+"c": "Địa lý",
+"q": "Vịnh Hạ Long nằm ở tỉnh nào?",
+"a": "Quảng Ninh",
+"w": [
+"Hải Phòng",
+"Thanh Hóa",
+"Nghệ An"
+]
+},
+{
+"c": "Địa lý",
+"q": "Con sông lớn nào chảy qua đồng bằng Nam Bộ và đổ ra biển bằng nhiều cửa?",
+"a": "Sông Mê Kông",
+"w": [
+"Sông Hồng",
+"Sông Đà",
+"Sông Hương"
+]
+},
+{
+"c": "Địa lý",
+"q": "Sông Hương chảy qua thành phố nào?",
+"a": "Huế",
+"w": [
+"Hà Nội",
+"Đà Nẵng",
+"Cần Thơ"
+]
+},
+{
+"c": "Địa lý",
+"q": "Hồ Gươm còn có tên gọi khác là gì?",
+"a": "Hồ Hoàn Kiếm",
+"w": [
+"Hồ Tây",
+"Hồ Trúc Bạch",
+"Hồ Thiền Quang"
+]
+},
+{
+"c": "Địa lý",
+"q": "Đà Lạt nổi tiếng với biệt danh nào?",
+"a": "Thành phố ngàn hoa",
+"w": [
+"Thành phố biển",
+"Thành phố cảng",
+"Thành phố đỏ lửa"
+]
+},
+{
+"c": "Địa lý",
+"q": "Hang động nào ở Quảng Bình được biết đến là hang động tự nhiên lớn nhất thế giới?",
+"a": "Hang Sơn Đoòng",
+"w": [
+"Động Phong Nha",
+"Động Thiên Đường",
+"Hang Én"
+]
+},
+{
+"c": "Địa lý",
+"q": "Cầu Rồng nổi tiếng nằm ở thành phố nào?",
+"a": "Đà Nẵng",
+"w": [
+"Hà Nội",
+"Hải Phòng",
+"Nha Trang"
+]
+},
+{
+"c": "Địa lý",
+"q": "Phố cổ Hội An nằm bên bờ con sông nào?",
+"a": "Sông Thu Bồn",
+"w": [
+"Sông Hàn",
+"Sông Hương",
+"Sông Gianh"
+]
+},
+{
+"c": "Địa lý",
+"q": "Việt Nam có hình dạng giống chữ cái nào?",
+"a": "Chữ S",
+"w": [
+"Chữ C",
+"Chữ L",
+"Chữ V"
+]
+},
+{
+"c": "Địa lý",
+"q": "Biển nằm ở phía đông Việt Nam được gọi là gì?",
+"a": "Biển Đông",
+"w": [
+"Biển Bắc",
+"Biển Đỏ",
+"Biển Đen"
+]
+},
+{
+"c": "Địa lý",
+"q": "Việt Nam có chung đường biên giới đất liền với những nước nào?",
+"a": "Trung Quốc, Lào, Campuchia",
+"w": [
+"Lào, Thái Lan, Campuchia",
+"Trung Quốc, Thái Lan, Lào",
+"Campuchia, Myanmar, Lào"
+]
+},
+{
+"c": "Địa lý",
+"q": "Đèo Hải Vân nằm giữa hai địa phương nào?",
+"a": "Huế và Đà Nẵng",
+"w": [
+"Quảng Nam và Quảng Ngãi",
+"Hà Tĩnh và Quảng Bình",
+"Khánh Hòa và Ninh Thuận"
+]
+},
+{
+"c": "Địa lý",
+"q": "Chợ nổi Cái Răng thuộc thành phố nào?",
+"a": "Cần Thơ",
+"w": [
+"TP. Hồ Chí Minh",
+"Mỹ Tho",
+"Long Xuyên"
+]
+},
+{
+"c": "Địa lý",
+"q": "Mũi Cà Mau là điểm cực nào trên đất liền Việt Nam?",
+"a": "Cực Nam",
+"w": [
+"Cực Bắc",
+"Cực Đông",
+"Cực Tây"
+]
+},
+{
+"c": "Địa lý",
+"q": "Quần đảo nào sau đây thuộc chủ quyền của Việt Nam?",
+"a": "Hoàng Sa",
+"w": [
+"Galápagos",
+"Maldives",
+"Hawaii"
+]
+},
+{
+"c": "Địa lý",
+"q": "Đồng bằng sông Hồng được bồi đắp chủ yếu bởi phù sa của sông nào?",
+"a": "Sông Hồng và sông Thái Bình",
+"w": [
+"Sông Mê Kông",
+"Sông Đồng Nai",
+"Sông Mã và sông Cả"
+]
+},
+{
+"c": "Địa lý",
+"q": "Hồ nước ngọt tự nhiên lớn nhất Việt Nam là hồ nào?",
+"a": "Hồ Ba Bể",
+"w": [
+"Hồ Tây",
+"Hồ Xuân Hương",
+"Hồ Lắk"
+]
+},
+{
+"c": "Địa lý",
+"q": "Ngọn núi nào được gọi là \"nóc nhà Đông Dương\"?",
+"a": "Fansipan",
+"w": [
+"Phú Sĩ",
+"Everest",
+"Bà Đen"
+]
+},
+{
+"c": "Địa lý",
+"q": "Tây Nguyên nổi tiếng trồng nhiều loại cây công nghiệp nào nhất?",
+"a": "Cà phê",
+"w": [
+"Lúa nước",
+"Cói",
+"Mía"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Nhật Bản là gì?",
+"a": "Tokyo",
+"w": [
+"Osaka",
+"Kyoto",
+"Seoul"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Pháp là gì?",
+"a": "Paris",
+"w": [
+"Lyon",
+"Marseille",
+"Rome"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Úc là thành phố nào?",
+"a": "Canberra",
+"w": [
+"Sydney",
+"Melbourne",
+"Perth"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Thái Lan là gì?",
+"a": "Băng Cốc",
+"w": [
+"Viêng Chăn",
+"Phnôm Pênh",
+"Kuala Lumpur"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Lào là gì?",
+"a": "Viêng Chăn",
+"w": [
+"Luông Pha Băng",
+"Băng Cốc",
+"Phnôm Pênh"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Hàn Quốc là gì?",
+"a": "Seoul",
+"w": [
+"Busan",
+"Bình Nhưỡng",
+"Tokyo"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đại dương lớn nhất thế giới là đại dương nào?",
+"a": "Thái Bình Dương",
+"w": [
+"Đại Tây Dương",
+"Ấn Độ Dương",
+"Bắc Băng Dương"
+]
+},
+{
+"c": "Thế giới",
+"q": "Ngọn núi cao nhất thế giới là núi nào?",
+"a": "Everest",
+"w": [
+"K2",
+"Kilimanjaro",
+"Phú Sĩ"
+]
+},
+{
+"c": "Thế giới",
+"q": "Sa mạc nóng lớn nhất thế giới là sa mạc nào?",
+"a": "Sahara",
+"w": [
+"Gobi",
+"Kalahari",
+"Atacama"
+]
+},
+{
+"c": "Thế giới",
+"q": "Châu lục nào có diện tích lớn nhất?",
+"a": "Châu Á",
+"w": [
+"Châu Phi",
+"Châu Mỹ",
+"Châu Âu"
+]
+},
+{
+"c": "Thế giới",
+"q": "Quốc gia nào có dân số đông nhất thế giới hiện nay?",
+"a": "Ấn Độ",
+"w": [
+"Trung Quốc",
+"Hoa Kỳ",
+"Indonesia"
+]
+},
+{
+"c": "Thế giới",
+"q": "Quốc gia nào có diện tích lớn nhất thế giới?",
+"a": "Nga",
+"w": [
+"Canada",
+"Trung Quốc",
+"Hoa Kỳ"
+]
+},
+{
+"c": "Thế giới",
+"q": "Tháp Eiffel nằm ở thành phố nào?",
+"a": "Paris",
+"w": [
+"London",
+"Berlin",
+"Madrid"
+]
+},
+{
+"c": "Thế giới",
+"q": "Kim tự tháp Giza nằm ở nước nào?",
+"a": "Ai Cập",
+"w": [
+"Mexico",
+"Hy Lạp",
+"Iraq"
+]
+},
+{
+"c": "Thế giới",
+"q": "Vạn Lý Trường Thành là công trình của nước nào?",
+"a": "Trung Quốc",
+"w": [
+"Mông Cổ",
+"Nhật Bản",
+"Hàn Quốc"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đền Angkor Wat nằm ở quốc gia nào?",
+"a": "Campuchia",
+"w": [
+"Thái Lan",
+"Lào",
+"Myanmar"
+]
+},
+{
+"c": "Thế giới",
+"q": "Tượng Nữ thần Tự do nằm ở thành phố nào?",
+"a": "New York",
+"w": [
+"Washington",
+"Los Angeles",
+"Chicago"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đất nước nào được mệnh danh là \"xứ sở hoa anh đào\"?",
+"a": "Nhật Bản",
+"w": [
+"Hàn Quốc",
+"Trung Quốc",
+"Hà Lan"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đất nước nào được mệnh danh là \"xứ sở chùa vàng\"?",
+"a": "Thái Lan",
+"w": [
+"Lào",
+"Myanmar",
+"Ấn Độ"
+]
+},
+{
+"c": "Thế giới",
+"q": "Sông nào dài nhất châu Phi?",
+"a": "Sông Nile",
+"w": [
+"Sông Congo",
+"Sông Niger",
+"Sông Zambezi"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đơn vị tiền tệ của Nhật Bản là gì?",
+"a": "Yên",
+"w": [
+"Won",
+"Nhân dân tệ",
+"Baht"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đơn vị tiền tệ của Hàn Quốc là gì?",
+"a": "Won",
+"w": [
+"Yên",
+"Ringgit",
+"Rupee"
+]
+},
+{
+"c": "Thế giới",
+"q": "Nước nào có hình dạng giống chiếc ủng?",
+"a": "Ý",
+"w": [
+"Tây Ban Nha",
+"Hy Lạp",
+"Chile"
+]
+},
+{
+"c": "Thế giới",
+"q": "Hiệp hội các quốc gia Đông Nam Á được viết tắt là gì?",
+"a": "ASEAN",
+"w": [
+"APEC",
+"NATO",
+"WTO"
+]
+},
+{
+"c": "Thế giới",
+"q": "Việt Nam gia nhập ASEAN vào năm nào?",
+"a": "1995",
+"w": [
+"1986",
+"2000",
+"2007"
+]
+},
+{
+"c": "Thế giới",
+"q": "Kênh đào Panama nối hai đại dương nào?",
+"a": "Thái Bình Dương và Đại Tây Dương",
+"w": [
+"Ấn Độ Dương và Thái Bình Dương",
+"Đại Tây Dương và Ấn Độ Dương",
+"Bắc Băng Dương và Đại Tây Dương"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ai là người đọc bản Tuyên ngôn Độc lập khai sinh nước Việt Nam Dân chủ Cộng hòa?",
+"a": "Chủ tịch Hồ Chí Minh",
+"w": [
+"Võ Nguyên Giáp",
+"Phạm Văn Đồng",
+"Trường Chinh"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Bản Tuyên ngôn Độc lập được đọc vào ngày nào?",
+"a": "2/9/1945",
+"w": [
+"19/8/1945",
+"30/4/1975",
+"7/5/1954"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Bản Tuyên ngôn Độc lập năm 1945 được đọc tại đâu?",
+"a": "Quảng trường Ba Đình",
+"w": [
+"Hồ Hoàn Kiếm",
+"Nhà hát Lớn Hà Nội",
+"Phủ Chủ tịch"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Chiến thắng Điện Biên Phủ diễn ra vào năm nào?",
+"a": "1954",
+"w": [
+"1945",
+"1968",
+"1975"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ngày thống nhất đất nước Việt Nam là ngày nào?",
+"a": "30/4/1975",
+"w": [
+"2/9/1945",
+"7/5/1954",
+"19/5/1890"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ai là vị tướng chỉ huy chiến dịch Điện Biên Phủ?",
+"a": "Võ Nguyên Giáp",
+"w": [
+"Văn Tiến Dũng",
+"Nguyễn Chí Thanh",
+"Hoàng Văn Thái"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ngô Quyền đánh tan quân Nam Hán trên sông nào?",
+"a": "Sông Bạch Đằng",
+"w": [
+"Sông Như Nguyệt",
+"Sông Hồng",
+"Sông Mã"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Trận Bạch Đằng của Ngô Quyền diễn ra vào năm nào?",
+"a": "938",
+"w": [
+"1288",
+"1077",
+"1789"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ai là vị tướng chỉ huy trận Bạch Đằng năm 1288, đánh tan quân Nguyên?",
+"a": "Trần Hưng Đạo",
+"w": [
+"Lý Thường Kiệt",
+"Lê Lợi",
+"Quang Trung"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Bài thơ \"Nam quốc sơn hà\" gắn với vị tướng nào?",
+"a": "Lý Thường Kiệt",
+"w": [
+"Trần Hưng Đạo",
+"Ngô Quyền",
+"Lê Lợi"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Hai Bà Trưng khởi nghĩa chống lại quân xâm lược nào?",
+"a": "Nhà Hán",
+"w": [
+"Nhà Tống",
+"Nhà Minh",
+"Nhà Thanh"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Vua Quang Trung đại phá quân Thanh vào dịp nào?",
+"a": "Tết Kỷ Dậu 1789",
+"w": [
+"Tết Mậu Thân 1968",
+"Năm 1288",
+"Năm 1427"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Tên thật của vua Quang Trung là gì?",
+"a": "Nguyễn Huệ",
+"w": [
+"Nguyễn Nhạc",
+"Nguyễn Ánh",
+"Nguyễn Lữ"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ai là người lãnh đạo khởi nghĩa Lam Sơn?",
+"a": "Lê Lợi",
+"w": [
+"Nguyễn Trãi",
+"Lê Lai",
+"Trần Quốc Tuấn"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Tác giả của \"Bình Ngô đại cáo\" là ai?",
+"a": "Nguyễn Trãi",
+"w": [
+"Lê Lợi",
+"Lý Thường Kiệt",
+"Trần Hưng Đạo"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Vua Lý Thái Tổ dời đô từ Hoa Lư về Thăng Long vào năm nào?",
+"a": "1010",
+"w": [
+"938",
+"1225",
+"1428"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Thăng Long là tên cũ của thành phố nào?",
+"a": "Hà Nội",
+"w": [
+"Huế",
+"Nam Định",
+"Ninh Bình"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Triều đại phong kiến cuối cùng của Việt Nam là triều đại nào?",
+"a": "Nhà Nguyễn",
+"w": [
+"Nhà Lê",
+"Nhà Trần",
+"Nhà Tây Sơn"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Kinh đô của triều Nguyễn đặt ở đâu?",
+"a": "Huế",
+"w": [
+"Thăng Long",
+"Hoa Lư",
+"Gia Định"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Vị vua cuối cùng của Việt Nam là ai?",
+"a": "Bảo Đại",
+"w": [
+"Khải Định",
+"Duy Tân",
+"Hàm Nghi"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Cố đô Hoa Lư thuộc tỉnh nào ngày nay?",
+"a": "Ninh Bình",
+"w": [
+"Thanh Hóa",
+"Hải Phòng",
+"Hưng Yên"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Văn Miếu – Quốc Tử Giám được xem là trường đại học đầu tiên của Việt Nam. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Theo truyền thuyết, nhà nước đầu tiên của người Việt là nhà nước nào?",
+"a": "Văn Lang",
+"w": [
+"Âu Lạc",
+"Đại Việt",
+"Đại Cồ Việt"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ai là người xây thành Cổ Loa?",
+"a": "An Dương Vương",
+"w": [
+"Hùng Vương",
+"Đinh Bộ Lĩnh",
+"Lý Bí"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Ngày giỗ Tổ Hùng Vương là ngày nào?",
+"a": "Mùng 10 tháng 3 âm lịch",
+"w": [
+"Mùng 1 tháng Giêng",
+"Rằm tháng 7",
+"Mùng 5 tháng 5 âm lịch"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Chủ tịch Hồ Chí Minh sinh năm nào?",
+"a": "1890",
+"w": [
+"1900",
+"1885",
+"1911"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Năm 1911, Nguyễn Tất Thành ra đi tìm đường cứu nước từ bến cảng nào?",
+"a": "Bến Nhà Rồng",
+"w": [
+"Cảng Hải Phòng",
+"Cửa Hội",
+"Cảng Đà Nẵng"
+]
+},
+{
+"c": "Lịch sử",
+"q": "Đinh Bộ Lĩnh dẹp loạn mấy sứ quân?",
+"a": "12",
+"w": [
+"10",
+"8",
+"16"
+]
+},
+{
+"c": "Khoa học",
+"q": "Hành tinh nào gần Mặt Trời nhất?",
+"a": "Sao Thủy",
+"w": [
+"Sao Kim",
+"Trái Đất",
+"Sao Hỏa"
+]
+},
+{
+"c": "Khoa học",
+"q": "Hành tinh nào lớn nhất trong Hệ Mặt Trời?",
+"a": "Sao Mộc",
+"w": [
+"Sao Thổ",
+"Trái Đất",
+"Sao Hải Vương"
+]
+},
+{
+"c": "Khoa học",
+"q": "Hành tinh nào được gọi là \"Hành tinh Đỏ\"?",
+"a": "Sao Hỏa",
+"w": [
+"Sao Kim",
+"Sao Mộc",
+"Sao Thủy"
+]
+},
+{
+"c": "Khoa học",
+"q": "Hành tinh nào nổi tiếng với hệ vành đai rõ nhất?",
+"a": "Sao Thổ",
+"w": [
+"Sao Mộc",
+"Sao Hỏa",
+"Sao Kim"
+]
+},
+{
+"c": "Khoa học",
+"q": "Công thức hóa học của nước là gì?",
+"a": "H₂O",
+"w": [
+"CO₂",
+"O₂",
+"NaCl"
+]
+},
+{
+"c": "Khoa học",
+"q": "Khí nào chiếm tỉ lệ lớn nhất trong không khí?",
+"a": "Nitơ",
+"w": [
+"Oxy",
+"Cacbonic",
+"Hiđro"
+]
+},
+{
+"c": "Khoa học",
+"q": "Cây xanh hấp thụ khí nào để quang hợp?",
+"a": "Cacbonic (CO₂)",
+"w": [
+"Oxy",
+"Nitơ",
+"Heli"
+]
+},
+{
+"c": "Khoa học",
+"q": "Ở áp suất thường, nước sôi ở bao nhiêu độ C?",
+"a": "100°C",
+"w": [
+"90°C",
+"80°C",
+"120°C"
+]
+},
+{
+"c": "Khoa học",
+"q": "Muối ăn có công thức hóa học là gì?",
+"a": "NaCl",
+"w": [
+"KCl",
+"H₂O",
+"CaCO₃"
+]
+},
+{
+"c": "Khoa học",
+"q": "Ký hiệu hóa học của vàng là gì?",
+"a": "Au",
+"w": [
+"Ag",
+"Fe",
+"Go"
+]
+},
+{
+"c": "Khoa học",
+"q": "Ký hiệu hóa học của sắt là gì?",
+"a": "Fe",
+"w": [
+"S",
+"Si",
+"Ir"
+]
+},
+{
+"c": "Khoa học",
+"q": "Cơ quan nào bơm máu đi khắp cơ thể?",
+"a": "Tim",
+"w": [
+"Phổi",
+"Gan",
+"Thận"
+]
+},
+{
+"c": "Khoa học",
+"q": "Người trưởng thành bình thường có bao nhiêu chiếc răng (kể cả răng khôn)?",
+"a": "32",
+"w": [
+"28",
+"30",
+"36"
+]
+},
+{
+"c": "Khoa học",
+"q": "Xương đùi là xương dài nhất trong cơ thể người. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+},
+{
+"c": "Khoa học",
+"q": "Động vật nào lớn nhất trên Trái Đất?",
+"a": "Cá voi xanh",
+"w": [
+"Voi châu Phi",
+"Cá mập voi",
+"Hươu cao cổ"
+]
+},
+{
+"c": "Khoa học",
+"q": "Động vật trên cạn nào chạy nhanh nhất?",
+"a": "Báo săn (báo gêpa)",
+"w": [
+"Sư tử",
+"Ngựa",
+"Linh dương"
+]
+},
+{
+"c": "Khoa học",
+"q": "Cá heo là loài cá. Đúng hay sai?",
+"a": "Sai",
+"w": [
+"Đúng"
+]
+},
+{
+"c": "Khoa học",
+"q": "Dơi là loài chim. Đúng hay sai?",
+"a": "Sai",
+"w": [
+"Đúng"
+]
+},
+{
+"c": "Khoa học",
+"q": "Ánh sáng truyền nhanh hơn âm thanh. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+},
+{
+"c": "Khoa học",
+"q": "Ai là người đề ra thuyết tương đối?",
+"a": "Albert Einstein",
+"w": [
+"Isaac Newton",
+"Galileo Galilei",
+"Nikola Tesla"
+]
+},
+{
+"c": "Khoa học",
+"q": "Ai phát hiện ra định luật vạn vật hấp dẫn?",
+"a": "Isaac Newton",
+"w": [
+"Albert Einstein",
+"Archimedes",
+"Charles Darwin"
+]
+},
+{
+"c": "Khoa học",
+"q": "Trái Đất quay một vòng quanh Mặt Trời mất khoảng bao lâu?",
+"a": "Khoảng 365 ngày",
+"w": [
+"Khoảng 30 ngày",
+"Khoảng 24 giờ",
+"Khoảng 100 ngày"
+]
+},
+{
+"c": "Khoa học",
+"q": "Trái Đất tự quay quanh trục mất khoảng bao lâu?",
+"a": "Khoảng 24 giờ",
+"w": [
+"Khoảng 12 giờ",
+"Khoảng 7 ngày",
+"Khoảng 365 ngày"
+]
+},
+{
+"c": "Khoa học",
+"q": "Mặt Trăng là vệ tinh tự nhiên của hành tinh nào?",
+"a": "Trái Đất",
+"w": [
+"Sao Hỏa",
+"Sao Kim",
+"Sao Mộc"
+]
+},
+{
+"c": "Khoa học",
+"q": "Cầu vồng có bao nhiêu màu theo cách gọi quen thuộc?",
+"a": "7",
+"w": [
+"5",
+"6",
+"9"
+]
+},
+{
+"c": "Khoa học",
+"q": "Chất nào cứng nhất trong tự nhiên?",
+"a": "Kim cương",
+"w": [
+"Sắt",
+"Thạch anh",
+"Vàng"
+]
+},
+{
+"c": "Khoa học",
+"q": "Vitamin nào được cơ thể tổng hợp khi da tiếp xúc với ánh nắng?",
+"a": "Vitamin D",
+"w": [
+"Vitamin A",
+"Vitamin C",
+"Vitamin B12"
+]
+},
+{
+"c": "Khoa học",
+"q": "Nhóm máu nào được gọi là \"nhóm máu cho phổ thông\" (truyền được cho các nhóm khác)?",
+"a": "Nhóm O",
+"w": [
+"Nhóm A",
+"Nhóm B",
+"Nhóm AB"
+]
+},
+{
+"c": "Khoa học",
+"q": "Con nhện có bao nhiêu chân?",
+"a": "8",
+"w": [
+"6",
+"10",
+"12"
+]
+},
+{
+"c": "Khoa học",
+"q": "Côn trùng có bao nhiêu chân?",
+"a": "6",
+"w": [
+"4",
+"8",
+"10"
+]
+},
+{
+"c": "Khoa học",
+"q": "Đơn vị đo cường độ dòng điện là gì?",
+"a": "Ampe",
+"w": [
+"Vôn",
+"Oát",
+"Ôm"
+]
+},
+{
+"c": "Khoa học",
+"q": "Người Việt Nam đầu tiên bay vào vũ trụ là ai?",
+"a": "Phạm Tuân",
+"w": [
+"Ngô Bảo Châu",
+"Trần Đại Nghĩa",
+"Tôn Thất Tùng"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Bánh chưng thường có hình gì?",
+"a": "Hình vuông",
+"w": [
+"Hình tròn",
+"Hình tam giác",
+"Hình trụ dài"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Theo truyền thuyết, ai là người làm ra bánh chưng, bánh giầy?",
+"a": "Lang Liêu",
+"w": [
+"Thánh Gióng",
+"Sơn Tinh",
+"Mai An Tiêm"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Ai được nhắc đến trong sự tích quả dưa hấu?",
+"a": "Mai An Tiêm",
+"w": [
+"Lang Liêu",
+"Chử Đồng Tử",
+"Thạch Sanh"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Tết Trung thu là ngày nào âm lịch?",
+"a": "Rằm tháng 8",
+"w": [
+"Rằm tháng Giêng",
+"Mùng 5 tháng 5",
+"Rằm tháng 7"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Tết Đoan Ngọ (diệt sâu bọ) là ngày nào âm lịch?",
+"a": "Mùng 5 tháng 5",
+"w": [
+"Mùng 3 tháng 3",
+"Rằm tháng 8",
+"Mùng 10 tháng 3"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Ngày Quốc tế Phụ nữ là ngày nào?",
+"a": "8/3",
+"w": [
+"20/10",
+"1/6",
+"20/11"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Ngày Phụ nữ Việt Nam là ngày nào?",
+"a": "20/10",
+"w": [
+"8/3",
+"20/11",
+"27/7"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Ngày Nhà giáo Việt Nam là ngày nào?",
+"a": "20/11",
+"w": [
+"20/10",
+"1/6",
+"3/2"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Ngày Quốc tế Thiếu nhi là ngày nào?",
+"a": "1/6",
+"w": [
+"1/5",
+"2/9",
+"15/8"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Món phở có nguồn gốc từ miền nào của Việt Nam?",
+"a": "Miền Bắc",
+"w": [
+"Miền Trung",
+"Miền Nam",
+"Tây Nguyên"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Món bún bò nổi tiếng gắn với thành phố nào?",
+"a": "Huế",
+"w": [
+"Hà Nội",
+"Đà Nẵng",
+"Vũng Tàu"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Cao lầu là đặc sản của địa phương nào?",
+"a": "Hội An",
+"w": [
+"Huế",
+"Nha Trang",
+"Hà Nội"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Món \"bún chả\" là đặc sản nổi tiếng của đâu?",
+"a": "Hà Nội",
+"w": [
+"Sài Gòn",
+"Huế",
+"Cần Thơ"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Nước mắm Phú Quốc làm chủ yếu từ loại cá nào?",
+"a": "Cá cơm",
+"w": [
+"Cá thu",
+"Cá ngừ",
+"Cá rô"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Áo dài là trang phục truyền thống của nước nào?",
+"a": "Việt Nam",
+"w": [
+"Trung Quốc",
+"Hàn Quốc",
+"Thái Lan"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Nhạc cụ dân tộc nào chỉ có một dây?",
+"a": "Đàn bầu",
+"w": [
+"Đàn tranh",
+"Đàn nguyệt",
+"Đàn tỳ bà"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Múa rối nước là loại hình nghệ thuật truyền thống của vùng nào?",
+"a": "Đồng bằng Bắc Bộ",
+"w": [
+"Tây Nguyên",
+"Nam Bộ",
+"Duyên hải Nam Trung Bộ"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Nhã nhạc cung đình gắn liền với cố đô nào?",
+"a": "Huế",
+"w": [
+"Hoa Lư",
+"Thăng Long",
+"Cổ Loa"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Đờn ca tài tử là loại hình âm nhạc đặc trưng của vùng nào?",
+"a": "Nam Bộ",
+"w": [
+"Bắc Bộ",
+"Tây Bắc",
+"Tây Nguyên"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Quan họ là dân ca của vùng nào?",
+"a": "Bắc Ninh",
+"w": [
+"Nghệ Tĩnh",
+"Huế",
+"Nam Bộ"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Tranh Đông Hồ là dòng tranh dân gian của tỉnh nào?",
+"a": "Bắc Ninh",
+"w": [
+"Hà Nội",
+"Huế",
+"Nam Định"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Theo phong tục, mâm ngũ quả ngày Tết thường có mấy loại quả?",
+"a": "5",
+"w": [
+"3",
+"4",
+"7"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Trong 12 con giáp, con giáp đứng đầu là con gì?",
+"a": "Chuột (Tý)",
+"w": [
+"Trâu (Sửu)",
+"Hổ (Dần)",
+"Rồng (Thìn)"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Trong 12 con giáp của người Việt, con nào khác với lịch Trung Quốc?",
+"a": "Mèo",
+"w": [
+"Chó",
+"Gà",
+"Dê"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Theo truyền thuyết, ông Táo về trời vào ngày nào?",
+"a": "23 tháng Chạp",
+"w": [
+"30 tháng Chạp",
+"Mùng 1 Tết",
+"Rằm tháng Giêng"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Lễ hội chùa Hương diễn ra chủ yếu vào mùa nào?",
+"a": "Mùa xuân",
+"w": [
+"Mùa hạ",
+"Mùa thu",
+"Mùa đông"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Quốc hoa thường được nhắc đến của Việt Nam là hoa gì?",
+"a": "Hoa sen",
+"w": [
+"Hoa mai",
+"Hoa đào",
+"Hoa hồng"
+]
+},
+{
+"c": "Văn hóa & Ẩm thực",
+"q": "Bánh mì Việt Nam được du nhập từ ảnh hưởng ẩm thực của nước nào?",
+"a": "Pháp",
+"w": [
+"Ý",
+"Mỹ",
+"Đức"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tác giả của \"Truyện Kiều\" là ai?",
+"a": "Nguyễn Du",
+"w": [
+"Nguyễn Trãi",
+"Hồ Xuân Hương",
+"Nguyễn Đình Chiểu"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "\"Truyện Kiều\" được viết bằng thể thơ nào?",
+"a": "Lục bát",
+"w": [
+"Thất ngôn bát cú",
+"Song thất lục bát",
+"Thơ tự do"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Nhân vật chính của \"Truyện Kiều\" tên là gì?",
+"a": "Thúy Kiều",
+"w": [
+"Thúy Vân",
+"Tấm",
+"Mỵ Châu"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tác giả của \"Lục Vân Tiên\" là ai?",
+"a": "Nguyễn Đình Chiểu",
+"w": [
+"Nguyễn Du",
+"Nguyễn Khuyến",
+"Tú Xương"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Nữ sĩ được mệnh danh là \"Bà chúa thơ Nôm\" là ai?",
+"a": "Hồ Xuân Hương",
+"w": [
+"Bà Huyện Thanh Quan",
+"Đoàn Thị Điểm",
+"Xuân Quỳnh"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tác giả của \"Dế Mèn phiêu lưu ký\" là ai?",
+"a": "Tô Hoài",
+"w": [
+"Nam Cao",
+"Nguyễn Nhật Ánh",
+"Kim Lân"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tác giả của truyện ngắn \"Chí Phèo\" là ai?",
+"a": "Nam Cao",
+"w": [
+"Ngô Tất Tố",
+"Vũ Trọng Phụng",
+"Nguyên Hồng"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tiểu thuyết \"Tắt đèn\" là của nhà văn nào?",
+"a": "Ngô Tất Tố",
+"w": [
+"Nam Cao",
+"Nguyễn Công Hoan",
+"Thạch Lam"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "\"Số đỏ\" là tác phẩm nổi tiếng của nhà văn nào?",
+"a": "Vũ Trọng Phụng",
+"w": [
+"Nam Cao",
+"Tô Hoài",
+"Ngô Tất Tố"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tác giả của \"Mắt biếc\" và \"Tôi thấy hoa vàng trên cỏ xanh\" là ai?",
+"a": "Nguyễn Nhật Ánh",
+"w": [
+"Nguyễn Ngọc Tư",
+"Tô Hoài",
+"Hồ Anh Thái"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Bài hát \"Tiến quân ca\" (Quốc ca Việt Nam) do ai sáng tác?",
+"a": "Văn Cao",
+"w": [
+"Trịnh Công Sơn",
+"Phạm Tuyên",
+"Hoàng Việt"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Trong truyện cổ tích, ai là người được ông Bụt giúp đỡ và trở thành hoàng hậu?",
+"a": "Cô Tấm",
+"w": [
+"Cô Cám",
+"Mỵ Nương",
+"Thúy Kiều"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Trong truyền thuyết, ai cưỡi ngựa sắt đánh đuổi giặc Ân?",
+"a": "Thánh Gióng",
+"w": [
+"Sơn Tinh",
+"Thạch Sanh",
+"An Dương Vương"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Sơn Tinh và Thủy Tinh tranh nhau cầu hôn ai?",
+"a": "Mỵ Nương",
+"w": [
+"Mỵ Châu",
+"Âu Cơ",
+"Tấm"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Theo truyền thuyết, Lạc Long Quân và Âu Cơ sinh ra bao nhiêu người con?",
+"a": "100",
+"w": [
+"50",
+"18",
+"12"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Từ nào viết đúng chính tả?",
+"a": "Sáng sủa",
+"w": [
+"Sáng xủa",
+"Xáng sủa",
+"Xáng xủa"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Từ nào viết đúng chính tả?",
+"a": "Chẳng lẽ",
+"w": [
+"Chẳng lẻ",
+"Chẵng lẽ",
+"Trẳng lẽ"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Từ nào viết đúng chính tả?",
+"a": "Dành dụm",
+"w": [
+"Giành dụm",
+"Rành dụm",
+"Dành giụm"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Từ nào viết đúng chính tả?",
+"a": "Xán lạn",
+"w": [
+"Sáng lạn",
+"Xáng lạn",
+"Sán lạn"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Tiếng Việt có bao nhiêu thanh điệu?",
+"a": "6",
+"w": [
+"5",
+"4",
+"8"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Bảng chữ cái tiếng Việt có bao nhiêu chữ cái?",
+"a": "29",
+"w": [
+"26",
+"24",
+"33"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Từ trái nghĩa với \"siêng năng\" là gì?",
+"a": "Lười biếng",
+"w": [
+"Chăm chỉ",
+"Cần cù",
+"Nhanh nhẹn"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Câu \"Có công mài sắt, có ngày nên kim\" khuyên chúng ta điều gì?",
+"a": "Kiên trì thì sẽ thành công",
+"w": [
+"Nên làm nghề rèn",
+"Sắt quý hơn kim",
+"Không nên vội vàng ăn uống"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Điền vào câu tục ngữ: \"Uống nước nhớ …\"",
+"a": "nguồn",
+"w": [
+"cây",
+"sông",
+"biển"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Điền vào câu tục ngữ: \"Ăn quả nhớ kẻ trồng …\"",
+"a": "cây",
+"w": [
+"rau",
+"lúa",
+"hoa"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Điền vào câu tục ngữ: \"Một con ngựa đau, cả tàu bỏ …\"",
+"a": "cỏ",
+"w": [
+"ăn",
+"chạy",
+"đi"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Điền vào câu tục ngữ: \"Gần mực thì đen, gần đèn thì …\"",
+"a": "rạng",
+"w": [
+"sáng",
+"tỏ",
+"trắng"
+]
+},
+{
+"c": "Tiếng Việt & Văn học",
+"q": "Chữ Quốc ngữ được xây dựng dựa trên hệ chữ cái nào?",
+"a": "Chữ cái La-tinh",
+"w": [
+"Chữ Hán",
+"Chữ Phạn",
+"Chữ Kirin"
+]
+},
+{
+"c": "Thể thao",
+"q": "Một đội bóng đá có bao nhiêu cầu thủ trên sân?",
+"a": "11",
+"w": [
+"9",
+"10",
+"12"
+]
+},
+{
+"c": "Thể thao",
+"q": "Một trận bóng đá chính thức (không tính bù giờ) kéo dài bao nhiêu phút?",
+"a": "90 phút",
+"w": [
+"60 phút",
+"80 phút",
+"120 phút"
+]
+},
+{
+"c": "Thể thao",
+"q": "World Cup bóng đá được tổ chức bao nhiêu năm một lần?",
+"a": "4 năm",
+"w": [
+"2 năm",
+"3 năm",
+"5 năm"
+]
+},
+{
+"c": "Thể thao",
+"q": "Đội tuyển nào vô địch World Cup 2022?",
+"a": "Argentina",
+"w": [
+"Pháp",
+"Brazil",
+"Croatia"
+]
+},
+{
+"c": "Thể thao",
+"q": "Đội tuyển nào vô địch World Cup nhiều lần nhất?",
+"a": "Brazil",
+"w": [
+"Đức",
+"Ý",
+"Argentina"
+]
+},
+{
+"c": "Thể thao",
+"q": "Thế vận hội Olympic được tổ chức bao nhiêu năm một lần (mỗi loại hè/đông)?",
+"a": "4 năm",
+"w": [
+"2 năm",
+"3 năm",
+"5 năm"
+]
+},
+{
+"c": "Thể thao",
+"q": "Biểu tượng Olympic gồm bao nhiêu vòng tròn?",
+"a": "5",
+"w": [
+"4",
+"6",
+"7"
+]
+},
+{
+"c": "Thể thao",
+"q": "Vận động viên đem về tấm huy chương vàng Olympic đầu tiên cho Việt Nam là ai?",
+"a": "Hoàng Xuân Vinh",
+"w": [
+"Trần Hiếu Ngân",
+"Nguyễn Thị Ánh Viên",
+"Hoàng Anh Tuấn"
+]
+},
+{
+"c": "Thể thao",
+"q": "Hoàng Xuân Vinh giành HCV Olympic 2016 ở môn nào?",
+"a": "Bắn súng",
+"w": [
+"Cử tạ",
+"Bơi lội",
+"Taekwondo"
+]
+},
+{
+"c": "Thể thao",
+"q": "Đội tuyển Việt Nam vô địch AFF Cup lần đầu tiên vào năm nào?",
+"a": "2008",
+"w": [
+"2018",
+"1998",
+"2004"
+]
+},
+{
+"c": "Thể thao",
+"q": "Môn thể thao nào dùng quả cầu lông và vợt?",
+"a": "Cầu lông",
+"w": [
+"Quần vợt",
+"Bóng bàn",
+"Đá cầu"
+]
+},
+{
+"c": "Thể thao",
+"q": "Trong cờ vua, quân nào có thể đi chéo bất kỳ số ô nào?",
+"a": "Tượng",
+"w": [
+"Mã",
+"Xe",
+"Tốt"
+]
+},
+{
+"c": "Thể thao",
+"q": "Một bàn cờ vua có bao nhiêu ô?",
+"a": "64",
+"w": [
+"81",
+"100",
+"49"
+]
+},
+{
+"c": "Thể thao",
+"q": "Trong bóng rổ, một cú ném thành công từ ngoài vạch 3 điểm được bao nhiêu điểm?",
+"a": "3",
+"w": [
+"2",
+"1",
+"4"
+]
+},
+{
+"c": "Thể thao",
+"q": "Môn võ cổ truyền nào của Việt Nam đã lan rộng ra nhiều nước trên thế giới?",
+"a": "Vovinam",
+"w": [
+"Karate",
+"Taekwondo",
+"Judo"
+]
+},
+{
+"c": "Thể thao",
+"q": "Môn thể thao nào được gọi là \"môn thể thao vua\"?",
+"a": "Bóng đá",
+"w": [
+"Bóng rổ",
+"Quần vợt",
+"Đua xe"
+]
+},
+{
+"c": "Thể thao",
+"q": "Cự ly chạy marathon chính thức là bao nhiêu?",
+"a": "42,195 km",
+"w": [
+"21,1 km",
+"40 km",
+"50 km"
+]
+},
+{
+"c": "Thể thao",
+"q": "Trong quần vợt, giải Wimbledon được tổ chức ở nước nào?",
+"a": "Anh",
+"w": [
+"Pháp",
+"Mỹ",
+"Úc"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "7 × 8 bằng bao nhiêu?",
+"a": "56",
+"w": [
+"54",
+"48",
+"64"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Căn bậc hai của 144 là bao nhiêu?",
+"a": "12",
+"w": [
+"14",
+"11",
+"16"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Một tam giác có tổng ba góc bằng bao nhiêu độ?",
+"a": "180°",
+"w": [
+"90°",
+"270°",
+"360°"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Số nguyên tố nhỏ nhất là số nào?",
+"a": "2",
+"w": [
+"1",
+"0",
+"3"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "1 giờ có bao nhiêu giây?",
+"a": "3.600",
+"w": [
+"600",
+"360",
+"6.000"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Năm nhuận có bao nhiêu ngày?",
+"a": "366",
+"w": [
+"365",
+"364",
+"360"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Số La Mã \"X\" bằng bao nhiêu?",
+"a": "10",
+"w": [
+"5",
+"50",
+"100"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Số La Mã \"L\" bằng bao nhiêu?",
+"a": "50",
+"w": [
+"100",
+"500",
+"1.000"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Hình vuông có cạnh 5 cm thì diện tích bằng bao nhiêu?",
+"a": "25 cm²",
+"w": [
+"20 cm²",
+"10 cm²",
+"50 cm²"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Số Pi (π) xấp xỉ bằng bao nhiêu?",
+"a": "3,14",
+"w": [
+"2,71",
+"1,61",
+"3,41"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "15% của 200 là bao nhiêu?",
+"a": "30",
+"w": [
+"15",
+"20",
+"35"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Lục giác có bao nhiêu cạnh?",
+"a": "6",
+"w": [
+"5",
+"7",
+"8"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Một tá là bao nhiêu cái?",
+"a": "12",
+"w": [
+"10",
+"20",
+"6"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "1 km bằng bao nhiêu mét?",
+"a": "1.000 m",
+"w": [
+"100 m",
+"10.000 m",
+"10 m"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Tháng nào có ít ngày nhất trong năm?",
+"a": "Tháng 2",
+"w": [
+"Tháng 4",
+"Tháng 6",
+"Tháng 11"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Cái gì càng lấy đi nhiều thì càng to ra?",
+"a": "Cái lỗ",
+"w": [
+"Cái bánh",
+"Cái túi",
+"Cái bóng"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Con gì đầu dê mình ốc?",
+"a": "Con dốc",
+"w": [
+"Con dê",
+"Con ốc sên",
+"Con dơi"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Cái gì luôn đi tới mà không bao giờ quay lại?",
+"a": "Thời gian",
+"w": [
+"Dòng sông",
+"Cơn gió",
+"Chiếc xe"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Có 3 quả táo, bạn lấy đi 2 quả. Bạn có mấy quả táo?",
+"a": "2",
+"w": [
+"1",
+"3",
+"0"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Bố của Nam có 3 người con: Một, Hai và ai?",
+"a": "Nam",
+"w": [
+"Ba",
+"Tư",
+"Bốn"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Tháng nào có 28 ngày?",
+"a": "Tháng nào cũng có",
+"w": [
+"Chỉ tháng 2",
+"Tháng 2 năm nhuận",
+"Không có tháng nào"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Nếu hôm nay là thứ Hai thì 10 ngày sau là thứ mấy?",
+"a": "Thứ Năm",
+"w": [
+"Thứ Tư",
+"Thứ Sáu",
+"Chủ nhật"
+]
+},
+{
+"c": "Công nghệ",
+"q": "\"WWW\" trong địa chỉ trang web là viết tắt của gì?",
+"a": "World Wide Web",
+"w": [
+"World Wireless Web",
+"Wide World Window",
+"Web Wide World"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Hệ điều hành Android do công ty nào phát triển?",
+"a": "Google",
+"w": [
+"Apple",
+"Microsoft",
+"Samsung"
+]
+},
+{
+"c": "Công nghệ",
+"q": "iPhone là sản phẩm của công ty nào?",
+"a": "Apple",
+"w": [
+"Samsung",
+"Google",
+"Nokia"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Trong máy tính, \"CPU\" là bộ phận gì?",
+"a": "Bộ xử lý trung tâm",
+"w": [
+"Bộ nhớ trong",
+"Màn hình",
+"Ổ cứng"
+]
+},
+{
+"c": "Công nghệ",
+"q": "1 byte gồm bao nhiêu bit?",
+"a": "8",
+"w": [
+"4",
+"16",
+"10"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Tổ hợp phím nào thường dùng để sao chép trên Windows?",
+"a": "Ctrl + C",
+"w": [
+"Ctrl + V",
+"Ctrl + X",
+"Ctrl + Z"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Tổ hợp phím Ctrl + Z thường dùng để làm gì?",
+"a": "Hoàn tác thao tác vừa làm",
+"w": [
+"Lưu tệp",
+"In tài liệu",
+"Đóng cửa sổ"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Ai được xem là người sáng lập Microsoft cùng Paul Allen?",
+"a": "Bill Gates",
+"w": [
+"Steve Jobs",
+"Mark Zuckerberg",
+"Elon Musk"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Mạng xã hội Facebook do ai sáng lập (cùng các bạn đại học)?",
+"a": "Mark Zuckerberg",
+"w": [
+"Bill Gates",
+"Jack Ma",
+"Larry Page"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Trò chơi Flappy Bird nổi tiếng toàn cầu do người nước nào tạo ra?",
+"a": "Việt Nam",
+"w": [
+"Nhật Bản",
+"Hàn Quốc",
+"Mỹ"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Tên miền quốc gia của Việt Nam là gì?",
+"a": ".vn",
+"w": [
+".vi",
+".viet",
+".vt"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Wi-Fi là công nghệ kết nối mạng không dây. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+}
+]

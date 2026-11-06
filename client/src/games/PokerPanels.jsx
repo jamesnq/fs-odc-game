@@ -16,10 +16,10 @@ const EXAMPLES = [
 ];
 
 /** Bảng luật Texas Hold'em tóm tắt + thứ hạng các bộ bài. `current` = bộ hiện tại của người xem (để làm nổi bật). */
-export function PokerRules({ s, current = -1 }) {
+export function PokerRules({ s, current = -1, bare = false }) {
   return (
-    <div className="panel pk-rules">
-      <h4>Luật Texas Hold'em</h4>
+    <div className={`pk-rules ${bare ? 'bare' : 'panel'}`}>
+      {!bare && <h4>Luật Texas Hold'em</h4>}
       <ul>
         <li>Mỗi người nhận <b>2 lá tẩy</b> úp. Có tối đa <b>5 lá bài chung</b> ngửa giữa bàn: Flop (3 lá) → Turn (1) → River (1).</li>
         <li>Mỗi ván có 4 vòng cược: Preflop, Flop, Turn, River. Nút <b>D</b> (dealer) xoay vòng; hai người bên trái đặt <b>small blind</b> ({s.smallBlind}) và <b>big blind</b> ({s.bigBlind}) bắt buộc.</li>

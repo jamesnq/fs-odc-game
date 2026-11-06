@@ -4,6 +4,8 @@ import { TalaHandler } from './tala.js';
 import { CaroHandler } from './caro.js';
 import { SamLocHandler } from './samloc.js';
 import { WordChainHandler } from './wordchain.js';
+import { QuizHandler } from './quiz.js';
+import { WordGuessHandler } from './wordguess.js';
 
 /**
  * Các trò chơi. Mỗi Handler điều khiển một bàn trong một phòng và cần có:
@@ -18,6 +20,8 @@ export const GAMES = {
   caro: { name: 'Cờ caro', Handler: CaroHandler },
   samloc: { name: 'Sâm lốc', Handler: SamLocHandler },
   wordchain: { name: 'Nối từ', Handler: WordChainHandler },
+  quiz: { name: 'Đố vui', Handler: QuizHandler },
+  wordguess: { name: 'Đoán chữ', Handler: WordGuessHandler },
 };
 
 export const isGame = (game) => typeof game === 'string' && Object.hasOwn(GAMES, game);
