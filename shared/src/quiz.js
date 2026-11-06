@@ -5,7 +5,11 @@
 
 export const MAX_POINTS = 1000;
 /** Chủ đề của bộ câu hỏi có sẵn (server/src/data/quiz-vi.json). */
-export const QUIZ_CATEGORIES = ['Địa lý', 'Thế giới', 'Lịch sử', 'Khoa học', 'Văn hóa & Ẩm thực', 'Tiếng Việt & Văn học', 'Thể thao', 'Toán & Đố mẹo', 'Công nghệ'];
+export const QUIZ_CATEGORIES = [
+  'Địa lý', 'Thế giới', 'Lịch sử', 'Di sản & Danh thắng', 'Văn hóa & Ẩm thực', 'Tiếng Việt & Văn học', 'Ca dao & Thành ngữ',
+  'Khoa học', 'Vũ trụ', 'Động vật & Thiên nhiên', 'Sức khỏe & Cơ thể', 'Phát minh & Nhân vật', 'Công nghệ',
+  'Âm nhạc & Điện ảnh', 'Thể thao', 'Đời sống & An toàn', 'Toán & Đố mẹo',
+];
 
 /** Mẫu gợi ý khi soạn bộ câu hỏi mới. */
 export const QUIZ_TEMPLATE = `# Tên bộ câu hỏi của bạn

@@ -63,11 +63,13 @@ Khi cần, chủ phòng vẫn có thể tắt chế độ chặt để chuyển 
 
 # Trò Đố vui và Đoán chữ (tự soạn cho dự án này)
 
-## `quiz-vi.json` — bộ câu hỏi Đố vui có sẵn (215 câu)
+## `quiz-vi.json` — bộ câu hỏi Đố vui có sẵn (423 câu)
 
-Soạn tay cho trò chơi này, 9 chủ đề (xem `QUIZ_CATEGORIES` trong `shared/src/quiz.js`).
+Soạn tay cho trò chơi này, 17 chủ đề (xem `QUIZ_CATEGORIES` trong `shared/src/quiz.js`).
 Mỗi mục: `{ "c": chủ đề, "q": câu hỏi, "a": đáp án đúng, "w": [đáp án sai] }`; câu Đúng/Sai có `a`/`w` là "Đúng"/"Sai".
 Tránh các dữ kiện dễ đổi (ví dụ tên tỉnh sau đợt sáp nhập năm 2025). Thấy câu sai thì sửa thẳng trong tệp.
+Tham khảo các chủ đề đố vui phổ biến trên mạng để chọn chủ đề, nhưng câu hỏi đều tự viết, không chép nguyên văn từ bộ câu hỏi của nơi khác.
+Mặt sau các tờ tiền Việt Nam, tuổi lái xe, số khẩn cấp… là thông tin hiện hành năm 2026 — cần rà lại khi có thay đổi.
 
 ## `vi-words-doanchu.txt` — đáp án của trò Đoán chữ (639 từ)
 

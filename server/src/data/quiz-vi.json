@@ -2136,5 +2136,2077 @@
 "w": [
 "Sai"
 ]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Thánh địa Mỹ Sơn là di tích của nền văn hóa nào?",
+"a": "Chăm Pa",
+"w": [
+"Óc Eo",
+"Đông Sơn",
+"Sa Huỳnh"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Quần thể danh thắng Tràng An nằm ở tỉnh nào?",
+"a": "Ninh Bình",
+"w": [
+"Thanh Hóa",
+"Quảng Ninh",
+"Lạng Sơn"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Thành nhà Hồ, di sản văn hóa thế giới, nằm ở tỉnh nào?",
+"a": "Thanh Hóa",
+"w": [
+"Nghệ An",
+"Ninh Bình",
+"Hà Tĩnh"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Năm 2025, quần thể di tích nào của Việt Nam được UNESCO ghi danh là di sản thế giới?",
+"a": "Yên Tử – Vĩnh Nghiêm, Côn Sơn, Kiếp Bạc",
+"w": [
+"Chùa Hương",
+"Đền Hùng",
+"Cao nguyên đá Đồng Văn"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Vườn quốc gia Phong Nha – Kẻ Bàng nổi tiếng nhất với gì?",
+"a": "Hệ thống hang động đá vôi",
+"w": [
+"Rừng ngập mặn",
+"Đồi cát đỏ",
+"Ruộng bậc thang"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Khuê Văn Các là biểu tượng của di tích nào ở Hà Nội?",
+"a": "Văn Miếu – Quốc Tử Giám",
+"w": [
+"Hoàng thành Thăng Long",
+"Chùa Một Cột",
+"Đền Ngọc Sơn"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Chùa Cầu là biểu tượng nổi tiếng của đô thị cổ nào?",
+"a": "Hội An",
+"w": [
+"Huế",
+"Phố Hiến",
+"Đồng Văn"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Ví và giặm là dân ca của vùng nào?",
+"a": "Nghệ An – Hà Tĩnh",
+"w": [
+"Bắc Ninh",
+"Huế",
+"Nam Bộ"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Xòe là điệu múa truyền thống nổi tiếng của dân tộc nào?",
+"a": "Thái",
+"w": [
+"Chăm",
+"Khmer",
+"Ê Đê"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Hát Xoan là loại hình dân ca gắn với vùng đất nào?",
+"a": "Phú Thọ",
+"w": [
+"Bắc Ninh",
+"Huế",
+"Cà Mau"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Không gian văn hóa Cồng chiêng là di sản của vùng nào?",
+"a": "Tây Nguyên",
+"w": [
+"Tây Bắc",
+"Đồng bằng sông Cửu Long",
+"Đồng bằng sông Hồng"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Bài chòi là loại hình nghệ thuật dân gian phổ biến ở miền nào?",
+"a": "Miền Trung",
+"w": [
+"Miền Bắc",
+"Miền Nam",
+"Tây Bắc"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Chùa Một Cột ở Hà Nội được xây dựng theo hình dáng của loài hoa nào?",
+"a": "Hoa sen",
+"w": [
+"Hoa cúc",
+"Hoa đào",
+"Hoa mai"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Cột cờ Lũng Cú nằm gần điểm cực nào của Việt Nam?",
+"a": "Cực Bắc",
+"w": [
+"Cực Nam",
+"Cực Đông",
+"Cực Tây"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Nhà thờ Đức Bà nổi tiếng nằm ở thành phố nào của Việt Nam?",
+"a": "TP. Hồ Chí Minh",
+"w": [
+"Hà Nội",
+"Đà Lạt",
+"Huế"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Dinh Độc Lập (Hội trường Thống Nhất) nằm ở đâu?",
+"a": "TP. Hồ Chí Minh",
+"w": [
+"Hà Nội",
+"Huế",
+"Đà Nẵng"
+]
+},
+{
+"c": "Di sản & Danh thắng",
+"q": "Cao nguyên đá Đồng Văn nổi tiếng ở vùng nào?",
+"a": "Vùng núi phía Bắc",
+"w": [
+"Tây Nguyên",
+"Nam Trung Bộ",
+"Đồng bằng sông Cửu Long"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ca khúc \"Nối vòng tay lớn\" là của nhạc sĩ nào?",
+"a": "Trịnh Công Sơn",
+"w": [
+"Văn Cao",
+"Phạm Duy",
+"Hoàng Việt"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ca khúc \"Mùa xuân đầu tiên\" là của nhạc sĩ nào?",
+"a": "Văn Cao",
+"w": [
+"Trịnh Công Sơn",
+"Phạm Tuyên",
+"Nguyễn Văn Tý"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ca khúc \"Như có Bác Hồ trong ngày vui đại thắng\" do ai sáng tác?",
+"a": "Phạm Tuyên",
+"w": [
+"Văn Cao",
+"Hoàng Hà",
+"Trần Hoàn"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ca khúc \"Hello Vietnam\" do nữ ca sĩ nào thể hiện?",
+"a": "Phạm Quỳnh Anh",
+"w": [
+"Mỹ Tâm",
+"Hồ Ngọc Hà",
+"Thanh Lam"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ban nhạc The Beatles đến từ nước nào?",
+"a": "Anh",
+"w": [
+"Mỹ",
+"Úc",
+"Canada"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ai được mệnh danh là \"Ông hoàng nhạc Pop\"?",
+"a": "Michael Jackson",
+"w": [
+"Elvis Presley",
+"Freddie Mercury",
+"Justin Bieber"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Bản giao hưởng số 5 \"Định mệnh\" là của nhà soạn nhạc nào?",
+"a": "Beethoven",
+"w": [
+"Mozart",
+"Bach",
+"Chopin"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Nhà soạn nhạc Mozart là người nước nào?",
+"a": "Áo",
+"w": [
+"Đức",
+"Ý",
+"Pháp"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Đàn piano thông thường có bao nhiêu phím?",
+"a": "88",
+"w": [
+"72",
+"64",
+"100"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Đàn ghi-ta thông thường có bao nhiêu dây?",
+"a": "6",
+"w": [
+"4",
+"5",
+"8"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ca khúc \"Gangnam Style\" nổi tiếng toàn cầu là của ca sĩ nào?",
+"a": "PSY",
+"w": [
+"BTS",
+"BigBang",
+"Rain"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Nhóm nhạc BTS đến từ nước nào?",
+"a": "Hàn Quốc",
+"w": [
+"Nhật Bản",
+"Trung Quốc",
+"Thái Lan"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Đạo diễn của bộ phim \"Titanic\" (1997) là ai?",
+"a": "James Cameron",
+"w": [
+"Steven Spielberg",
+"Christopher Nolan",
+"Peter Jackson"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Tượng vàng Oscar là giải thưởng của lĩnh vực nào?",
+"a": "Điện ảnh",
+"w": [
+"Âm nhạc",
+"Văn học",
+"Thể thao"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Liên hoan phim Cannes được tổ chức ở nước nào?",
+"a": "Pháp",
+"w": [
+"Ý",
+"Mỹ",
+"Đức"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Trong phim \"Vua sư tử\", chú sư tử con nhân vật chính tên là gì?",
+"a": "Simba",
+"w": [
+"Mufasa",
+"Scar",
+"Nala"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Chú chuột Mickey là nhân vật của hãng phim nào?",
+"a": "Disney",
+"w": [
+"Pixar",
+"DreamWorks",
+"Warner Bros."
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Doraemon đến từ thế kỷ thứ mấy?",
+"a": "Thế kỷ 22",
+"w": [
+"Thế kỷ 21",
+"Thế kỷ 23",
+"Thế kỷ 30"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Doraemon sợ con vật nào nhất?",
+"a": "Chuột",
+"w": [
+"Chó",
+"Rắn",
+"Gián"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Tên thật của Thám tử lừng danh Conan là gì?",
+"a": "Kudo Shinichi",
+"w": [
+"Mori Kogoro",
+"Hattori Heiji",
+"Kaito Kid"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Trường phép thuật trong truyện \"Harry Potter\" tên là gì?",
+"a": "Hogwarts",
+"w": [
+"Narnia",
+"Durmstrang",
+"Camelot"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Tác giả bộ truyện \"Harry Potter\" là ai?",
+"a": "J. K. Rowling",
+"w": [
+"J. R. R. Tolkien",
+"C. S. Lewis",
+"Roald Dahl"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Ai thủ vai ông Ba Sang trong phim \"Bố già\" (2021)?",
+"a": "Trấn Thành",
+"w": [
+"Hoài Linh",
+"Thái Hòa",
+"Kiều Minh Tuấn"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Trong \"Tây du ký\", Tôn Ngộ Không dùng vũ khí gì?",
+"a": "Gậy Như Ý",
+"w": [
+"Đinh ba",
+"Thanh long đao",
+"Quạt ba tiêu"
+]
+},
+{
+"c": "Âm nhạc & Điện ảnh",
+"q": "Trong \"Tây du ký\", ai là sư phụ của Tôn Ngộ Không trên đường thỉnh kinh?",
+"a": "Đường Tăng",
+"w": [
+"Trư Bát Giới",
+"Sa Tăng",
+"Quan Âm"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Loài chim lớn nhất thế giới hiện nay là loài nào?",
+"a": "Đà điểu",
+"w": [
+"Đại bàng",
+"Chim cánh cụt hoàng đế",
+"Hồng hạc"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Loài chim nhỏ nhất thế giới là loài nào?",
+"a": "Chim ruồi",
+"w": [
+"Chim sẻ",
+"Chim sâu",
+"Chim én"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Loài thú nào biết bay thật sự?",
+"a": "Dơi",
+"w": [
+"Sóc bay",
+"Chồn bay",
+"Cá chuồn"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Thức ăn chủ yếu của gấu trúc là gì?",
+"a": "Tre, trúc",
+"w": [
+"Cá",
+"Mật ong",
+"Thịt"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Chuột túi (kangaroo) sống tự nhiên ở nước nào?",
+"a": "Úc",
+"w": [
+"Ấn Độ",
+"Brazil",
+"Nam Phi"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Bạch tuộc có bao nhiêu xúc tu?",
+"a": "8",
+"w": [
+"6",
+"10",
+"12"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Bạch tuộc có bao nhiêu trái tim?",
+"a": "3",
+"w": [
+"1",
+"2",
+"4"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Con vật nào được gọi là \"chúa sơn lâm\"?",
+"a": "Hổ",
+"w": [
+"Sư tử",
+"Gấu",
+"Voi"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Động vật nào cao nhất thế giới?",
+"a": "Hươu cao cổ",
+"w": [
+"Voi châu Phi",
+"Lạc đà",
+"Đà điểu"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Ở loài cá ngựa, con nào mang thai và sinh con?",
+"a": "Con đực",
+"w": [
+"Con cái",
+"Cả hai",
+"Không con nào, cá ngựa đẻ trứng ra nước"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Con vật nào nổi tiếng với khả năng đổi màu da?",
+"a": "Tắc kè hoa",
+"w": [
+"Thằn lằn bóng",
+"Ếch xanh",
+"Rắn lục"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Cá sấu thuộc lớp động vật nào?",
+"a": "Bò sát",
+"w": [
+"Lưỡng cư",
+"Cá",
+"Thú"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Ếch là loài lưỡng cư. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Cá voi thở bằng phổi. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Ngay trước khi thành bướm, sâu bướm trải qua giai đoạn nào?",
+"a": "Nhộng (kén)",
+"w": [
+"Trứng",
+"Nòng nọc",
+"Ấu trùng bơi"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Loài thú quý hiếm sao la được phát hiện năm 1992 ở vườn quốc gia nào?",
+"a": "Vũ Quang",
+"w": [
+"Cúc Phương",
+"Cát Tiên",
+"Bạch Mã"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Vườn quốc gia đầu tiên của Việt Nam là vườn nào?",
+"a": "Cúc Phương",
+"w": [
+"Ba Vì",
+"Cát Bà",
+"Tam Đảo"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Lá cây có màu xanh nhờ chất nào?",
+"a": "Diệp lục",
+"w": [
+"Tinh bột",
+"Sắt",
+"Muối khoáng"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Mủ của cây nào được dùng để làm cao su tự nhiên?",
+"a": "Cây cao su",
+"w": [
+"Cây thông",
+"Cây dừa",
+"Cây phi lao"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Tổ ong mật được làm từ chất gì?",
+"a": "Sáp ong",
+"w": [
+"Đất sét",
+"Lá cây",
+"Mật hoa khô"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Động vật trên cạn nào mang thai lâu nhất (gần 2 năm)?",
+"a": "Voi",
+"w": [
+"Hươu cao cổ",
+"Tê giác",
+"Ngựa"
+]
+},
+{
+"c": "Động vật & Thiên nhiên",
+"q": "Chim cánh cụt sống tự nhiên chủ yếu ở nửa nào của Trái Đất?",
+"a": "Bán cầu Nam",
+"w": [
+"Bán cầu Bắc",
+"Chỉ ở Bắc Cực",
+"Vùng xích đạo châu Á"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Hệ Mặt Trời có bao nhiêu hành tinh?",
+"a": "8",
+"w": [
+"7",
+"9",
+"10"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Hành tinh nào nóng nhất trong Hệ Mặt Trời?",
+"a": "Sao Kim",
+"w": [
+"Sao Thủy",
+"Sao Hỏa",
+"Sao Mộc"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Hành tinh nào xa Mặt Trời nhất?",
+"a": "Sao Hải Vương",
+"w": [
+"Sao Thiên Vương",
+"Sao Thổ",
+"Sao Mộc"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "\"Sao Hôm\" và \"Sao Mai\" thực ra là hành tinh nào?",
+"a": "Sao Kim",
+"w": [
+"Sao Hỏa",
+"Sao Mộc",
+"Sao Thủy"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Người đầu tiên đặt chân lên Mặt Trăng là ai?",
+"a": "Neil Armstrong",
+"w": [
+"Yuri Gagarin",
+"Buzz Aldrin",
+"Phạm Tuân"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Con người lần đầu đặt chân lên Mặt Trăng vào năm nào?",
+"a": "1969",
+"w": [
+"1957",
+"1975",
+"1980"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Ai là người đầu tiên bay vào vũ trụ?",
+"a": "Yuri Gagarin",
+"w": [
+"Neil Armstrong",
+"Valentina Tereshkova",
+"John Glenn"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Ánh sáng Mặt Trời đi tới Trái Đất mất khoảng bao lâu?",
+"a": "Khoảng 8 phút",
+"w": [
+"Khoảng 8 giây",
+"Khoảng 8 giờ",
+"Khoảng 1 ngày"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Ngôi sao gần Trái Đất nhất là ngôi sao nào?",
+"a": "Mặt Trời",
+"w": [
+"Sao Bắc Đẩu",
+"Sao Thiên Lang",
+"Sao Kim"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Năm 2006, thiên thể nào bị xếp lại từ hành tinh thành hành tinh lùn?",
+"a": "Sao Diêm Vương",
+"w": [
+"Sao Hải Vương",
+"Mặt Trăng",
+"Sao Thủy"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Nhật thực xảy ra khi nào?",
+"a": "Mặt Trăng nằm giữa Mặt Trời và Trái Đất",
+"w": [
+"Trái Đất nằm giữa Mặt Trời và Mặt Trăng",
+"Mặt Trời nằm giữa Trái Đất và Mặt Trăng",
+"Mặt Trăng ở xa Trái Đất nhất"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Hệ Mặt Trời nằm trong thiên hà nào?",
+"a": "Dải Ngân Hà",
+"w": [
+"Andromeda",
+"Tam Giác",
+"Mây Magellan Lớn"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Trạm vũ trụ quốc tế thường được viết tắt là gì?",
+"a": "ISS",
+"w": [
+"NASA",
+"ESA",
+"GPS"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Khoảng bao lâu thì có một lần trăng tròn?",
+"a": "Khoảng 29,5 ngày",
+"w": [
+"Khoảng 7 ngày",
+"Khoảng 15 ngày",
+"Khoảng 365 ngày"
+]
+},
+{
+"c": "Vũ trụ",
+"q": "Trên Mặt Trăng không có không khí để thở. Đúng hay sai?",
+"a": "Đúng",
+"w": [
+"Sai"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Cơ thể người trưởng thành có khoảng bao nhiêu chiếc xương?",
+"a": "206",
+"w": [
+"106",
+"306",
+"186"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Cơ quan lớn nhất của cơ thể người là gì?",
+"a": "Da",
+"w": [
+"Gan",
+"Phổi",
+"Ruột"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Máu có màu đỏ nhờ chất nào?",
+"a": "Huyết sắc tố (hemoglobin)",
+"w": [
+"Diệp lục",
+"Canxi",
+"Insulin"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Thân nhiệt bình thường của người khoảng bao nhiêu?",
+"a": "Khoảng 37°C",
+"w": [
+"Khoảng 34°C",
+"Khoảng 40°C",
+"Khoảng 30°C"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Cơ quan nào lọc máu và tạo ra nước tiểu?",
+"a": "Thận",
+"w": [
+"Gan",
+"Tim",
+"Dạ dày"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Tim người có mấy ngăn?",
+"a": "4",
+"w": [
+"2",
+"3",
+"5"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Insulin, chất giúp điều hòa đường huyết, do cơ quan nào tiết ra?",
+"a": "Tuyến tụy",
+"w": [
+"Gan",
+"Thận",
+"Tuyến giáp"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Thiếu i-ốt lâu ngày dễ gây bệnh gì?",
+"a": "Bướu cổ",
+"w": [
+"Còi xương",
+"Quáng gà",
+"Thiếu máu"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Thiếu vitamin A dễ gây bệnh gì về mắt?",
+"a": "Quáng gà",
+"w": [
+"Cận thị",
+"Đau mắt đỏ",
+"Lác mắt"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Xương nhỏ nhất cơ thể người nằm ở đâu?",
+"a": "Trong tai",
+"w": [
+"Ở ngón chân út",
+"Ở mũi",
+"Ở cổ tay"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Trẻ em có bao nhiêu chiếc răng sữa?",
+"a": "20",
+"w": [
+"16",
+"24",
+"32"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Thuốc kháng sinh dùng để chữa bệnh do virus như cảm cúm. Đúng hay sai?",
+"a": "Sai",
+"w": [
+"Đúng"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Ai là người phát hiện ra thuốc kháng sinh penicillin?",
+"a": "Alexander Fleming",
+"w": [
+"Louis Pasteur",
+"Robert Koch",
+"Edward Jenner"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Ai được xem là cha đẻ của vắc-xin (phòng bệnh đậu mùa)?",
+"a": "Edward Jenner",
+"w": [
+"Alexander Fleming",
+"Marie Curie",
+"Gregor Mendel"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Mỗi ngày người trưởng thành nên ngủ khoảng bao nhiêu giờ?",
+"a": "7 – 9 giờ",
+"w": [
+"3 – 4 giờ",
+"12 – 14 giờ",
+"5 phút mỗi lần"
+]
+},
+{
+"c": "Sức khỏe & Cơ thể",
+"q": "Phổi là cơ quan chính của hệ nào?",
+"a": "Hệ hô hấp",
+"w": [
+"Hệ tiêu hóa",
+"Hệ tuần hoàn",
+"Hệ thần kinh"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Ăn cây nào, rào cây …\"",
+"a": "nấy",
+"w": [
+"đó",
+"kia",
+"này"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Nước chảy … mòn\"",
+"a": "đá",
+"w": [
+"núi",
+"sỏi",
+"cát"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Học thầy không tày học …\"",
+"a": "bạn",
+"w": [
+"sách",
+"trò",
+"mẹ"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Không thầy đố mày làm …\"",
+"a": "nên",
+"w": [
+"được",
+"xong",
+"giàu"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Tốt gỗ hơn tốt nước …\"",
+"a": "sơn",
+"w": [
+"màu",
+"mưa",
+"non"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Đi một ngày đàng, học một sàng …\"",
+"a": "khôn",
+"w": [
+"chữ",
+"gạo",
+"hay"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Thương người như thể thương …\"",
+"a": "thân",
+"w": [
+"mình",
+"nhà",
+"con"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào ca dao: \"Một cây làm chẳng nên non, ba cây chụm lại nên hòn núi …\"",
+"a": "cao",
+"w": [
+"xanh",
+"to",
+"đá"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào ca dao: \"Bầu ơi thương lấy … cùng, tuy rằng khác giống nhưng chung một giàn\"",
+"a": "bí",
+"w": [
+"mướp",
+"dưa",
+"su"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào ca dao: \"Nhiễu điều phủ lấy giá …\"",
+"a": "gương",
+"w": [
+"đàn",
+"sách",
+"trăng"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Chuồn chuồn bay thấp thì mưa, bay cao thì …, bay vừa thì râm\"",
+"a": "nắng",
+"w": [
+"gió",
+"bão",
+"rét"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Tiên học lễ, hậu học …\"",
+"a": "văn",
+"w": [
+"toán",
+"nghề",
+"chữ"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Gieo gió gặt …\"",
+"a": "bão",
+"w": [
+"mưa",
+"lúa",
+"sét"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Ở hiền gặp …\"",
+"a": "lành",
+"w": [
+"may",
+"phúc",
+"bạn"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Điền vào câu tục ngữ: \"Cười người hôm trước, hôm sau người …\"",
+"a": "cười",
+"w": [
+"khóc",
+"quên",
+"giận"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Thành ngữ \"Ếch ngồi đáy giếng\" chỉ người như thế nào?",
+"a": "Hiểu biết hạn hẹp mà tự cao",
+"w": [
+"Kiên nhẫn chờ thời",
+"Thích ở một mình",
+"Sợ nước"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Thành ngữ \"Đẽo cày giữa đường\" chỉ người như thế nào?",
+"a": "Không có chính kiến, ai nói gì cũng nghe theo",
+"w": [
+"Làm việc chăm chỉ",
+"Khéo tay hay làm",
+"Hay cản đường người khác"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Thành ngữ \"Nước đổ đầu vịt\" có nghĩa là gì?",
+"a": "Khuyên bảo mãi mà không tiếp thu",
+"w": [
+"Làm việc rất nhanh",
+"Gặp may bất ngờ",
+"Tiết kiệm nước"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Thành ngữ \"Mèo mù vớ cá rán\" có nghĩa là gì?",
+"a": "Gặp may một cách tình cờ",
+"w": [
+"Tham ăn",
+"Bị lừa",
+"Làm việc vô ích"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Câu \"Lá lành đùm lá rách\" khuyên điều gì?",
+"a": "Giúp đỡ, đùm bọc người khó khăn",
+"w": [
+"Giữ gìn quần áo",
+"Tiết kiệm lá chuối",
+"Không nên chơi với người nghèo"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Câu \"Uống nước nhớ nguồn\" nói về đạo lý gì?",
+"a": "Biết ơn người đi trước",
+"w": [
+"Giữ vệ sinh nguồn nước",
+"Uống đủ nước mỗi ngày",
+"Yêu thiên nhiên"
+]
+},
+{
+"c": "Ca dao & Thành ngữ",
+"q": "Thành ngữ \"Chậm mà chắc\" khuyên điều gì?",
+"a": "Làm từ từ nhưng chắc chắn",
+"w": [
+"Làm càng chậm càng tốt",
+"Đừng bao giờ vội ăn",
+"Nên đi bộ thay vì chạy"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai được biết đến là người phát minh ra điện thoại?",
+"a": "Alexander Graham Bell",
+"w": [
+"Thomas Edison",
+"Nikola Tesla",
+"Guglielmo Marconi"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai được biết đến với việc cải tiến và thương mại hóa bóng đèn sợi đốt?",
+"a": "Thomas Edison",
+"w": [
+"Albert Einstein",
+"James Watt",
+"Michael Faraday"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai thực hiện chuyến bay có động cơ đầu tiên năm 1903?",
+"a": "Anh em nhà Wright",
+"w": [
+"Anh em nhà Lumière",
+"Leonardo da Vinci",
+"Charles Lindbergh"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai là người phát minh ra World Wide Web?",
+"a": "Tim Berners-Lee",
+"w": [
+"Bill Gates",
+"Steve Jobs",
+"Mark Zuckerberg"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai là tác giả của thuyết tiến hóa bằng chọn lọc tự nhiên?",
+"a": "Charles Darwin",
+"w": [
+"Gregor Mendel",
+"Isaac Newton",
+"Louis Pasteur"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai là người lập ra bảng tuần hoàn các nguyên tố hóa học?",
+"a": "Dmitri Mendeleev",
+"w": [
+"Marie Curie",
+"Antoine Lavoisier",
+"John Dalton"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Nhà khoa học Marie Curie nổi tiếng với nghiên cứu về lĩnh vực nào?",
+"a": "Phóng xạ",
+"w": [
+"Điện từ",
+"Di truyền",
+"Thiên văn"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Bức tranh \"Mona Lisa\" do ai vẽ?",
+"a": "Leonardo da Vinci",
+"w": [
+"Michelangelo",
+"Picasso",
+"Van Gogh"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Bức tranh \"Đêm đầy sao\" là tác phẩm của họa sĩ nào?",
+"a": "Vincent van Gogh",
+"w": [
+"Claude Monet",
+"Pablo Picasso",
+"Salvador Dalí"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Giải Nobel được lập theo di chúc của ai?",
+"a": "Alfred Nobel",
+"w": [
+"Albert Einstein",
+"Isaac Newton",
+"Thomas Edison"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Alfred Nobel nổi tiếng với phát minh nào?",
+"a": "Thuốc nổ dynamite",
+"w": [
+"Máy hơi nước",
+"Điện thoại",
+"Kính hiển vi"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Giáo sư Ngô Bảo Châu nhận Huy chương Fields (toán học) vào năm nào?",
+"a": "2010",
+"w": [
+"2000",
+"2006",
+"2014"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Giáo sư Tôn Thất Tùng nổi tiếng thế giới với phương pháp phẫu thuật cơ quan nào?",
+"a": "Gan",
+"w": [
+"Tim",
+"Não",
+"Thận"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "James Watt nổi tiếng với việc cải tiến loại máy nào?",
+"a": "Động cơ hơi nước",
+"w": [
+"Máy bay",
+"Máy tính",
+"Máy ảnh"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai được xem là người làm ra chiếc ô tô chạy xăng thực dụng đầu tiên (1886)?",
+"a": "Karl Benz",
+"w": [
+"Henry Ford",
+"Enzo Ferrari",
+"Rudolf Diesel"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Năm 1492, nhà thám hiểm nào vượt Đại Tây Dương đến châu Mỹ?",
+"a": "Christopher Columbus",
+"w": [
+"Vasco da Gama",
+"Ferdinand Magellan",
+"James Cook"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Hai người đầu tiên lên tới đỉnh Everest (1953) là ai?",
+"a": "Edmund Hillary và Tenzing Norgay",
+"w": [
+"Neil Armstrong và Buzz Aldrin",
+"Lewis và Clark",
+"Amundsen và Scott"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Ai được xem là người đưa kỹ thuật in chữ rời vào châu Âu?",
+"a": "Johannes Gutenberg",
+"w": [
+"Martin Luther",
+"Galileo Galilei",
+"William Shakespeare"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Tác giả của vở kịch \"Romeo và Juliet\" là ai?",
+"a": "William Shakespeare",
+"w": [
+"Victor Hugo",
+"Charles Dickens",
+"Lev Tolstoy"
+]
+},
+{
+"c": "Phát minh & Nhân vật",
+"q": "Tác giả của tiểu thuyết \"Những người khốn khổ\" là ai?",
+"a": "Victor Hugo",
+"w": [
+"Alexandre Dumas",
+"Jules Verne",
+"Honoré de Balzac"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Ở Việt Nam, số điện thoại gọi cấp cứu y tế là số nào?",
+"a": "115",
+"w": [
+"113",
+"114",
+"116"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Ở Việt Nam, số điện thoại gọi cảnh sát là số nào?",
+"a": "113",
+"w": [
+"114",
+"115",
+"911"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Ở Việt Nam, số điện thoại báo cháy là số nào?",
+"a": "114",
+"w": [
+"113",
+"115",
+"112"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Ở Việt Nam, xe cộ đi về phía bên nào của đường?",
+"a": "Bên phải",
+"w": [
+"Bên trái",
+"Giữa đường",
+"Tùy ý"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Đèn giao thông màu nào báo hiệu phải dừng lại?",
+"a": "Đỏ",
+"w": [
+"Xanh",
+"Vàng",
+"Trắng"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Theo luật Việt Nam, người đủ bao nhiêu tuổi mới được lái xe máy trên 50 cm³?",
+"a": "18 tuổi",
+"w": [
+"16 tuổi",
+"15 tuổi",
+"20 tuổi"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Khi có cháy và nhiều khói trong nhà, nên làm gì?",
+"a": "Cúi thấp người, che mũi miệng và thoát ra ngoài",
+"w": [
+"Đi thang máy xuống",
+"Mở hết cửa sổ rồi ở lại",
+"Trốn vào tủ quần áo"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Đơn vị tiền tệ của Việt Nam là gì?",
+"a": "Đồng",
+"w": [
+"Hào",
+"Xu",
+"Nguyên"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Tờ tiền mệnh giá lớn nhất đang lưu hành ở Việt Nam là bao nhiêu?",
+"a": "500.000 đồng",
+"w": [
+"200.000 đồng",
+"1.000.000 đồng",
+"100.000 đồng"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Mặt sau tờ 200.000 đồng in hình danh thắng nào?",
+"a": "Vịnh Hạ Long",
+"w": [
+"Chùa Cầu",
+"Văn Miếu",
+"Phu Văn Lâu"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Mặt sau tờ 20.000 đồng in hình công trình nào?",
+"a": "Chùa Cầu (Hội An)",
+"w": [
+"Chùa Một Cột",
+"Văn Miếu",
+"Dinh Độc Lập"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Mặt sau tờ 100.000 đồng in hình di tích nào?",
+"a": "Văn Miếu – Quốc Tử Giám",
+"w": [
+"Hoàng thành Thăng Long",
+"Đền Hùng",
+"Chùa Thiên Mụ"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Mặt sau tờ 50.000 đồng in hình công trình ở thành phố nào?",
+"a": "Huế",
+"w": [
+"Hà Nội",
+"Hội An",
+"Đà Lạt"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Mặt sau tờ 10.000 đồng in hình gì?",
+"a": "Giàn khoan dầu khí ngoài biển",
+"w": [
+"Cánh đồng lúa",
+"Nhà máy thủy điện",
+"Cảng biển"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Mặt sau tờ 500.000 đồng in hình gì?",
+"a": "Nhà Bác Hồ ở làng Kim Liên (Nghệ An)",
+"w": [
+"Lăng Chủ tịch Hồ Chí Minh",
+"Bến Nhà Rồng",
+"Hang Pác Bó"
+]
+},
+{
+"c": "Đời sống & An toàn",
+"q": "Nên rửa tay bằng gì để diệt khuẩn tốt nhất khi có điều kiện?",
+"a": "Xà phòng và nước sạch",
+"w": [
+"Chỉ nước lạnh",
+"Khăn giấy khô",
+"Nước muối"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Trung Quốc là gì?",
+"a": "Bắc Kinh",
+"w": [
+"Thượng Hải",
+"Quảng Châu",
+"Hồng Kông"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Campuchia là gì?",
+"a": "Phnôm Pênh",
+"w": [
+"Xiêm Riệp",
+"Viêng Chăn",
+"Băng Cốc"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của nước Anh là gì?",
+"a": "Luân Đôn",
+"w": [
+"Manchester",
+"Liverpool",
+"Edinburgh"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Đức là gì?",
+"a": "Berlin",
+"w": [
+"Munich",
+"Hamburg",
+"Frankfurt"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Nga là gì?",
+"a": "Mát-xcơ-va",
+"w": [
+"Xanh Pê-téc-bua",
+"Kiev",
+"Minsk"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Hoa Kỳ là gì?",
+"a": "Washington, D.C.",
+"w": [
+"New York",
+"Los Angeles",
+"Chicago"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Canada là gì?",
+"a": "Ottawa",
+"w": [
+"Toronto",
+"Vancouver",
+"Montreal"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Brazil là gì?",
+"a": "Brasília",
+"w": [
+"Rio de Janeiro",
+"São Paulo",
+"Buenos Aires"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Ai Cập là gì?",
+"a": "Cairo",
+"w": [
+"Alexandria",
+"Luxor",
+"Giza"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Philippines là gì?",
+"a": "Manila",
+"w": [
+"Cebu",
+"Davao",
+"Jakarta"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Ấn Độ là gì?",
+"a": "New Delhi",
+"w": [
+"Mumbai",
+"Kolkata",
+"Bangalore"
+]
+},
+{
+"c": "Thế giới",
+"q": "Thủ đô của Ý là gì?",
+"a": "Rome",
+"w": [
+"Milan",
+"Venice",
+"Florence"
+]
+},
+{
+"c": "Thế giới",
+"q": "Quốc gia nhỏ nhất thế giới là nước nào?",
+"a": "Vatican",
+"w": [
+"Monaco",
+"Singapore",
+"San Marino"
+]
+},
+{
+"c": "Thế giới",
+"q": "Hồ nước ngọt sâu nhất thế giới là hồ nào?",
+"a": "Hồ Baikal",
+"w": [
+"Hồ Victoria",
+"Hồ Superior",
+"Hồ Titicaca"
+]
+},
+{
+"c": "Thế giới",
+"q": "Sông dài nhất châu Á là sông nào?",
+"a": "Trường Giang (Dương Tử)",
+"w": [
+"Hoàng Hà",
+"Mê Kông",
+"Hằng"
+]
+},
+{
+"c": "Thế giới",
+"q": "Tháp nghiêng Pisa nằm ở nước nào?",
+"a": "Ý",
+"w": [
+"Pháp",
+"Tây Ban Nha",
+"Hy Lạp"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đồng hồ Big Ben nổi tiếng nằm ở thành phố nào?",
+"a": "Luân Đôn",
+"w": [
+"Paris",
+"Berlin",
+"New York"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đất nước nào thường được gọi là \"xứ sở mặt trời mọc\"?",
+"a": "Nhật Bản",
+"w": [
+"Hàn Quốc",
+"Trung Quốc",
+"Thái Lan"
+]
+},
+{
+"c": "Thế giới",
+"q": "Đường xích đạo chia Trái Đất thành hai nửa nào?",
+"a": "Bán cầu Bắc và bán cầu Nam",
+"w": [
+"Bán cầu Đông và bán cầu Tây",
+"Châu Á và châu Âu",
+"Đất liền và biển"
+]
+},
+{
+"c": "Thế giới",
+"q": "Ngôn ngữ chính thức của Brazil là gì?",
+"a": "Tiếng Bồ Đào Nha",
+"w": [
+"Tiếng Tây Ban Nha",
+"Tiếng Anh",
+"Tiếng Pháp"
+]
+},
+{
+"c": "Thể thao",
+"q": "Cầu thủ Cristiano Ronaldo mang quốc tịch nước nào?",
+"a": "Bồ Đào Nha",
+"w": [
+"Tây Ban Nha",
+"Brazil",
+"Ý"
+]
+},
+{
+"c": "Thể thao",
+"q": "Cầu thủ Lionel Messi mang quốc tịch nước nào?",
+"a": "Argentina",
+"w": [
+"Tây Ban Nha",
+"Uruguay",
+"Brazil"
+]
+},
+{
+"c": "Thể thao",
+"q": "SEA Games là đại hội thể thao của khu vực nào?",
+"a": "Đông Nam Á",
+"w": [
+"Châu Á",
+"Đông Á",
+"Châu Đại Dương"
+]
+},
+{
+"c": "Thể thao",
+"q": "Trong bóng đá, cầu thủ nhận thẻ đỏ sẽ thế nào?",
+"a": "Bị truất quyền thi đấu, rời sân",
+"w": [
+"Được đá phạt đền",
+"Bị phạt 5 phút",
+"Được thay người"
+]
+},
+{
+"c": "Thể thao",
+"q": "Mỗi đội bóng chuyền có bao nhiêu người trên sân?",
+"a": "6",
+"w": [
+"5",
+"7",
+"11"
+]
+},
+{
+"c": "Thể thao",
+"q": "Mỗi đội bóng rổ có bao nhiêu người trên sân?",
+"a": "5",
+"w": [
+"6",
+"7",
+"4"
+]
+},
+{
+"c": "Thể thao",
+"q": "Trong cầu lông, một ván (game) thường chơi tới bao nhiêu điểm?",
+"a": "21",
+"w": [
+"11",
+"15",
+"25"
+]
+},
+{
+"c": "Thể thao",
+"q": "Một vòng golf tiêu chuẩn có bao nhiêu lỗ?",
+"a": "18",
+"w": [
+"9",
+"12",
+"24"
+]
+},
+{
+"c": "Thể thao",
+"q": "Thế vận hội Olympic mùa hè năm 2024 được tổ chức ở thành phố nào?",
+"a": "Paris",
+"w": [
+"Tokyo",
+"Los Angeles",
+"London"
+]
+},
+{
+"c": "Thể thao",
+"q": "World Cup 2026 do những nước nào đồng tổ chức?",
+"a": "Mỹ, Canada và Mexico",
+"w": [
+"Qatar và Ả Rập Xê Út",
+"Anh và Pháp",
+"Nhật Bản và Hàn Quốc"
+]
+},
+{
+"c": "Thể thao",
+"q": "Giải quần vợt Roland Garros được tổ chức ở nước nào?",
+"a": "Pháp",
+"w": [
+"Anh",
+"Mỹ",
+"Úc"
+]
+},
+{
+"c": "Thể thao",
+"q": "Môn thể thao nào dùng \"cú úp rổ\"?",
+"a": "Bóng rổ",
+"w": [
+"Bóng chuyền",
+"Bóng ném",
+"Cầu lông"
+]
+},
+{
+"c": "Công nghệ",
+"q": "\"AI\" là viết tắt của cụm từ nào?",
+"a": "Trí tuệ nhân tạo (Artificial Intelligence)",
+"w": [
+"Internet tự động",
+"Ứng dụng tương tác",
+"Âm thanh kỹ thuật số"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Ngôn ngữ nào dùng để tạo cấu trúc trang web?",
+"a": "HTML",
+"w": [
+"MP3",
+"PDF",
+"JPG"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Hệ nhị phân chỉ dùng những chữ số nào?",
+"a": "0 và 1",
+"w": [
+"1 và 2",
+"0 đến 9",
+"1 và 10"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Ký hiệu \"@\" trong địa chỉ email thường được người Việt đọc là gì?",
+"a": "A còng",
+"w": [
+"Chấm",
+"Gạch dưới",
+"Thăng"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Steve Jobs là người đồng sáng lập công ty nào?",
+"a": "Apple",
+"w": [
+"Microsoft",
+"Google",
+"Samsung"
+]
+},
+{
+"c": "Công nghệ",
+"q": "YouTube hiện thuộc sở hữu của công ty nào?",
+"a": "Google",
+"w": [
+"Meta",
+"Microsoft",
+"Amazon"
+]
+},
+{
+"c": "Công nghệ",
+"q": "\"RAM\" trong máy tính là loại bộ nhớ gì?",
+"a": "Bộ nhớ tạm khi máy đang chạy",
+"w": [
+"Ổ lưu trữ lâu dài",
+"Màn hình cảm ứng",
+"Pin dự phòng"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Tốc độ xung nhịp của CPU thường được đo bằng đơn vị nào?",
+"a": "GHz",
+"w": [
+"GB",
+"MP",
+"dB"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Đuôi tệp nào thường là tệp ảnh?",
+"a": ".jpg",
+"w": [
+".mp3",
+".docx",
+".exe"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Đuôi tệp nào thường là tệp nhạc?",
+"a": ".mp3",
+"w": [
+".png",
+".xlsx",
+".zip"
+]
+},
+{
+"c": "Công nghệ",
+"q": "Tổ hợp phím Ctrl + V thường dùng để làm gì?",
+"a": "Dán",
+"w": [
+"Sao chép",
+"Cắt",
+"Lưu"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Con gì \"càng\" to \"càng\" nhỏ?",
+"a": "Con cua",
+"w": [
+"Con voi",
+"Con kiến",
+"Con cá"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Cái gì của bạn nhưng người khác dùng nhiều hơn bạn?",
+"a": "Cái tên",
+"w": [
+"Cái áo",
+"Đôi giày",
+"Cái điện thoại"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Cái gì đen khi mua về, đỏ khi dùng và xám khi vứt đi?",
+"a": "Than",
+"w": [
+"Mực",
+"Gỗ",
+"Sắt"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Cái gì càng rửa càng bẩn?",
+"a": "Nước",
+"w": [
+"Xà phòng",
+"Cái bát",
+"Đôi tay"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Quả gì không ăn được?",
+"a": "Quả bóng",
+"w": [
+"Quả táo",
+"Quả cam",
+"Quả lê"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Có cổ nhưng không có đầu là cái gì?",
+"a": "Cái áo",
+"w": [
+"Cái quần",
+"Cái mũ",
+"Đôi tất"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Cái gì bạn vẫn giữ được sau khi đã trao nó cho người khác?",
+"a": "Lời hứa",
+"w": [
+"Món quà",
+"Tiền",
+"Quyển sách"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Nhà có 4 góc, mỗi góc có 1 con mèo, trước mặt mỗi con có 3 con mèo. Nhà có tất cả mấy con mèo?",
+"a": "4",
+"w": [
+"12",
+"16",
+"8"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Một sợi dây cắt 3 nhát thì được mấy đoạn (cắt ngang, không gập)?",
+"a": "4",
+"w": [
+"3",
+"5",
+"6"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Số nào tiếp theo trong dãy: 2, 4, 8, 16, …?",
+"a": "32",
+"w": [
+"24",
+"18",
+"30"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "Số nào tiếp theo trong dãy: 1, 1, 2, 3, 5, 8, …?",
+"a": "13",
+"w": [
+"11",
+"12",
+"16"
+]
+},
+{
+"c": "Toán & Đố mẹo",
+"q": "12 × 12 bằng bao nhiêu?",
+"a": "144",
+"w": [
+"124",
+"132",
+"154"
+]
 }
 ]

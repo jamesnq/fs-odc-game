@@ -44,7 +44,7 @@
 
 **Đố vui** (kiểu Kahoot, 1–30 người, chơi một mình cũng được)
 - Câu hỏi trắc nghiệm 2–4 đáp án (▲ ◆ ● ■), mỗi câu 5–60 giây. Đúng được tới 1.000 điểm, trả lời càng nhanh càng nhiều điểm (`1000 × (1 − thời gian/2)`, trong 0,5 giây được trọn điểm). Đúng liên tiếp được thưởng chuỗi +100 … +500
-- **Bộ câu hỏi có sẵn** (`server/src/data/quiz-vi.json`, 215 câu, 9 chủ đề): lấy ngẫu nhiên, ít lặp lại trong phòng, chọn được chủ đề và số câu
+- **Bộ câu hỏi có sẵn** (`server/src/data/quiz-vi.json`, 423 câu, 17 chủ đề): lấy ngẫu nhiên, ít lặp lại trong phòng, chọn được chủ đề và số câu
 - **Tự soạn bộ câu hỏi** bằng văn bản đơn giản (`? câu hỏi`, `* đáp án đúng`, `- đáp án sai`, `# tên bộ`), kiểm tra ngay khi gõ, lưu nhiều bộ trên trình duyệt, bấm "Dùng bộ này" để cả phòng chơi
 - Sau mỗi câu: đáp án đúng, số người chọn từng đáp án, bảng xếp hạng; cuối ván có bục trao giải. Server giữ đáp án và tự đo thời gian, client không biết đáp án trước
 - **Phím tắt:** `1`–`4` chọn đáp án · `Enter`/`→` câu tiếp
