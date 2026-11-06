@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, BookOpen, Eye } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
@@ -7,6 +7,8 @@ import PokerHandLog from './PokerHandLog.jsx';
 import Modal from '../components/Modal.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import { fmtNum } from '../format.js';
+import { PokerRules, BestHandPanel, myHole } from './PokerPanels.jsx';
+import { describeHand } from '@game/shared/poker';
 
 const STREET_VI = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
 
@@ -19,7 +21,20 @@ export default function PokerGame({ room, state: s }) {
   const mySeat = s.mySeat;
   const base = mySeat >= 0 ? mySeat : 0;
   const o = s.options;
-  useHotkeys({ t: () => s.canRabbit && act({ type: 'rabbit' }) });
+  const [showRules, setShowRules] = useState(() => {
+    try { return localStorage.getItem('pk-rules') === '1'; } catch { return false; }
+  });
+  const toggleRules = () => setShowRules((v) => {
+    try { localStorage.setItem('pk-rules', v ? '0' : '1'); } catch { /* bỏ qua */ }
+    return !v;
+  });
+  const hole = myHole(s);
+  const myCat = useMemo(() => (hole ? describeHand(hole, h?.board || []).cat : -1), [hole?.join(), h?.board?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  useHotkeys({
+    t: () => s.canRabbit && act({ type: 'rabbit' }),
+    s: () => s.canShow && act({ type: 'show' }),
+    l: toggleRules,
+  });
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, !!s.turnLeft);
   const nextIn = useCountdown(s.nextHandIn, room.receivedAt, !!s.nextHandIn);
 
@@ -102,7 +117,9 @@ export default function PokerGame({ room, state: s }) {
                   </div>
                   <div className="pk-chips">💰 {fmtNum(seat.chips)}</div>
                   {seat.lastAction && <div className="pk-act">{seat.lastAction}</div>}
-                  {shown && <div className="pk-hand">{shown.hand}</div>}
+                  {shown && (shown.hand || shown.voluntary) && (
+                    <div className="pk-hand">{shown.hand}{shown.voluntary && <span className="pk-showed">{shown.hand ? ' · ' : ''}show</span>}</div>
+                  )}
                   {toAct && <div className="timebar"><div style={{ width: `${(timeLeft / s.turnTotal) * 100}%` }} /></div>}
                 </div>
                 {h && h.street !== 'done' && h.dealer === i && <div className="pk-dealer">D</div>}
@@ -117,6 +134,15 @@ export default function PokerGame({ room, state: s }) {
         <ActionBar s={s} o={o} act={act} myTurn={!!o} timeLeft={timeLeft} />
       )}
       {mySeat < 0 && <div className="muted center small pk-watch">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
+      <div className="pk-extras">
+        <BestHandPanel s={s} />
+        <div className="row pk-extras-bar">
+          <button className={`btn sm ${showRules ? 'primary' : 'ghost'}`} aria-expanded={showRules} onClick={toggleRules}>
+            <BookOpen size={14} aria-hidden /> <kbd>L</kbd> {showRules ? 'Ẩn luật chơi' : 'Xem luật chơi'}
+          </button>
+        </div>
+        {showRules && <PokerRules s={s} current={myCat} />}
+      </div>
       <GameInfo>
         {mySeat >= 0 && (
           <div className="panel row wrap pk-mybar">
@@ -185,7 +211,14 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
   // Luôn giữ nguyên khung (nút + thanh chọn mức cược) kể cả khi chưa tới lượt → không nhảy layout
   return (
     <div className={`pk-actions ${o ? '' : 'idle'}`}>
-      <div className="pk-turn">{o ? <>Tới lượt bạn! ⏱ {Math.ceil(timeLeft / 1000)}s</> : <span className="muted">Chờ tới lượt…</span>}</div>
+      <div className="pk-turn">
+        {o ? <>Tới lượt bạn! ⏱ {Math.ceil(timeLeft / 1000)}s</> : <span className="muted">{s.hand?.street === 'done' ? 'Ván đã kết thúc' : 'Chờ tới lượt…'}</span>}
+        {s.canShow && (
+          <button className="btn sm cta pk-show" title="Lật 2 lá tẩy của bạn cho cả bàn xem (S)" onClick={() => act({ type: 'show' })}>
+            <Eye size={14} aria-hidden /> <kbd>S</kbd> Show bài
+          </button>
+        )}
+      </div>
       <div className="row wrap">
         <button className="btn danger" disabled={!o} onClick={doFold}><kbd>F</kbd> Bỏ bài</button>
         <button className="btn" disabled={!o} onClick={doCall}>

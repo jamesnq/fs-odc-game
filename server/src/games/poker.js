@@ -69,6 +69,12 @@ export class PokerHandler {
       this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardLabel).join(' ')}`);
       return;
     }
+    if (a.type === 'show') {
+      const cards = this.game.showCards(id);
+      const name = Object.values(this.game.hand.players).find((p) => p.id === id)?.name || '?';
+      this.room.system(`🃏 ${name} show bài: ${cards.map(cardLabel).join(' ')}`);
+      return;
+    }
     const seat = this.game.seatOf(id);
     if (seat < 0) throw new Error('Bạn đang ở chế độ xem');
     const s = this.game.seats[seat];

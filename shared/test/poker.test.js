@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bestHand, score5, PokerGame } from '../src/poker.js';
+import { bestHand, score5, describeHand, PokerGame } from '../src/poker.js';
 
 test('xếp hạng bài', () => {
   assert.equal(bestHand(['AS', 'KS', 'QS', 'JS', 'TS', '2D', '3C']).name, 'Thùng phá sảnh');
@@ -231,4 +231,57 @@ test('all-in bị giới hạn ở mức đối thủ còn theo được', () =>
   assert.equal(o.allInTo, 250);
   g.act('p0', 'allin');
   assert.equal(g.hand.players[0].bet, 250);
+});
+
+test('Show bài: người bỏ bài / thắng không lật được chủ động show sau khi ván kết thúc', () => {
+  const g = table();
+  g.startHand();
+  assert.equal(g.canShow('p0'), false, 'đang chơi thì chưa được show');
+  assert.throws(() => g.showCards('p0'), /kết thúc/);
+  const hole0 = g.hand.players[0].hole.slice();
+  const hole2 = g.hand.players[2].hole.slice();
+  g.act('p0', 'fold');
+  g.act('p1', 'fold');
+  assert.equal(g.hand.street, 'done');
+  assert.deepEqual(g.view('p1').seats[0].hole, [], 'bài đã bỏ bị ẩn trước khi show');
+  assert.equal(g.canShow('p0'), true);
+  assert.equal(g.canShow('zzz'), false, 'người xem không show được');
+  assert.deepEqual(g.showCards('p0'), hole0);
+  assert.deepEqual(g.view('p1').seats[0].hole, hole0, 'show xong mọi người cùng thấy');
+  assert.equal(g.view('p1').hand.result.shown[0].voluntary, true);
+  assert.equal(g.canShow('p0'), false);
+  assert.throws(() => g.showCards('p0'), /rồi/);
+  // Người thắng (không bị lật) cũng show được, chip không đổi
+  const before = g.seats.map((s) => s && s.chips);
+  g.showCards('p2');
+  assert.deepEqual(g.seats.map((s) => s && s.chips), before);
+  // Hands log lộ bài đã show
+  const e = g.historyView('p1')[0];
+  assert.deepEqual(e.players.find((p) => p.seat === 2).hole, hole2);
+  assert.equal(e.players.find((p) => p.seat === 1).hole.length, 2, 'bài của chính mình');
+});
+
+test('describeHand: combo 5 lá mạnh nhất, lá tạo bộ và bài chờ', () => {
+  let d = describeHand(['AS', 'AD'], []);
+  assert.equal(d.name, 'Một đôi');
+  assert.deepEqual(d.cards.length, 2);
+  d = describeHand(['AS', 'KD'], []);
+  assert.equal(d.name, 'Mậu thầu');
+  d = describeHand(['KS', 'KD'], ['KC', '7H', '7S', '2D', '3C']);
+  assert.equal(d.name, 'Cù lũ');
+  assert.deepEqual(d.cards, ['KS', 'KD', 'KC', '7H', '7S']);
+  assert.equal(d.used.length, 5);
+  d = describeHand(['QS', 'QH'], ['9C', '6D', '2S']);
+  assert.deepEqual(d.used.sort(), ['QH', 'QS']);
+  assert.equal(d.cards.length, 5);
+  d = describeHand(['AH', '2H'], ['3S', '4H', '5C']);
+  assert.equal(d.name, 'Sảnh');
+  assert.equal(d.cards[0][0], '5', 'sảnh A-5: lá 5 là cao nhất');
+  d = describeHand(['AH', 'KH'], ['2H', '7H', '9C']);
+  assert.ok(d.draws.includes('Chờ thùng'));
+  d = describeHand(['8S', '7D'], ['6C', '5H', '2S']);
+  assert.ok(d.draws.includes('Chờ sảnh 2 đầu'));
+  d = describeHand(['8S', '7D'], ['6C', '4H', '2S']);
+  assert.ok(d.draws.includes('Chờ sảnh'));
+  assert.deepEqual(describeHand(['8S', '7D'], ['6C', '5H', '2S', 'KD', 'QC']).draws, [], 'hết bài chung thì không còn chờ');
 });
