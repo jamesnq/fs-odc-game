@@ -1,13 +1,8 @@
 import { PokerGame } from '@game/shared/poker';
+import { cardLabel } from '@game/shared/cards';
 import { DeckCommitments } from './fairness.js';
-
-const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
-const cardText = (c) => (c[0] === 'T' ? '10' : c[0]) + SUIT[c[1]];
-
-const clampInt = (v, min, max, def) => {
-  const n = Math.floor(Number(v));
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
-};
+import { bool, clampInt } from './options.js';
+import { ReadyGate } from './ready.js';
 
 export class PokerHandler {
   constructor(room, options) {
@@ -22,7 +17,7 @@ export class PokerHandler {
       buyIn: clampInt(options.buyIn, bigBlind * 10, bigBlind * 1000, bigBlind * 100),
       maxSeats: clampInt(options.maxSeats, 2, 9, 6),
       turnSeconds: clampInt(options.turnSeconds, 10, 120, 30),
-      rabbitHunt: options.rabbitHunt === undefined ? true : !!options.rabbitHunt && options.rabbitHunt !== 'false',
+      rabbitHunt: bool(options.rabbitHunt, true),
     };
     this.game = new PokerGame({ smallBlind: this.options.smallBlind, bigBlind: this.options.bigBlind, maxSeats: this.options.maxSeats });
     this.stacks = new Map(); // chip giữ lại khi đứng dậy
@@ -31,8 +26,15 @@ export class PokerHandler {
     this.deadline = 0;
     this.nextHandTimer = null;
     this.nextHandAt = 0;
-    this.lastLogLen = -1;
+    this.timerKey = ''; // lượt mà đồng hồ hiện tại đang tính
+    // Không tự chia: mọi người sẵn sàng rồi chủ phòng bấm bắt đầu; sau đó các ván nối tiếp nhau
+    // cho đến khi chủ phòng tạm dừng hoặc bàn còn dưới 2 người.
+    this.ready = new ReadyGate(room);
+    this.started = false;
   }
+
+  /** Người đang ngồi bàn (chưa rời). */
+  _seated() { return this.game.seats.filter((x) => x && !x.left); }
 
   get maxPlayers() { return this.options.maxSeats; }
   playerIds() { return this.game.seats.filter((s) => s && !s.left).map((s) => s.id); }
@@ -60,6 +62,7 @@ export class PokerHandler {
     if (s < 0) return;
     this.stacks.set(id, this.game.seats[s].chips);
     this.game.leave(id);
+    this.ready.delete(id);
     this._afterChange();
   }
 
@@ -67,12 +70,35 @@ export class PokerHandler {
 
   action(id, a) {
     if (a.type === 'setBlinds') return this._setBlinds(id, a);
+    if (a.type === 'start') {
+      if (this.started) throw new Error('Bàn đang chơi');
+      this.ready.check(id, this._seated());
+      if (!this.game.canStart() && !this.game.inHand) throw new Error('Cần ít nhất 2 người có chip và không nghỉ ván');
+      this.started = true;
+      this.ready.clear();
+      this.room.system('Chủ phòng bắt đầu — chia bài!');
+      this._maybeSchedule();
+      return;
+    }
+    if (a.type === 'pause') {
+      if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được tạm dừng');
+      if (!this.started) throw new Error('Bàn chưa bắt đầu');
+      this._stop();
+      this.room.system(`Chủ phòng tạm dừng bàn${this.game.inHand ? ' sau ván này' : ''}`);
+      return;
+    }
     if (a.type === 'rabbit') {
       if (!this.options.rabbitHunt) throw new Error('Bàn này không cho xem rabbit');
       const cards = this.game.rabbitHunt(id);
       const name = this.game.seats.find((x) => x && x.id === id)?.name
         || Object.values(this.game.hand.players).find((p) => p.id === id)?.name || '?';
-      this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardText).join(' ')}`);
+      this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardLabel).join(' ')}`);
+      return;
+    }
+    if (a.type === 'show') {
+      const cards = this.game.showCards(id);
+      const name = Object.values(this.game.hand.players).find((p) => p.id === id)?.name || '?';
+      this.room.system(`🃏 ${name} show bài: ${cards.map(cardLabel).join(' ')}`);
       return;
     }
     const seat = this.game.seatOf(id);
@@ -92,6 +118,10 @@ export class PokerHandler {
       }
       case 'sitout':
         s.sitOut = !s.sitOut;
+        break;
+      case 'ready':
+        if (this.started) throw new Error('Bàn đang chơi');
+        this.ready.toggle(id);
         break;
       default:
         throw new Error('Hành động không hợp lệ');
@@ -138,7 +168,7 @@ export class PokerHandler {
     }
     this.timerKey = key;
     const seat = this.game.seats[h.toAct];
-    // Người đã rời / ngồi ngoài: tự động sau 1 giây
+    // Người đã rời / ngồi ngoài / mất kết nối: tự động sau 3 giây
     const ms = seat && (seat.left || seat.sitOut || !this.room.isOnline(seat.id)) ? 3000 : this.options.turnSeconds * 1000;
     this.deadline = Date.now() + ms;
     this.turnTimer = setTimeout(() => this._onTimeout(), ms);
@@ -154,15 +184,28 @@ export class PokerHandler {
     this.room.changed();
   }
 
+  /** Dừng chia ván mới (ván đang chơi vẫn chơi nốt). */
+  _stop() {
+    this.started = false;
+    clearTimeout(this.nextHandTimer);
+    this.nextHandTimer = null;
+    this.nextHandAt = 0;
+  }
+
   _maybeSchedule() {
-    if (this.game.inHand || this.nextHandTimer) return;
+    // Bàn còn dưới 2 người: dừng lại, lần sau phải sẵn sàng và bấm bắt đầu lại
+    if (this.started && !this.game.inHand && this._seated().length < 2) {
+      this._stop();
+      this.room.system('Bàn còn dưới 2 người — tạm dừng, chờ chủ phòng bắt đầu lại');
+    }
+    if (!this.started || this.game.inHand || this.nextHandTimer) return;
     if (!this.game.canStart()) { this.nextHandAt = 0; return; }
     const delay = this.game.hand ? 6000 : 3000; // xem kết quả ván trước
     this.nextHandAt = Date.now() + delay;
     this.nextHandTimer = setTimeout(() => {
       this.nextHandTimer = null;
       this.nextHandAt = 0;
-      if (!this.game.inHand && this.game.canStart()) {
+      if (this.started && !this.game.inHand && this.game.canStart()) {
         this.game.startHand();
         // Blind chờ (nếu có) vừa được áp dụng khi chia ván mới
         this.options.smallBlind = this.game.smallBlind;
@@ -204,6 +247,8 @@ export class PokerHandler {
       turnLeft: this.deadline ? Math.max(0, this.deadline - Date.now()) : 0,
       turnTotal: this.options.turnSeconds * 1000,
       nextHandIn: this.nextHandAt ? Math.max(0, this.nextHandAt - Date.now()) : 0,
+      started: this.started,
+      ...this.ready.view(this._seated().map((x) => x.id)),
     };
   }
 

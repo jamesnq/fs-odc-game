@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, BookOpen, Eye, Pause } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
 import PokerHandLog from './PokerHandLog.jsx';
 import Modal from '../components/Modal.jsx';
+import GameInfo from '../components/GameInfo.jsx';
+import StartBar, { ReadyMark } from '../components/StartBar.jsx';
+import { fmtNum } from '../format.js';
+import { PokerRules, BestHandPanel, myHole } from './PokerPanels.jsx';
+import { describeHand } from '@game/shared/poker';
 
 const STREET_VI = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
-const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
 
 export default function PokerGame({ room, state: s }) {
   const { act, call, user } = useApp();
@@ -18,7 +22,16 @@ export default function PokerGame({ room, state: s }) {
   const mySeat = s.mySeat;
   const base = mySeat >= 0 ? mySeat : 0;
   const o = s.options;
-  useHotkeys({ t: () => s.canRabbit && act({ type: 'rabbit' }) });
+  // Luật chơi mở dạng popup (không đẩy nội dung xuống dưới bàn)
+  const [showRules, setShowRules] = useState(false);
+  const toggleRules = () => setShowRules((v) => !v);
+  const hole = myHole(s);
+  const myCat = useMemo(() => (hole ? describeHand(hole, h?.board || []).cat : -1), [hole?.join(), h?.board?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  useHotkeys({
+    t: () => s.canRabbit && act({ type: 'rabbit' }),
+    s: () => s.canShow && act({ type: 'show' }),
+    l: toggleRules,
+  });
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, !!s.turnLeft);
   const nextIn = useCountdown(s.nextHandIn, room.receivedAt, !!s.nextHandIn);
 
@@ -49,24 +62,32 @@ export default function PokerGame({ room, state: s }) {
                     : <div key={i} className="card-slot" />;
               })}
             </div>
-            {h && <div className="pk-pot">Pot: <b>{fmt(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
+            {h && <div className="pk-pot">Pot: <b>{fmtNum(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
             {h?.result && (
               <div className="pk-result">
                 {h.result.pots.map((p, k) => (
-                  <div key={k}>🏆 {p.winners.map((w) => s.seats[w]?.name || '?').join(', ')} thắng {fmt(p.amount)}{p.hand ? ` — ${p.hand}` : ''}</div>
+                  <div key={k}>🏆 {p.winners.map((w) => s.seats[w]?.name || '?').join(', ')} thắng {fmtNum(p.amount)}{p.hand ? ` — ${p.hand}` : ''}</div>
                 ))}
               </div>
             )}
             {!h?.street || h.street === 'done' ? (
               <div className="muted small pk-next">
-                {nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
+                {!s.started ? 'Chờ mọi người sẵn sàng, chủ phòng bấm Bắt đầu'
+                  : nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
               </div>
             ) : null}
             <div className="muted small">
-              Blind {fmt(s.smallBlind)}/{fmt(s.bigBlind)}
+              Blind {fmtNum(s.smallBlind)}/{fmtNum(s.bigBlind)}
               {isOwner && <button className="link pk-blind-edit" title="Đổi blind" aria-label="Đổi blind" onClick={() => setEditBlinds(true)}><Pencil size={14} aria-hidden /></button>}
+              {isOwner && s.started && <button className="link pk-pause" title="Không chia ván mới (ván đang chơi vẫn chơi nốt)" onClick={() => act({ type: 'pause' })}><Pause size={13} aria-hidden /> Tạm dừng</button>}
             </div>
-            {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmt(s.nextBlinds.smallBlind)}/{fmt(s.nextBlinds.bigBlind)}</div>}
+            {mySeat >= 0 && s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
+              <button className="btn cta sm" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmtNum(s.config.buyIn)} chip</button>
+            )}
+            {mySeat >= 0 && s.seats[mySeat].sitOut && (
+              <button className="btn sm" onClick={() => act({ type: 'sitout' })}>Quay lại chơi</button>
+            )}
+            {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmtNum(s.nextBlinds.smallBlind)}/{fmtNum(s.nextBlinds.bigBlind)}</div>}
           </div>
 
           {s.seats.map((seat, i) => {
@@ -92,40 +113,61 @@ export default function PokerGame({ room, state: s }) {
                 <div className="pk-info">
                   <div className="pk-name">
                     {seat.name}{seat.left && ' (rời)'}{seat.sitOut && ' (nghỉ)'}
+                    {!s.started && !seat.left && <ReadyMark id={seat.id} ready={s.ready} ownerId={room.ownerId} />}
                   </div>
-                  <div className="pk-chips">💰 {fmt(seat.chips)}</div>
+                  <div className="pk-chips">💰 {fmtNum(seat.chips)}</div>
                   {seat.lastAction && <div className="pk-act">{seat.lastAction}</div>}
-                  {shown && <div className="pk-hand">{shown.hand}</div>}
+                  {shown && (shown.hand || shown.voluntary) && (
+                    <div className="pk-hand">{shown.hand}{shown.voluntary && <span className="pk-showed">{shown.hand ? ' · ' : ''}show</span>}</div>
+                  )}
                   {toAct && <div className="timebar"><div style={{ width: `${(timeLeft / s.turnTotal) * 100}%` }} /></div>}
                 </div>
                 {h && h.street !== 'done' && h.dealer === i && <div className="pk-dealer">D</div>}
-                {seat.bet > 0 && <div className="pk-bet">{fmt(seat.bet)}</div>}
+                {seat.bet > 0 && <div className="pk-bet">{fmtNum(seat.bet)}</div>}
               </div>
             );
           })}
         </div>
       </div>
 
+      {!s.started && (
+        <div className="board-actions pk-start">
+          <StartBar players={s.seats.filter((x) => x && !x.left)} ready={s.ready} waitingFor={s.waitingFor} seated={mySeat >= 0}
+            startLabel="Bắt đầu chia bài" />
+        </div>
+      )}
       {mySeat >= 0 && (
         <ActionBar s={s} o={o} act={act} myTurn={!!o} timeLeft={timeLeft} />
       )}
-      {mySeat >= 0 && (
-        <div className="row pk-mybar">
-          {s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
-            <button className="btn primary" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmt(s.config.buyIn)} chip</button>
-          )}
-          <button className="btn ghost sm" onClick={() => act({ type: 'sitout' })}>{s.seats[mySeat].sitOut ? 'Quay lại chơi' : 'Nghỉ ván sau'}</button>
-          <button className="btn ghost sm" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+      {mySeat < 0 && <div className="muted center small pk-watch">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
+      <div className="pk-extras">
+        <BestHandPanel s={s} />
+        <div className="row pk-extras-bar">
+          <button className="btn sm ghost" aria-haspopup="dialog" onClick={toggleRules}>
+            <BookOpen size={14} aria-hidden /> <kbd>L</kbd> Xem luật chơi
+          </button>
         </div>
-      )}
-      {mySeat < 0 && <div className="muted center small">Bạn đang xem. Chọn "Ngồi đây" ở ghế trống để chơi.</div>}
-      {h && (
-        <details className="panel pk-log">
-          <summary>Diễn biến ván #{h.no}</summary>
-          {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
-        </details>
-      )}
-      <PokerHandLog s={s} />
+        {showRules && (
+          <Modal title="Luật Texas Hold'em" onClose={() => setShowRules(false)} wide>
+            <PokerRules s={s} current={myCat} bare />
+          </Modal>
+        )}
+      </div>
+      <GameInfo>
+        {mySeat >= 0 && (
+          <div className="panel row wrap pk-mybar">
+            <button className="btn sm" onClick={() => act({ type: 'sitout' })}>{s.seats[mySeat].sitOut ? 'Quay lại chơi' : 'Nghỉ ván sau'}</button>
+            <button className="btn ghost sm" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+          </div>
+        )}
+        {h && (
+          <details className="panel pk-log" open>
+            <summary>Diễn biến ván #{h.no}</summary>
+            {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
+          </details>
+        )}
+        <PokerHandLog s={s} />
+      </GameInfo>
       {editBlinds && <BlindsDialog s={s} act={act} onClose={() => setEditBlinds(false)} />}
     </div>
   );
@@ -134,8 +176,10 @@ export default function PokerGame({ room, state: s }) {
 function ActionBar({ s, o, act, myTurn, timeLeft }) {
   const bb = s.bigBlind;
   const [amount, setAmount] = useState(o ? o.minTo : 0);
+  // Chuỗi đang gõ trong ô số tiền (null = hiển thị amount). Tách riêng để xóa hết được số cũ, kể cả số 0.
+  const [draft, setDraft] = useState(null);
   const key = o ? `${s.hand?.no}:${o.currentBet}:${o.minTo}` : '';
-  useEffect(() => { if (o) setAmount(o.minTo); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (o) { setAmount(o.minTo); setDraft(null); } }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canBR = o && (o.canBet || o.canRaise);
   const clamp = (v) => (o ? Math.max(o.minTo, Math.min(o.maxTo, Math.round(v))) : v);
@@ -143,6 +187,7 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
     if (!o) return;
     const toCall = o.currentBet - o.myBet;
     setAmount(clamp(o.currentBet + f * (o.pot + toCall)));
+    setDraft(null);
   };
 
   const doFold = () => o && act({ type: 'act', action: 'fold' });
@@ -150,7 +195,10 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
   const doCheck = () => o && o.canCheck && act({ type: 'act', action: 'check' });
   const doBR = () => {
     if (!canBR) return;
-    act({ type: 'act', action: amount >= o.maxTo ? 'allin' : o.canBet ? 'bet' : 'raise', amount });
+    const v = clamp(amount);
+    setAmount(v);
+    setDraft(null);
+    act({ type: 'act', action: v >= o.maxTo ? 'allin' : o.canBet ? 'bet' : 'raise', amount: v });
   };
   const doAllIn = () => o && act({ type: 'act', action: 'allin' });
 
@@ -162,8 +210,8 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
     r: doBR,
     a: doAllIn,
     Enter: doBR,
-    ArrowUp: (e) => canBR && setAmount((v) => clamp(v + (e.shiftKey ? 10 : 1) * bb)),
-    ArrowDown: (e) => canBR && setAmount((v) => clamp(v - (e.shiftKey ? 10 : 1) * bb)),
+    ArrowUp: (e) => { if (canBR) { setDraft(null); setAmount((v) => clamp(v + (e.shiftKey ? 10 : 1) * bb)); } },
+    ArrowDown: (e) => { if (canBR) { setDraft(null); setAmount((v) => clamp(v - (e.shiftKey ? 10 : 1) * bb)); } },
     1: () => preset(1 / 3),
     2: () => preset(1 / 2),
     3: () => preset(3 / 4),
@@ -173,22 +221,35 @@ function ActionBar({ s, o, act, myTurn, timeLeft }) {
   // Luôn giữ nguyên khung (nút + thanh chọn mức cược) kể cả khi chưa tới lượt → không nhảy layout
   return (
     <div className={`pk-actions ${o ? '' : 'idle'}`}>
-      <div className="pk-turn">{o ? <>Tới lượt bạn! ⏱ {Math.ceil(timeLeft / 1000)}s</> : <span className="muted">Chờ tới lượt…</span>}</div>
+      <div className="pk-turn">
+        {o ? <>Tới lượt bạn! ⏱ {Math.ceil(timeLeft / 1000)}s</> : <span className="muted">{s.hand?.street === 'done' ? 'Ván đã kết thúc' : 'Chờ tới lượt…'}</span>}
+        {s.canShow && (
+          <button className="btn sm cta pk-show" title="Lật 2 lá tẩy của bạn cho cả bàn xem (S)" onClick={() => act({ type: 'show' })}>
+            <Eye size={14} aria-hidden /> <kbd>S</kbd> Show bài
+          </button>
+        )}
+      </div>
       <div className="row wrap">
         <button className="btn danger" disabled={!o} onClick={doFold}><kbd>F</kbd> Bỏ bài</button>
         <button className="btn" disabled={!o} onClick={doCall}>
-          <kbd>C</kbd> {!o ? 'Theo' : o.canCheck ? 'Check' : `Theo ${fmt(o.toCall)}`}
+          <kbd>C</kbd> {!o ? 'Theo' : o.canCheck ? 'Check' : `Theo ${fmtNum(o.toCall)}`}
         </button>
         <button className="btn primary" disabled={!canBR} onClick={doBR}>
-          <kbd>{o?.canBet ? 'B' : 'R'}</kbd> {!canBR ? 'Tố' : amount >= o.maxTo ? 'All-in' : o.canBet ? 'Cược' : 'Tố lên'} {canBR ? fmt(amount) : ''}
+          <kbd>{o?.canBet ? 'B' : 'R'}</kbd> {!canBR ? 'Tố' : amount >= o.maxTo ? 'All-in' : o.canBet ? 'Cược' : 'Tố lên'} {canBR ? fmtNum(amount) : ''}
         </button>
-        <button className="btn warn" disabled={!o} onClick={doAllIn}><kbd>A</kbd> All-in {o ? fmt(o.maxTo - o.myBet) : ''}</button>
+        <button className="btn warn" disabled={!o} onClick={doAllIn}><kbd>A</kbd> All-in {o ? fmtNum((o.allInTo ?? o.maxTo) - o.myBet) : ''}</button>
       </div>
       <div className={`row wrap pk-sizing ${canBR ? '' : 'off'}`} aria-hidden={!canBR}>
         <input type="range" min={o?.minTo ?? 0} max={o?.maxTo ?? 1} step={1} value={canBR ? amount : 0} disabled={!canBR}
-          onChange={(e) => setAmount(Number(e.target.value))} />
-        <input type="number" className="num" min={o?.minTo} max={o?.maxTo} value={canBR ? amount : ''} disabled={!canBR}
-          onChange={(e) => setAmount(Number(e.target.value))} onBlur={() => setAmount(clamp(amount))}
+          onChange={(e) => { setAmount(Number(e.target.value)); setDraft(null); }} />
+        <input type="text" inputMode="numeric" className="num" aria-label="Số tiền cược" value={canBR ? (draft ?? String(amount)) : ''} disabled={!canBR}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => {
+            const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 12);
+            setDraft(d);
+            if (d) setAmount(Number(d));
+          }}
+          onBlur={() => { setAmount(clamp(amount)); setDraft(null); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); doBR(); } }} />
         {[['1', '⅓', 1 / 3], ['2', '½', 1 / 2], ['3', '¾', 3 / 4], ['4', 'Pot', 1]].map(([k, l, f]) => (
           <button key={k} className="btn sm" disabled={!canBR} onClick={() => preset(f)}><kbd>{k}</kbd> {l}</button>
@@ -207,7 +268,7 @@ function BlindsDialog({ s, act, onClose }) {
   const inHand = s.hand && s.hand.street !== 'done';
   const sbN = Math.floor(Number(sb)), bbN = Math.floor(Number(bb));
   const error = !(bbN >= 2) ? 'Big blind tối thiểu là 2'
-    : bbN > s.config.buyIn ? `Big blind không được lớn hơn buy-in (${fmt(s.config.buyIn)})`
+    : bbN > s.config.buyIn ? `Big blind không được lớn hơn buy-in (${fmtNum(s.config.buyIn)})`
     : !(sbN >= 1) ? 'Small blind tối thiểu là 1'
     : sbN > bbN ? 'Small blind không được lớn hơn big blind' : null;
   const preset = (f) => { const b = Math.max(2, Math.round(cur.bigBlind * f)); setBb(b); setSb(Math.max(1, Math.floor(b / 2))); };

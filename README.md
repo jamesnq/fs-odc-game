@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Cờ vua · Cờ tướng · Cờ caro · Tá lả · Sâm lốc · Poker · Nối từ
+# 🎲 Sảnh Trò Chơi — Cờ vua · Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Đố vui · Đoán chữ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -12,7 +12,9 @@
 - Đặt tên người chơi (lưu trên trình duyệt, tự kết nối lại khi F5 / rớt mạng, giữ ghế 60 giây)
 - Tạo / vào / rời / xóa phòng, đặt và đổi tên phòng, lọc và tìm phòng theo trò chơi
 - Vào chơi hoặc chỉ **xem**, ngồi / đứng dậy, chủ phòng mời người ra, chat trong phòng, chia sẻ link phòng
-- Chủ phòng rời thì quyền chủ phòng tự chuyển cho người khác; phòng trống tự xóa
+- **Không tự bắt đầu ván:** người ngồi bàn bấm **Sẵn sàng**, khi mọi người đã sẵn sàng thì **chủ phòng bấm Bắt đầu** (chủ phòng không cần bấm sẵn sàng; áp dụng cho mọi trò, kể cả chơi lại). Poker: chủ phòng bắt đầu một lần rồi các ván nối tiếp nhau, có nút **Tạm dừng**
+- **Bàn bài (Tá lả, Sâm lốc, Poker):** người xem được **ngồi chờ ngay cả khi ván đang diễn ra**, vào chơi từ ván sau
+- Chủ phòng rời thì quyền chủ phòng tự chuyển cho người khác đang kết nối; người cuối cùng rời phòng thì phòng tự xóa ngay (người mất kết nối được giữ chỗ 60 giây để vào lại)
 - **Báo bản deploy mới:** khi server được deploy bản mới, người đang mở app thấy thông báo "Đã có phiên bản mới" kèm nút **Tải lại** (tải lại vẫn giữ chỗ trong phòng). Phiên bản hiện tại xem ở `/health`
 
 **Cờ tướng**
@@ -28,13 +30,52 @@
 - Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
 - **Bảng điểm** cộng dồn qua các ván (xem bên dưới)
 - **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
+- **Chơi với máy** (Dễ / Vừa / Khó): chọn khi tạo bàn (bạn cầm X đi trước) hoặc bấm **Chơi với máy** ở ghế trống. Máy luôn sẵn sàng, đồng ý chơi lại và cho đi lại, chỉ đồng ý hòa khi bàn gần kín. Máy Khó tìm trước vài nước (alpha-beta), chỉ nghĩ dưới 0,5 giây mỗi nước (`shared/src/caroBot.js`)
 
 **Nối từ** (2–8 người)
 - Mỗi từ gồm **2 chữ**, chữ đầu phải trùng chữ cuối của từ trước: *con mèo → mèo con → con đường*; không lặp từ trong ván
 - Kiểm tra mỗi chữ có trong **từ điển âm tiết tiếng Việt** (6.609 âm tiết, tắt được khi tạo bàn); bỏ dấu kiểu cũ hay mới đều được (*hòa* = *hoà*)
+- **Từ mở đầu không được quá khó:** chữ cuối phải có ít nhất 10 từ nối tiếp trong từ điển (vd. không mở bằng *ao chuôm*)
+- **Nối từ cụt là thắng luôn:** nối một từ (có trong từ điển) mà từ điển không còn từ nào chưa dùng bắt đầu bằng chữ cuối → thắng ngay
 - Từ vô nghĩa? Bạn bè bấm **❌ phản đối** — quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại
 - Mỗi lượt 10–60 giây, hết giờ mất 1 mạng (1–3 mạng), hết mạng bị loại; người cuối cùng còn lại thắng. Có bảng thắng qua các ván
 - Khi tới lượt, ô nhập tự điền sẵn chữ đầu — chỉ cần gõ chữ thứ hai rồi `Enter`
+- **Chơi với máy** (tối đa 3 máy mỗi bàn): chọn khi tạo bàn hoặc bấm **Chơi với máy / Thêm máy**. Máy chỉ dùng từ có trong từ điển. Máy Dễ hay bí, máy Vừa nối ngẫu nhiên, máy Khó chọn từ có chữ cuối khó nối tiếp nhất. Máy không bỏ phiếu phản đối và không được tính vào số phiếu cần để gỡ từ. Bàn đầy thì người mới vào được nhường ghế của một máy (`shared/src/wordchainBot.js`)
+
+**Đố vui** (kiểu Kahoot, 1–30 người, chơi một mình cũng được)
+- Câu hỏi trắc nghiệm 2–4 đáp án (▲ ◆ ● ■), mỗi câu 5–60 giây. Đúng được tới 1.000 điểm, trả lời càng nhanh càng nhiều điểm (`1000 × (1 − thời gian/2)`, trong 0,5 giây được trọn điểm). Đúng liên tiếp được thưởng chuỗi +100 … +500
+- **Bộ câu hỏi có sẵn** (`server/src/data/quiz-vi.json`, 423 câu, 17 chủ đề): lấy ngẫu nhiên, ít lặp lại trong phòng, chọn được chủ đề và số câu
+- **Tự soạn bộ câu hỏi** bằng văn bản đơn giản (`? câu hỏi`, `* đáp án đúng`, `- đáp án sai`, `# tên bộ`), kiểm tra ngay khi gõ, lưu nhiều bộ trên trình duyệt, bấm "Dùng bộ này" để cả phòng chơi
+- Sau mỗi câu: đáp án đúng, số người chọn từng đáp án, bảng xếp hạng; cuối ván có bục trao giải. Server giữ đáp án và tự đo thời gian, client không biết đáp án trước
+- **Phím tắt:** `1`–`4` chọn đáp án · `Enter`/`→` câu tiếp
+
+**Đoán chữ** (kiểu Wordle tiếng Việt, 1–10 người)
+- Đoán từ **2 chữ** trong 6 lượt. Mỗi chữ chấm theo **âm đầu · vần · thanh**: 🟩 đúng chỗ, 🟨 có ở chữ kia, ⬛ không có. Có bảng tổng hợp các âm đầu / vần / thanh đã thử
+- **Đua:** cùng một từ, ai đoán ra ít lượt nhất (rồi nhanh nhất) thắng; trong lúc chơi chỉ thấy màu ô của người khác. **Cùng đoán:** cả phòng chung 6 lượt. **Từ của ngày:** mọi người cùng một từ mỗi ngày
+- Đáp án lấy từ `server/src/data/vi-words-doanchu.txt` (639 từ thông dụng), từ đoán kiểm tra bằng từ điển của Nối từ
+
+**Vẽ đoán** (2–12 người)
+- Mỗi vòng ai cũng được vẽ một lần (1–6 vòng). Người vẽ chọn 1 trong 3 từ (~400 từ tiếng Việt dễ vẽ, chủ phòng có thể thêm từ riêng hoặc chỉ dùng từ riêng), vẽ trong 30–180 giây
+- Người khác gõ đoán — **không cần gõ dấu**; sai 1 chữ cái được báo "gần đúng" (chỉ mình thấy). Đoán càng sớm càng nhiều điểm, người vẽ được 60 điểm cho mỗi người đoán đúng; ai cũng đoán đúng thì sang lượt sớm
+- Gợi ý: ô chữ hiện số chữ cái, quá nửa thời gian thì lộ dần vài chữ (tắt được khi tạo bàn)
+- Bút 16 màu, 5 cỡ nét, tẩy, đổ màu, hoàn tác, xóa. Nét vẽ truyền trực tiếp tới mọi người; vào xem / tải lại giữa lượt vẫn thấy cả bức vẽ
+- Chat của phòng chặn tin nhắn lộ đáp án; người vào giữa ván được đoán ngay và tới lượt thì vẽ; chủ phòng có thể dừng ván. Có bảng thắng qua các ván
+- **Phím tắt (khi vẽ):** `B` bút · `E` tẩy · `F` đổ màu · `Z` hoàn tác · `1–5` cỡ nét
+
+**Tam sao thất bản (vẽ)** (3–12 người)
+- Khi tạo phòng, chọn **Cổ điển** hoặc **Chuyền hình**. Chuyền hình: người đầu nhận từ khóa ngẫu nhiên và vẽ; từng người sau chỉ xem hình ngay trước để vẽ lại; người cuối đoán bằng lời. Mỗi ván xáo trộn thứ tự người chơi, cuối ván lật từ khóa và toàn bộ chuỗi hình.
+- Mọi người làm **cùng lúc**: mỗi người viết một câu → người sau **vẽ** lại câu đó → người sau nữa nhìn tranh **đoán bằng lời** → lại vẽ… Mỗi câu chuyện đi qua đủ mọi người đúng một lần (thứ tự ngẫu nhiên, đề bài không lộ tên người trước)
+- Thời gian viết 15–120 giây, vẽ 30–240 giây; bấm **Xong** để nộp sớm (bấm lại để sửa), hết giờ thì phần đang làm dở vẫn được tính. Bước đầu có nút lấy gợi ý nếu bí ý tưởng
+- Cuối ván chủ phòng bấm **Tiếp** (`→` / `Space`) để lật từng phần của từng câu chuyện cho cả bàn cùng xem; xong ván ai cũng xem lại được mọi câu chuyện
+- Tranh chỉ lộ đúng lúc: khi đang chơi mỗi người chỉ xem được tranh mình được giao. Người rời giữa ván thì phần của họ để trống, câu chuyện vẫn đi tiếp; người xem có thể ngồi chờ ván sau
+
+**Nối thú** (1–8 người, kiểu trò "Pikachu" / Onet)
+- Bàn 9×16 ô (đổi được 4–10 hàng × 4–18 cột) gồm 36 hình thú. Chọn hai ô **cùng hình** nối được bằng đường gấp khúc **tối đa 3 đoạn** (≤ 2 lần rẽ), chỉ đi qua ô trống, được vòng ra **ngoài viền** bàn — nối được thì hai ô biến mất, đường nối hiện lên chốc lát
+- **Đua cùng một bàn:** mọi người nhận cùng một bàn (cùng hạt giống), mỗi người tự nối trên bản của mình; thanh tiến độ của từng người hiện trên đầu. Ai dọn sạch trước thắng, hết giờ (mặc định 8 phút) thì xếp theo điểm. Một người cũng chơi được
+- Mỗi cặp 10 điểm, nối liên tiếp trong 3 giây được **combo** +2/bậc; dọn sạch được thưởng 1 điểm cho mỗi giây còn lại
+- **Gợi ý** và **đổi hình** (xáo bàn) có giới hạn lượt; hết nước đi thì bàn **tự xáo** miễn phí. Tùy chọn **trọng lực**: nối xong các hình phía trên rơi xuống
+- Server kiểm tra mọi nước nối; người xem bấm tên người chơi để xem bàn của họ. Điện thoại dọc: bàn tự xoay dọc cho ô to hơn
+- **Phím tắt:** `H` gợi ý · `S` đổi hình · `Esc` bỏ chọn
 
 **Bảng điểm (Cờ vua, Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người
@@ -135,6 +176,17 @@ docker run -p 3001:3001 game-lobby
 | `APP_SERVERS` | _(trống)_ | Chia app thành nhiều server, mỗi server một mật khẩu (JSON). Có biến này thì `APP_PASSWORD` bị bỏ qua |
 | `TRUST_PROXY` | _(trống)_ | Số reverse proxy đứng trước server (thường là `1`). IP thật = phần tử thứ N tính từ **cuối** `X-Forwarded-For` — phần đầu do client tự điền nên không tin được. Để trống khi không có proxy |
 | `DEBUG_IP` | _(trống)_ | Đặt `1` để in IP và `X-Forwarded-For` của mỗi kết nối ra log — dùng để kiểm tra `TRUST_PROXY` đúng chưa |
+| `VOICE_ENABLED` | `1` | Đặt `0` để tắt hẳn voice chat |
+| `VOICE_SERVERS` | `B4` | Chỉ bật voice chat cho các server (tên trong `APP_SERVERS`, cách nhau dấu phẩy, không phân biệt hoa thường). `*` = mọi server. Chạy một server không đặt tên thì không bị giới hạn |
+| `VOICE_MAX_PER_ROOM` | `6` | Số người tối đa trong kênh thoại mỗi phòng |
+| `VOICE_TURN_ENABLED` | `1` | Đặt `0` để tắt TURN Cloudflare dù đã có key (chỉ dùng STUN miễn phí — mạng 4G/NAT chặt sẽ không kết nối được) |
+| `CF_TURN_KEY_ID`, `CF_TURN_KEY_API_TOKEN` | _(trống)_ | TURN của Cloudflare cho voice chat (giúp kết nối qua 4G). Trống = chỉ dùng STUN miễn phí |
+| `CF_ACCOUNT_ID`, `CF_ANALYTICS_TOKEN` | _(trống)_ | Để server tự theo dõi dung lượng TURN đã dùng trong tháng (token quyền *Account Analytics: Read*) |
+| `VOICE_TURN_QUOTA_GB` | `900` | Ngưỡng GB/tháng (gói miễn phí 1.000 GB) |
+| `VOICE_QUOTA_ACTION` | `disable` | Chạm ngưỡng thì `disable` (tắt voice chat tới đầu tháng sau) hoặc `stun` (vẫn chạy, bỏ TURN) |
+
+### Voice chat
+Bấm nút 🎧 **Thoại** ở đầu phòng để vào kênh thoại của phòng (trình duyệt hỏi quyền micro; không có micro thì vẫn nghe được). Âm thanh đi thẳng giữa các trình duyệt bằng WebRTC (mã hóa đầu-cuối), server chỉ chuyển tín hiệu kết nối, không ghi âm. Chi tiết thiết kế: [docs/voice-chat-plan.md](docs/voice-chat-plan.md).
 
 ### Auth gate (mật khẩu vào app)
 Khi đặt `APP_PASSWORD`, mọi kết nối Socket.IO phải gửi đúng mật khẩu, nếu không sẽ bị từ chối. Người dùng thấy màn hình nhập mật khẩu; nhập đúng thì server cấp một **phiên đăng nhập** (ký HMAC, hạn 30 ngày, tự gia hạn khi vào) để trình duyệt nhớ — bản thân mật khẩu **không** được lưu trên máy người chơi. Nút **⇄ Đổi server** xóa phiên (đăng xuất).
@@ -177,13 +229,23 @@ shared/src/       Luật chơi thuần JS (dùng cho cả server và client)
   xiangqi.js      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
   caro.js         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
   wordchain.js    Nối từ: chuẩn hóa âm tiết, lượt, mạng, phản đối
-server/src/data/  Từ điển âm tiết tiếng Việt cho Nối từ (MIT, xem README trong thư mục)
   poker.js        Chấm bài, ván cược, side pot
   samloc.js       Sâm lốc: phân loại bộ, chặn, báo Sâm, báo 1, tới trắng, tính tiền
   tala.js         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
 shared/test/      Unit test (node --test)
-server/src/       Express + Socket.IO, quản lý user, phòng, đồng hồ
+server/src/       Express + Socket.IO
+  index.js        Khởi động: ghép các phần bên dưới
+  config.js       Đọc biến môi trường, giới hạn tài nguyên
+  http.js         Header bảo mật, /health, phục vụ client đã build
+  auth.js         Mật khẩu, phiên đăng nhập, khóa IP đoán mật khẩu
+  rateLimit.js    Token bucket, bộ đếm theo IP
+  lobby.js        Người dùng, phòng: vào / ra / xóa phòng
+  connection.js   Các sự kiện socket của một kết nối
+  voice.js        Voice chat: STUN/TURN, hạn mức, lọc tín hiệu
 server/src/games/ Lớp điều phối từng game (ghế, hẹn giờ, quyền thao tác)
+  duel.js         Khung chung cờ 2 người có đồng hồ (Cờ tướng, Cờ caro)
+  cardTable.js    Khung chung bài đánh theo lượt (Tá lả, Sâm lốc)
+server/src/data/  Từ điển tiếng Việt cho Nối từ (MIT, xem README trong thư mục)
 client/src/       React UI: sảnh, phòng, bàn cờ, bàn bài, phím tắt
 ```
 

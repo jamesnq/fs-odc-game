@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Undo2, Handshake, Flag, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowUpDown } from 'lucide-react';
 import { legalMovesFrom, colorOf, typeOf, PIECE_CHAR, rowOf, colOf, idx } from '@game/shared/xiangqi';
 import { useApp } from '../store.jsx';
-import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
-import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.jsx';
+import { useHotkeys } from '../hooks.js';
+import Scoreboard, { ScoreLine } from '../components/Scoreboard.jsx';
+import { PlayerBar, MoveList } from '../components/DuelPanels.jsx';
+import GameInfo from '../components/GameInfo.jsx';
+import { RequestOverlay, ResultOverlay, BoardActions } from '../components/BoardRequests.jsx';
 
 const CELL = 56;
 const PAD = 50; // chừa chỗ cho số cột hai bên
@@ -12,7 +15,7 @@ const H = CELL * 9 + PAD * 2;
 const COLOR_NAME = { r: 'Đỏ', b: 'Đen' };
 
 export default function XiangqiGame({ room, state: s }) {
-  const { act, call, user } = useApp();
+  const { act } = useApp();
   const [sel, setSel] = useState(null);
   const [manualFlip, setManualFlip] = useState(false);
   const my = s.myColor;
@@ -50,13 +53,13 @@ export default function XiangqiGame({ room, state: s }) {
   const topColor = flipped ? 'r' : 'b';
   const bottomColor = flipped ? 'b' : 'r';
   const opp = my === 'r' ? 'b' : 'r';
-  const pending = s.pending;
   const checkedKing = s.inCheck ? s.board.indexOf(s.turn === 'r' ? 'K' : 'k') : -1;
 
   return (
-    <div className="xq">
-      <div className="xq-main">
-        <PlayerBar color={topColor} s={s} room={room} />
+    <div className="bg xq">
+      <div className="bg-col xq-main">
+        <XiangqiPlayer side={topColor} s={s} room={room} />
+        <div className="bg-board">
         <svg className="xq-board" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Bàn cờ tướng">
           <BoardDefs />
           <rect x="0" y="0" width={W} height={H} rx="16" fill="url(#xq-frame)" />
@@ -101,140 +104,34 @@ export default function XiangqiGame({ room, state: s }) {
             );
           })}
         </svg>
-        <PlayerBar color={bottomColor} s={s} room={room} />
+        {s.status === 'playing' && s.inCheck && <div className="board-strip check" role="status">Chiếu tướng!</div>}
+        {s.status === 'waiting' && (
+          <div className="board-strip" role="status">{s.seats.r && s.seats.b ? 'Chờ sẵn sàng — chủ phòng bấm Bắt đầu…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
+        )}
+        <RequestOverlay s={s} my={my} opp={opp} />
+        <ResultOverlay over={s.status === 'over' && !!s.result} resetKey={s.score?.gameNo}
+          title={s.result?.winner ? `${COLOR_NAME[s.result.winner]} thắng${my && s.result.winner === my ? ' — bạn thắng!' : ''}` : 'Hòa'}
+          detail={s.result?.text}>
+          <ScoreLine score={s.score} a={s.seats.r} b={s.seats.b} />
+        </ResultOverlay>
+        </div>
+        <XiangqiPlayer side={bottomColor} s={s} room={room} />
+        <BoardActions s={s} my={my} opp={opp} sitLabel="bấm “Ngồi” ở ghế trống để chơi" rematchLabel="Chơi lại (đổi màu)"
+          extra={<button className="btn ghost ba-icon" onClick={() => setManualFlip((f) => !f)} title="Lật bàn cờ (F)" aria-label="Lật bàn cờ"><ArrowUpDown size={16} aria-hidden /></button>} />
       </div>
 
-      <div className="xq-side">
-        <div className="panel">
-          {s.status === 'waiting' && (
-            <div className="xq-status" role="status" aria-live="polite">
-              {s.seats.r && s.seats.b ? 'Chờ hai bên sẵn sàng…' : 'Đang chờ người chơi…'}
-            </div>
-          )}
-          {s.status === 'playing' && (
-            <div className="xq-status" role="status" aria-live="polite">
-              Lượt: <b className={`c-${s.turn}`}>{COLOR_NAME[s.turn]}</b>
-              {s.inCheck && <span className="check-badge">CHIẾU!</span>}
-              {myTurn && <span className="your-turn"> — tới lượt bạn</span>}
-            </div>
-          )}
-          {s.status === 'over' && s.result && (
-            <div className="xq-result">
-              <div className="big">
-                {s.result.winner ? <>{COLOR_NAME[s.result.winner]} thắng{my && (s.result.winner === my ? ' 🎉' : '')}</> : 'Hòa'}
-              </div>
-              <div className="muted">{s.result.text}</div>
-              <ScoreLine score={s.score} a={s.seats.r} b={s.seats.b} />
-            </div>
-          )}
-
-          {pending && my && pending.from === opp && (
-            <div className="request">
-              <b>{s.seats[opp]?.name}</b> {pending.type === 'draw' ? 'xin cầu hòa' : 'xin đi lại'}.
-              <div className="row">
-                <button className="btn primary sm" onClick={() => act({ type: 'respond', accept: true })}>Đồng ý</button>
-                <button className="btn sm" onClick={() => act({ type: 'respond', accept: false })}>Từ chối</button>
-              </div>
-            </div>
-          )}
-          {pending && my && pending.from === my && (
-            <div className="request mine">
-              Đang chờ đối thủ trả lời {pending.type === 'draw' ? 'cầu hòa' : 'xin đi lại'}…
-              <button className="btn sm" onClick={() => act({ type: 'cancelRequest' })}>Hủy</button>
-            </div>
-          )}
-          {pending && !my && <div className="muted small">{COLOR_NAME[pending.from]} đang {pending.type === 'draw' ? 'cầu hòa' : 'xin đi lại'}…</div>}
-
-          {my && (
-            <div className="xq-actions">
-              {s.status === 'waiting' && (
-                <button className={`btn ${s.ready[my] ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })} disabled={!s.seats[opp]}>
-                  {s.ready[my] ? 'Hủy sẵn sàng' : <><Check size={16} aria-hidden /> Sẵn sàng</>}
-                </button>
-              )}
-              {s.status === 'playing' && (
-                <>
-                  <button className="btn" disabled={!!pending} onClick={() => act({ type: 'requestUndo' })}><Undo2 size={16} aria-hidden /> Xin đi lại</button>
-                  <button className="btn" disabled={!!pending} onClick={() => act({ type: 'offerDraw' })}><Handshake size={16} aria-hidden /> Cầu hòa</button>
-                  <button className="btn danger" onClick={() => confirm('Bạn chắc chắn muốn xin thua?') && act({ type: 'resign' })}><Flag size={16} aria-hidden /> Xin thua</button>
-                </>
-              )}
-              {s.status === 'over' && (
-                <button className="btn primary" disabled={s.rematch[my] || !s.seats[opp]} onClick={() => act({ type: 'rematch' })}>
-                  {s.rematch[my] ? 'Đang chờ đối thủ…' : s.rematch[opp] ? <><RotateCcw size={16} aria-hidden /> Đồng ý chơi lại</> : <><RotateCcw size={16} aria-hidden /> Chơi lại (đổi màu)</>}
-                </button>
-              )}
-              {s.status !== 'playing' && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>}
-            </div>
-          )}
-          {!my && <div className="muted small">Bạn đang xem. Ngồi vào ghế trống để chơi.</div>}
-          <div className="row" style={{ marginTop: 8 }}>
-            <button className="btn ghost sm" onClick={() => setManualFlip((f) => !f)}><ArrowUpDown size={16} aria-hidden /> Lật bàn <kbd>F</kbd></button>
-          </div>
-        </div>
+      <GameInfo>
         <Scoreboard room={room} score={s.score} playing={s.status === 'playing'}
           sides={{ r: { label: 'Đỏ', cls: 'c-r' }, b: { label: 'Đen', cls: 'c-b' } }} />
-        <MoveList moves={s.moves} />
-        <div className="muted small">Thời gian: {s.options.minutes} phút mỗi bên. Hết giờ là thua.</div>
-      </div>
-    </div>
-  );
-
-}
-
-function PlayerBar({ color, s, room }) {
-  const { call, user } = useApp();
-  const my = s.myColor;
-  const seat = s.seats[color];
-  const running = s.running && s.turn === color;
-  const ms = useCountdown(s.clocks[color], room.receivedAt, running);
-  const low = ms < 60000;
-  const member = seat && room.members.find((m) => m.id === seat.id);
-  return (
-    <div className={`xq-player ${running ? 'active' : ''}`}>
-      <span className={`xq-chip ${color}`}>{PIECE_CHAR[color].K}</span>
-      {seat ? (
-        <span className="pname">
-          {seat.name}{seat.id === user.id && ' (bạn)'}
-          {s.score?.gameNo > 0 && (
-            <span className="score-chip" title="Điểm trong phòng: thắng 1, hòa ½, thua 0">{fmtPts(pointsOf(s.score, seat.id) ?? 0)} điểm</span>
-          )}
-          {member && !member.online && <span className="muted"> (mất kết nối)</span>}
-          {s.status === 'waiting' && s.ready[color] && <span className="ready"> ✔ sẵn sàng</span>}
-          {s.status === 'over' && s.rematch[color] && <span className="ready"> ↻ muốn chơi lại</span>}
-        </span>
-      ) : (
-        <span className="pname muted">
-          Ghế trống {!my && s.status !== 'playing' && (
-            <button className="btn primary sm" onClick={() => call('room:sit', { seat: color })}>Ngồi {COLOR_NAME[color]}</button>
-          )}
-        </span>
-      )}
-      <span className={`clock ${running ? 'running' : ''} ${low && running ? 'low' : ''}`}>{fmtClock(ms)}</span>
+        <MoveList moves={s.moves} sides={["r", "b"]} />
+        <div className="muted small">Thời gian: {s.options.minutes} phút mỗi bên. Hết giờ là thua. Xin đi lại / cầu hòa cần đối thủ đồng ý.</div>
+      </GameInfo>
     </div>
   );
 }
 
-function MoveList({ moves }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [moves.length]);
-  const rows = [];
-  for (let i = 0; i < moves.length; i += 2) rows.push([i / 2 + 1, moves[i], moves[i + 1]]);
-  return (
-    <div className="panel moves">
-      <h4>Biên bản ({moves.length} nước)</h4>
-      <div className="move-list" ref={ref}>
-        {rows.length === 0 && <div className="muted small">Chưa có nước đi</div>}
-        {rows.map(([n, a, b]) => (
-          <div key={n} className="move-row">
-            <span className="muted">{n}.</span>
-            <span className="c-r">{a?.san}</span>
-            <span className="c-b">{b?.san || ''}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function XiangqiPlayer({ side, s, room }) {
+  return <PlayerBar side={side} s={s} room={room} chip={<span className={`xq-chip ${side}`}>{PIECE_CHAR[side].K}</span>} sitLabel={`Ngồi ${COLOR_NAME[side]}`} />;
 }
 
 /** Gradient gỗ, mặt quân và bóng đổ (có độ lệch) cho bàn cờ. */

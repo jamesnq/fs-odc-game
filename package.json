@@ -12,10 +12,11 @@
     "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w client",
     "start": "npm run start -w server",
-    "test": "npm test -w shared",
+    "test": "npm test -w shared && npm test -w server",
     "test:e2e": "node server/test/e2e.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@playwright/test": "^1.65.0",
+    "concurrently": "^10.0.6"
   }
 }

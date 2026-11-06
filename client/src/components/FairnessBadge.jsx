@@ -54,8 +54,8 @@ export default function FairnessBadge({ roomId, fair }) {
 
   return (
     <>
-      <button className={`fair-badge ${cls}`} onClick={() => setOpen(true)} title="Xáo bài kiểm chứng được">
-        <Icon size={14} aria-hidden /> Ván #{fair.no}: {label}
+      <button className={`fair-badge ${cls}`} onClick={() => setOpen(true)} title={`Ván #${fair.no}: ${label} — bấm để xem cách kiểm chứng`}>
+        <Icon size={16} aria-hidden /><span className="fb-text">Ván #{fair.no}: {label}</span>
       </button>
       {open && (
         <Modal title="Xáo bài kiểm chứng được" onClose={() => setOpen(false)}>

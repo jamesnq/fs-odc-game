@@ -19,6 +19,7 @@ export function AppProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [user, setUser] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [online, setOnline] = useState([]); // người đang kết nối cùng server
   const [room, setRoom] = useState(null); // trạng thái phòng hiện tại
   const [toasts, setToasts] = useState([]);
   // Luồng vào app — một trạng thái duy nhất để các màn hình không giành nhau (tránh nhấp nháy):
@@ -28,6 +29,7 @@ export function AppProvider({ children }) {
   const [server, setServer] = useState(null); // { id, name, gated } — server (sảnh) đang vào
   const [newVersion, setNewVersion] = useState(null); // phiên bản mới trên server, khác bản đang chạy
   const [authError, setAuthError] = useState(null); // null = chưa bị chặn; chuỗi = cần nhập mật khẩu
+  const [voiceStatus, setVoiceStatus] = useState(null); // { enabled, reason, maxPerRoom, relay } — voice chat có bật trên server không
   const receivedAt = useRef(0);
 
   const toast = useCallback((text, type = 'info') => {
@@ -42,10 +44,15 @@ export function AppProvider({ children }) {
     if (res.session) storage.session = res.session;
     storage.password = '';
     setServer(res.server);
+    setVoiceStatus(res.voice || null);
     storage.name = res.user.name;
     setUser(res.user);
     setRooms(res.rooms);
+    setOnline(res.online || []);
     setPhase('ready');
+    // A restart loses in-memory rooms. Clear the previous room before trying the
+    // URL again; otherwise a failed join leaves an unusable game on screen.
+    if (!res.roomId) setRoom(null);
     const wanted = roomFromHash();
     if (!res.roomId && wanted) {
       try {
@@ -56,7 +63,6 @@ export function AppProvider({ children }) {
         location.hash = '';
       }
     }
-    if (!res.roomId && !wanted) setRoom(null);
     return res;
   }, [toast]);
 
@@ -101,7 +107,9 @@ export function AppProvider({ children }) {
       if (version && __APP_VERSION__ && version !== __APP_VERSION__) setNewVersion(version);
     };
     socket.on('app:version', onVersion);
+    socket.on('voice:status', setVoiceStatus);
     socket.on('lobby:rooms', onRooms);
+    socket.on('lobby:online', setOnline);
     socket.on('room:state', onState);
     socket.on('room:closed', onClosed);
     socket.on('room:left', onLeft);
@@ -111,7 +119,9 @@ export function AppProvider({ children }) {
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
       socket.off('app:version', onVersion);
+      socket.off('voice:status', setVoiceStatus);
       socket.off('lobby:rooms', onRooms);
+      socket.off('lobby:online', setOnline);
       socket.off('room:state', onState);
       socket.off('room:closed', onClosed);
       socket.off('room:left', onLeft);
@@ -173,14 +183,15 @@ export function AppProvider({ children }) {
     setRoom(null);
     setUser(null);
     setRooms([]);
+    setOnline([]);
     setServer(null);
     setAuthError('AUTH_REQUIRED');
     setPhase('auth');
   }, [room]);
 
   const value = useMemo(() => ({
-    connected, user, setUser, rooms, room, toast, phase, hello, call, act, authError, login, newVersion, server, switchServer,
-  }), [newVersion, server, switchServer, connected, user, rooms, room, toast, phase, hello, call, act, authError, login]);
+    connected, user, setUser, rooms, online, room, toast, phase, hello, call, act, authError, login, newVersion, server, switchServer, voiceStatus,
+  }), [newVersion, server, switchServer, connected, user, rooms, online, room, toast, phase, hello, call, act, authError, login, voiceStatus]);
 
   return (
     <Ctx.Provider value={value}>

@@ -8,10 +8,17 @@
     "./xiangqi": "./src/xiangqi.js",
     "./chess": "./src/chess.js",
     "./caro": "./src/caro.js",
+    "./caroBot": "./src/caroBot.js",
     "./samloc": "./src/samloc.js",
     "./wordchain": "./src/wordchain.js",
+    "./wordchainBot": "./src/wordchainBot.js",
     "./poker": "./src/poker.js",
-    "./tala": "./src/tala.js"
+    "./quiz": "./src/quiz.js",
+    "./wordguess": "./src/wordguess.js",
+    "./tala": "./src/tala.js",
+    "./scribble": "./src/scribble.js",
+    "./telephone": "./src/telephone.js",
+    "./onet": "./src/onet.js"
   },
   "scripts": {
     "test": "node --test"

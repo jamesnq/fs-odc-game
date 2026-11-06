@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Palette, MessagesSquare, PawPrint, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, Lightbulb, SpellCheck } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -11,6 +11,11 @@ export const GAME_META = {
   xiangqi: { name: 'Cờ tướng', Icon: Castle, desc: '2 người, mỗi bên 8 phút, có chế độ xem' },
   caro: { name: 'Cờ caro', Icon: Grid3x3, desc: '2 người, 5 quân liên tiếp là thắng' },
   wordchain: { name: 'Nối từ', Icon: WholeWord, desc: '2–8 người, nối từ tiếng Việt theo lượt' },
+  scribble: { name: 'Vẽ đoán', Icon: Palette, desc: '2–12 người, một người vẽ, cả bàn đoán chữ' },
+  telephone: { name: 'Tam sao thất bản', Icon: MessagesSquare, desc: '3–12 người, viết → vẽ → đoán → vẽ… rồi xem câu chuyện thất bản' },
+  onet: { name: 'Nối thú', Icon: PawPrint, desc: '1–8 người, nối cặp thú giống nhau, đua dọn sạch bàn' },
+  quiz: { name: 'Đố vui', Icon: Lightbulb, desc: 'Kiểu Kahoot, 1–30 người, có bộ câu hỏi sẵn hoặc tự soạn' },
+  wordguess: { name: 'Đoán chữ', Icon: SpellCheck, desc: 'Đoán từ 2 chữ trong 6 lượt, đua hoặc cùng đoán' },
 };
 
 /** Icon SVG của trò chơi (bộ Lucide), màu theo từng trò. */
@@ -30,7 +35,7 @@ export default function Lobby() {
 
   return (
     <div className="lobby">
-      <section>
+      <section className="lobby-games">
         <div className="section-head">
           <div>
             <h2>Chọn trò chơi</h2>
@@ -118,8 +123,115 @@ export default function Lobby() {
           </div>
         )}
       </section>
+      <OnlinePanel />
       {creating && <CreateRoomDialog game={creating} onClose={() => setCreating(null)} />}
     </div>
+  );
+}
+
+/** Màu avatar cố định theo id để dễ phân biệt từng người. */
+const hueOf = (id) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
+const initial = (name) => name.trim().charAt(0).toUpperCase() || '?';
+
+function Avatar({ p, size = 34 }) {
+  return (
+    <span className="op-avatar" aria-hidden style={{ '--h': hueOf(p.id), width: size, height: size }}>{initial(p.name)}</span>
+  );
+}
+
+/**
+ * Người đang online cùng server (trừ mình), chia hai nhóm: ở sảnh (dễ rủ chơi) và đang trong phòng (bấm để vào cùng).
+ * Trên điện thoại khung thu gọn thành một dòng avatar, chạm để mở.
+ */
+const OPEN_KEY = 'gl_online_open';
+
+function OnlinePanel() {
+  const { online, user, call } = useApp();
+  const [q, setQ] = useState('');
+  // Ẩn / hiện danh sách, nhớ lựa chọn trên trình duyệt. Lần đầu: màn rộng mở sẵn, màn hẹp thu gọn.
+  const [open, setOpenState] = useState(() => {
+    try {
+      const v = localStorage.getItem(OPEN_KEY);
+      if (v !== null) return v === '1';
+    } catch { /* không có localStorage */ }
+    return !!window.matchMedia?.('(min-width: 1100px)').matches;
+  });
+  const setOpen = (f) => setOpenState((v) => {
+    const next = f(v);
+    try { localStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* bỏ qua */ }
+    return next;
+  });
+  const others = online.filter((p) => p.id !== user.id);
+  const match = (p) => !q || p.name.toLowerCase().includes(q.toLowerCase());
+  const byName = (a, b) => a.name.localeCompare(b.name, 'vi');
+  const idle = others.filter((p) => !p.room && match(p)).sort(byName);
+  const busy = others.filter((p) => p.room && match(p)).sort((a, b) => b.room.playing - a.room.playing || byName(a, b));
+
+  const row = (p) => {
+    const r = p.room;
+    return (
+      <li key={p.id}>
+        <Avatar p={p} />
+        <div className="op-body">
+          <b title={p.name}>{p.name}</b>
+          {r ? (
+            <span className={`op-status g-${r.game}`} title={`${GAME_META[r.game]?.name} · ${r.name}`}>
+              <GameIcon game={r.game} size={13} />
+              <span className="op-room">{r.playing ? 'Chơi' : 'Xem'} · {r.name}</span>
+            </span>
+          ) : <span className="op-status">Đang rảnh</span>}
+        </div>
+        {r && (
+          <button className="btn sm op-join" title={`Vào phòng ${r.name}`} aria-label={`Vào phòng ${r.name} cùng ${p.name}`}
+            onClick={() => call('room:join', { roomId: r.id, mode: r.playing ? 'play' : 'watch' })}>
+            <LogIn size={15} aria-hidden /> Vào
+          </button>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <aside className={`online-panel ${open ? 'open' : ''}`} aria-labelledby="online-title">
+      <button type="button" className="op-head" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="online-content"
+        title={open ? 'Ẩn danh sách' : 'Hiện danh sách người đang online'}>
+        <h2 id="online-title"><span className="dot on" aria-hidden />Đang online</h2>
+        <span className="op-stack" aria-hidden>
+          {others.slice(0, 4).map((p) => <Avatar key={p.id} p={p} size={24} />)}
+          {others.length > 4 && <span className="op-more">+{others.length - 4}</span>}
+        </span>
+        <span className="tab-count" aria-label={`${others.length} người khác`}>{others.length}</span>
+        <ChevronDown size={18} className="op-chevron" aria-hidden />
+      </button>
+      <div className="op-content" id="online-content">
+        {others.length === 0 ? (
+          <div className="op-empty">
+            <Users size={26} aria-hidden />
+            <span>Chỉ có bạn đang online.<br />Gửi link cho bạn bè để cùng chơi nhé!</span>
+          </div>
+        ) : (
+          <>
+            {others.length > 6 && (
+              <label className="search">
+                <Search size={16} aria-hidden />
+                <input type="search" placeholder="Tìm người chơi…" aria-label="Tìm người chơi" value={q} onChange={(e) => setQ(e.target.value)} />
+              </label>
+            )}
+            <div className="op-scroll">
+              {idle.length > 0 && <>
+                <h3 className="op-group">Ở sảnh <span>{idle.length}</span></h3>
+                <ul className="op-list">{idle.map(row)}</ul>
+              </>}
+              {busy.length > 0 && <>
+                <h3 className="op-group">Trong phòng <span>{busy.length}</span></h3>
+                <ul className="op-list">{busy.map(row)}</ul>
+              </>}
+              {!idle.length && !busy.length && <p className="muted small">Không tìm thấy ai</p>}
+            </div>
+          </>
+        )}
+      </div>
+    </aside>
   );
 }
 
@@ -128,8 +240,11 @@ function describeOptions(r) {
   if (r.game === 'xiangqi') return `${o.minutes} phút/bên`;
   if (r.game === 'caro') return `${o.size}×${o.size} · ${o.minutes} phút/bên${o.blockTwoEnds ? ' · chặn 2 đầu' : ''}`;
   if (r.game === 'wordchain') return `${o.turnSeconds} giây/lượt · ${o.lives} mạng${o.dictionary ? (o.strict ? ' · từ điển chặt' : ' · từ điển thoáng') : ''}`;
+  if (r.game === 'quiz') return `${o.category === 'all' ? 'Tất cả chủ đề' : o.category} · ${o.questions} câu · ${o.seconds} giây/câu`;
+  if (r.game === 'wordguess') return `${o.mode === 'coop' ? 'Cùng đoán' : 'Đua'}${o.daily ? ' · Từ của ngày' : ''} · ${o.minutes} phút`;
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
   if (r.game === 'samloc') return `Cược ${o.unit}/đơn vị · ${o.turnSeconds} giây/lượt`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;
+  if (r.game === 'onet') return o.mode === 'classic' ? `Cổ điển · ${o.rows}×${o.cols} ô · ${o.minutes} phút/màn` : `${o.rows}×${o.cols} ô · ${o.minutes} phút${o.gravity ? ' · trọng lực' : ''}`;
   return '';
 }
