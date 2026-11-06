@@ -107,6 +107,16 @@ export function bestArrangement(hand, locked = [], { objective = 'points', maxCa
   return best && { melds: best.melds, count: best.count, points: best.points };
 }
 
+/** Gom từng phỏm hợp lệ lên trước, bài rác xếp theo hạng ở cuối. Không sửa bài đầu vào. */
+export function sortByMeld(hand, locked = []) {
+  const byRank = (a, b) => rankOf(a) - rankOf(b) || a[1].localeCompare(b[1]);
+  const sorted = hand.slice().sort(byRank);
+  const best = bestArrangement(sorted, locked);
+  const melds = best?.melds || [];
+  const used = new Set(melds.flat());
+  return [...melds.flatMap((m) => m.slice().sort(byRank)), ...sorted.filter((c) => !used.has(c))];
+}
+
 export const lockedFeasible = (hand, locked) => !!bestArrangement(hand, locked, { objective: 'count' });
 
 // ---------- Ván chơi ----------

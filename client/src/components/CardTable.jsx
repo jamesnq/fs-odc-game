@@ -6,11 +6,30 @@
  *
  * seats: [{ key, rel, node, active, me }]  — rel: vị trí tương đối so với người xem (0 = dưới cùng)
  */
-export default function CardTable({ seats, center, className = '' }) {
+export default function CardTable({ seats, center, tableContent, outsideSeats = false, className = '' }) {
   const n = seats.length;
+  if (outsideSeats) {
+    return (
+      <div className={`ct ct-outside ${className} n${n}`}>
+        <div className="ct-outside-opponents">
+          {seats.filter((s) => s.rel !== 0).map((s) => (
+            <div key={s.key} className={`ct-outside-seat rel-${s.rel} ${s.me ? 'me' : ''} ${s.active ? 'active' : ''}`}>{s.node}</div>
+          ))}
+        </div>
+        <div className="ct-felt">
+          <div className="ct-center">{center}</div>
+          {tableContent}
+        </div>
+        {seats.filter((s) => s.rel === 0).map((s) => (
+          <div key={s.key} className={`ct-outside-self ${s.me ? 'me' : ''} ${s.active ? 'active' : ''}`}>{s.node}</div>
+        ))}
+      </div>
+    );
+  }
   return (
-    <div className={`ct ${className}`}>
+    <div className={`ct ${className} ${tableContent ? 'ct-with-content' : ''}`}>
       <div className={`ct-felt n${n}`}>
+        <div className="ct-arena">
         <div className="ct-center">{center}</div>
         {seats.map((s) => {
           const ang = Math.PI / 2 + (s.rel * 2 * Math.PI) / n;
@@ -23,6 +42,8 @@ export default function CardTable({ seats, center, className = '' }) {
             </div>
           );
         })}
+        </div>
+        {tableContent}
       </div>
     </div>
   );
