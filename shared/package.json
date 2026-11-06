@@ -18,7 +18,8 @@
     "./tala": "./src/tala.js",
     "./scribble": "./src/scribble.js",
     "./telephone": "./src/telephone.js",
-    "./onet": "./src/onet.js"
+    "./onet": "./src/onet.js",
+    "./snake": "./src/snake.js"
   },
   "scripts": {
     "test": "node --test"
