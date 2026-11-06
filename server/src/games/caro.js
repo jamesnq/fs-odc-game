@@ -1,4 +1,6 @@
 import { createGame, makeMove, undoMoves, coord, MIN_SIZE, MAX_SIZE } from '@game/shared/caro';
+import { chooseMove } from '@game/shared/caroBot';
+import { botLevel } from './bots.js';
 import { DuelHandler } from './duel.js';
 import { bool, clampInt } from './options.js';
 
@@ -16,7 +18,12 @@ export class CaroHandler extends DuelHandler {
       size: clampInt(options.size, MIN_SIZE, MAX_SIZE, 15),
       blockTwoEnds: bool(options.blockTwoEnds, true),
     });
+    // Tạo bàn kèm máy: máy ngồi ghế O, người tạo bàn ngồi X (đi trước)
+    const bot = botLevel(options.bot);
+    if (bot) this._addBot(room.ownerId, { level: bot, seat: 'o' });
   }
+
+  _botMove(game, level) { return { cell: chooseMove(game, level) }; }
 
   _newGame() { return createGame({ size: this.options.size, blockTwoEnds: this.options.blockTwoEnds }); }
   _move(game, a) { return makeMove(game, Number(a.cell)); }

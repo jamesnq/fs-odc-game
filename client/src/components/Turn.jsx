@@ -54,6 +54,11 @@ export function turnInfo(room, userId) {
       if (s.status !== 'playing' || !g) return null;
       return { mine: g.currentId === userId, who: g.players.find((p) => p.id === g.currentId)?.name };
     }
+    case 'quiz': {
+      const g = s.game;
+      if (s.status !== 'playing' || !g || g.phase !== 'question' || !g.me) return null;
+      return g.myChoice === null ? { mine: true, text: 'Trả lời nhanh!' } : { mine: false, text: `Chờ mọi người (${g.answered}/${g.players})` };
+    }
     default:
       return null;
   }

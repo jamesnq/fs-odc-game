@@ -3,10 +3,16 @@ import { useEffect, useRef } from 'react';
 import { useApp } from '../store.jsx';
 import { useCountdown, fmtClock } from '../hooks.js';
 import { pointsOf, fmtPts } from './Scoreboard.jsx';
+import BotPicker, { canManageBots } from './BotPicker.jsx';
 
-/** Thanh người chơi một bên: tên, điểm trong phòng, trạng thái, đồng hồ; ghế trống thì có nút ngồi. */
-export function PlayerBar({ side, s, room, chip, sitLabel }) {
-  const { call, user } = useApp();
+/**
+ * Thanh người chơi một bên: tên, điểm trong phòng, trạng thái, đồng hồ; ghế trống thì có nút ngồi.
+ * `bots`: bàn cho phép chơi với máy → ghế trống có nút thêm máy, ghế máy có nút bỏ máy.
+ */
+export function PlayerBar({ side, s, room, chip, sitLabel, bots = false }) {
+  const { call, act, user } = useApp();
+  const manage = bots && s.status !== 'playing' && canManageBots(room, user, !!s.myColor);
+  const hasBot = Object.values(s.seats).some((x) => x?.bot);
   const seat = s.seats[side];
   const running = s.running && s.turn === side;
   const ms = useCountdown(s.clocks[side], room.receivedAt, running);
@@ -23,13 +29,17 @@ export function PlayerBar({ side, s, room, chip, sitLabel }) {
           {member && !member.online && <span className="muted"> (mất kết nối)</span>}
           {s.status !== 'playing' && seat.id === room.ownerId && <span className="ready owner" title="Chủ phòng — bấm Bắt đầu"> 👑</span>}
           {s.status === 'waiting' && s.ready[side] && <span className="ready"> ✔ sẵn sàng</span>}
-          {s.status === 'over' && s.ready[side] && <span className="ready"> ↻ muốn chơi lại</span>}
+          {s.status === 'over' && s.ready[side] && !seat.bot && <span className="ready"> ↻ muốn chơi lại</span>}
+          {seat.bot && manage && (
+            <button className="btn ghost sm" onClick={() => act({ type: 'removeBot' })} title="Bỏ máy khỏi ghế này">Bỏ máy</button>
+          )}
         </span>
       ) : (
         <span className="pname muted">
           Ghế trống {!s.myColor && s.status !== 'playing' && (
             <button className="btn primary sm" onClick={() => call('room:sit', { seat: side })}>{sitLabel}</button>
           )}
+          {manage && !hasBot && <BotPicker onPick={(level) => act({ type: 'addBot', seat: side, level })} />}
         </span>
       )}
       <span className={`clock ${running ? 'running' : ''} ${ms < 60000 && running ? 'low' : ''}`}>{fmtClock(ms)}</span>

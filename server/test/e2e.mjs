@@ -713,6 +713,165 @@ if (OTHER_PASSWORD) {
   await a.req('room:delete', { roomId });
 }
 
+// ---------- Chơi với máy: Cờ caro ----------
+{
+  a.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Caro máy', game: 'caro', options: { minutes: 5, bot: 'hard' } });
+  await until(() => a.state?.state.seats.o?.bot === 'hard');
+  assert.equal(a.state.state.myColor, 'x', 'người tạo bàn ngồi X, máy ngồi O');
+  assert.equal(a.state.state.ready.o, true, 'máy luôn sẵn sàng');
+  assert.deepEqual(a.state.state.waitingFor, [], 'không phải chờ máy');
+  const list = await a.req('lobby:list');
+  assert.ok(list.rooms.find((r) => r.id === roomId).playerNames.some((n) => n.includes('Máy')), 'sảnh hiện tên máy');
+  await assert.rejects(a.act({ type: 'addBot', level: 'easy' }), /đã có máy/);
+  await a.act({ type: 'start' });
+  await until(() => a.state.state.status === 'playing');
+  await a.act({ type: 'move', cell: 7 * 15 + 7 });
+  await until(() => a.state.state.moves.length === 2, 4000);
+  assert.equal(a.state.state.turn, 'x', 'máy đã đi, tới lượt người');
+  await a.act({ type: 'requestUndo' }); // máy đồng ý cho đi lại
+  await until(() => a.state.state.moves.length === 0, 4000);
+  await a.act({ type: 'move', cell: 7 * 15 + 7 });
+  await until(() => a.state.state.moves.length === 2, 4000);
+  await a.act({ type: 'offerDraw' }); // máy từ chối cầu hòa
+  await until(() => !a.state.state.pending, 4000);
+  assert.equal(a.state.state.status, 'playing');
+  await a.act({ type: 'resign' });
+  await until(() => a.state.state.status === 'over');
+  assert.equal(a.state.state.result.winner, 'o');
+  await a.act({ type: 'start' }); // máy luôn sẵn sàng chơi lại; chơi lại thì đổi lượt: máy đi trước
+  await until(() => a.state.state.status === 'playing' && a.state.state.moves.length === 1, 4000);
+  assert.equal(a.state.state.myColor, 'o');
+  await a.act({ type: 'resign' });
+  await until(() => a.state.state.status === 'over');
+  await a.act({ type: 'removeBot' });
+  await until(() => !a.state.state.seats.x);
+  await a.act({ type: 'addBot', level: 'easy' });
+  await until(() => a.state.state.seats.x?.bot === 'easy');
+  await a.req('room:delete', { roomId });
+  console.log('✔ Cờ caro chơi với máy OK');
+}
+
+// ---------- Chơi với máy: Nối từ ----------
+{
+  a.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Nối từ máy', game: 'wordchain', options: { turnSeconds: 10, bot: 'medium', bots: 2 } });
+  await until(() => a.state?.state.seats.length === 3);
+  assert.equal(a.state.state.seats.filter((x) => x.bot).length, 2);
+  await a.act({ type: 'start' });
+  await until(() => a.state.state.status === 'playing');
+  await assert.rejects(a.act({ type: 'removeBot', id: a.state.state.seats.find((x) => x.bot).id }), /đang diễn ra/);
+  const g = () => a.state.state.game;
+  // Tới lượt mình thì nối, chờ đủ 2 từ của máy
+  const start = Date.now();
+  while (g().chain.filter((w) => w.by.startsWith('bot:')).length < 2 && Date.now() - start < 20000) {
+    if (g().currentId === a.user.id && !a.busy) {
+      a.busy = true;
+      const req = g().required;
+      await a.act({ type: 'word', text: req ? `${req} ${req}` : 'học tập' }).catch(() => a.act({ type: 'giveup' }));
+      a.busy = false;
+    }
+    if (a.state.state.status !== 'playing') break;
+    await wait(50);
+  }
+  const botWords = g().chain.filter((w) => w.by.startsWith('bot:'));
+  assert.ok(botWords.length >= 1, 'máy đã nối từ');
+  await a.req('room:delete', { roomId });
+  console.log('✔ Nối từ chơi với máy OK —', botWords.map((w) => w.text).join(', '));
+}
+
+// ---------- Đố vui ----------
+{
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Đố vui test', game: 'quiz', options: { questions: 3, seconds: 5 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => c.state?.state.seats.length === 2);
+  assert.equal(c.state.state.source.type, 'builtin');
+  assert.ok(c.state.state.bankSize >= 100, 'có bộ câu hỏi soạn sẵn');
+  await assert.rejects(b.act({ type: 'loadQuiz', text: '? Hỏi\n- a\n- b' }), /đúng 1 đáp án đúng/);
+  await assert.rejects(c.act({ type: 'loadQuiz', text: '? Hỏi\n* a\n- b' }), /người đang chơi hoặc chủ phòng/);
+  const QUIZ = '# Bộ của Bình\n? Một cộng một bằng mấy?\n* 2\n- 3\n- 11\n? Mèo kêu thế nào?\n* Meo meo\n- Gâu gâu\n? Nước sôi ở bao nhiêu độ C?\n- 50\n* 100\n- 0\n- 200\n';
+  const RIGHT = { 'Một cộng một bằng mấy?': '2', 'Mèo kêu thế nào?': 'Meo meo', 'Nước sôi ở bao nhiêu độ C?': '100' };
+  await b.act({ type: 'loadQuiz', text: QUIZ });
+  await until(() => c.state.state.source.type === 'custom');
+  assert.equal(c.state.state.source.title, 'Bộ của Bình');
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' }); // chủ phòng bấm Bắt đầu
+  await until(() => c.state.state.status === 'playing');
+  for (let k = 0; k < 3; k++) {
+    await until(() => a.state.state.game.phase === 'question' && a.state.state.game.index === k, 5000);
+    const g = a.state.state.game;
+    assert.equal(g.reveal, null, 'client không biết đáp án khi đang hỏi');
+    const right = g.question.choices.indexOf(RIGHT[g.question.q]);
+    const wrong = right === 0 ? 1 : 0;
+    await a.act({ type: 'answer', choice: right });
+    await assert.rejects(a.act({ type: 'answer', choice: wrong }), /đã trả lời/);
+    await b.act({ type: 'answer', choice: k === 1 ? right : wrong }); // cả hai đã trả lời → hiện đáp án ngay
+    await until(() => a.state.state.game.phase === 'reveal' || a.state.state.status === 'over');
+    if (a.state.state.status === 'over') break;
+    assert.equal(a.state.state.game.reveal.answer, right);
+    assert.ok(a.state.state.game.me.last.points > 500, 'trả lời đúng và nhanh được trên 500 điểm');
+    if (k < 2) await a.act({ type: 'next' });
+  }
+  await until(() => c.state.state.status === 'over', 8000);
+  const lb = c.state.state.game.leaderboard;
+  assert.equal(lb[0].id, a.user.id, 'An đúng cả 3 câu đứng đầu');
+  assert.equal(lb[0].correct, 3);
+  assert.equal(lb[1].correct, 1);
+  assert.ok(lb[0].score > 3 * 900 + 100 + 200, 'có thưởng chuỗi');
+  assert.equal(c.state.state.wins[0].wins, 1);
+  assert.equal(c.state.state.history[0].title, 'Bộ của Bình');
+  // Quay về bộ có sẵn, đổi chủ đề
+  await a.act({ type: 'useBuiltin', category: 'Lịch sử', questions: 5 });
+  await until(() => c.state.state.source.type === 'builtin' && c.state.state.options.category === 'Lịch sử');
+  await c.req('room:leave');
+  await a.req('room:delete', { roomId });
+  console.log('✔ Đố vui OK');
+}
+
+// ---------- Đoán chữ ----------
+{
+  a.state = b.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Đoán chữ test', game: 'wordguess', options: { mode: 'race', minutes: 3 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await until(() => a.state?.state.seats.length === 2);
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' }); // chủ phòng bấm Bắt đầu
+  await until(() => a.state.state.status === 'playing');
+  assert.equal(a.state.state.game.secret, null, 'không lộ từ bí mật');
+  await assert.rejects(a.act({ type: 'guess', text: 'mèo' }), /2 chữ/);
+  await assert.rejects(a.act({ type: 'guess', text: 'tành mui' }), /không có trong từ điển/);
+  await a.act({ type: 'guess', text: 'học sinh' });
+  await assert.rejects(a.act({ type: 'guess', text: 'Học Sinh' }), /Đã đoán/);
+  await until(() => a.state.state.game.mine.count === 1);
+  const m = a.state.state.game.mine.guesses[0].marks;
+  assert.equal(m.length, 2);
+  assert.ok(['g', 'y', 'x'].includes(m[0].onset));
+  await until(() => b.state.state.game.others[0]?.count === 1);
+  assert.equal(b.state.state.game.others[0].guesses[0].text, undefined, 'đang đua: không thấy chữ của người khác');
+  await a.act({ type: 'giveup' });
+  await b.act({ type: 'giveup' });
+  await until(() => a.state.state.status === 'over');
+  const secret = a.state.state.game.secret;
+  assert.ok(secret && secret.split(' ').length === 2, 'hết ván thì hiện từ bí mật');
+  assert.equal(b.state.state.game.others[0].guesses[0].text, 'học sinh', 'hết ván thì thấy chữ');
+  // Cùng đoán: chung một bàn, đoán trúng là cả đội thắng
+  await a.act({ type: 'setMode', mode: 'coop' });
+  await until(() => a.state.state.options.mode === 'coop');
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' }); // chủ phòng bấm Bắt đầu
+  await until(() => a.state.state.status === 'playing');
+  await a.act({ type: 'guess', text: 'học sinh' }).catch(() => {});
+  await b.act({ type: 'guess', text: secret }).catch(() => {}); // có thể trùng từ cũ hoặc không trúng: chỉ kiểm tra bàn chung
+  await until(() => a.state.state.game.shared.count >= 1);
+  assert.equal(b.state.state.game.shared.guesses[0].name, 'An', 'bàn chung thấy ai đoán');
+  await a.act({ type: 'giveup' }).catch(() => {});
+  await until(() => a.state.state.status === 'over');
+  await a.req('room:delete', { roomId });
+  console.log('✔ Đoán chữ OK — từ bí mật ván 1:', secret);
+}
+
 // ---------- Dọn phòng trống ----------
 {
   const p = await client('Chủ').ready;

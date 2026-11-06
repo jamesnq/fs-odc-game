@@ -4,6 +4,8 @@ import { TalaHandler } from './tala.js';
 import { CaroHandler } from './caro.js';
 import { SamLocHandler } from './samloc.js';
 import { WordChainHandler } from './wordchain.js';
+import { QuizHandler } from './quiz.js';
+import { WordGuessHandler } from './wordguess.js';
 import { ScribbleHandler } from './scribble.js';
 import { TelephoneHandler } from './telephone.js';
 import { OnetHandler } from './onet.js';
@@ -22,6 +24,8 @@ export const GAMES = {
   caro: { name: 'Cờ caro', Handler: CaroHandler },
   samloc: { name: 'Sâm lốc', Handler: SamLocHandler },
   wordchain: { name: 'Nối từ', Handler: WordChainHandler },
+  quiz: { name: 'Đố vui', Handler: QuizHandler },
+  wordguess: { name: 'Đoán chữ', Handler: WordGuessHandler },
   scribble: { name: 'Vẽ đoán', Handler: ScribbleHandler },
   telephone: { name: 'Tam sao thất bản', Handler: TelephoneHandler },
   onet: { name: 'Nối thú', Handler: OnetHandler },

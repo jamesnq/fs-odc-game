@@ -100,7 +100,7 @@ export class WordChainGame {
    */
   constructor(players, { lives = 1, isValidSyllable = null, isKnownWord = null, strict = false, first = 0, countNext = null, firstMinNext = FIRST_MIN_NEXT } = {}) {
     if (players.length < 2) throw new Error('Cần ít nhất 2 người chơi');
-    this.players = players.map((p) => ({ id: p.id, name: p.name, lives, out: false, words: 0, outAt: 0 }));
+    this.players = players.map((p) => ({ id: p.id, name: p.name, bot: p.bot || null, lives, out: false, words: 0, outAt: 0 }));
     this.turn = Number.isInteger(first) && first >= 0 && first < players.length ? first : 0;
     this.chain = []; // { text, syllables, keys, by, name, ts }
     this.used = new Set(); // khóa của các từ đã dùng
@@ -169,6 +169,7 @@ export class WordChainGame {
     if (!last) throw new Error('Chưa có từ nào để phản đối');
     const p = this.players[this.indexOf(id)];
     if (!p || p.out) throw new Error('Chỉ người chơi còn trong ván mới được phản đối');
+    if (p.bot) throw new Error('Máy không bỏ phiếu phản đối');
     if (last.by === id) throw new Error('Không thể phản đối từ của chính mình');
     if (this.objections.has(id)) this.objections.delete(id);
     else this.objections.add(id);
@@ -179,10 +180,10 @@ export class WordChainGame {
     return false;
   }
 
-  /** Số phiếu phản đối cần để gỡ từ: quá nửa số người còn lại (trừ người nối từ đó). */
+  /** Số phiếu phản đối cần để gỡ từ: quá nửa số người còn lại (trừ người nối từ đó và máy — máy không bỏ phiếu). */
   objectionsNeeded() {
     const last = this.last;
-    const voters = this.active.filter((p) => !last || p.id !== last.by).length;
+    const voters = this.active.filter((p) => !p.bot && (!last || p.id !== last.by)).length;
     return Math.floor(voters / 2) + 1;
   }
 

@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú
+# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Đố vui · Đoán chữ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -30,6 +30,7 @@
 - Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
 - **Bảng điểm** cộng dồn qua các ván (xem bên dưới)
 - **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
+- **Chơi với máy** (Dễ / Vừa / Khó): chọn khi tạo bàn (bạn cầm X đi trước) hoặc bấm **Chơi với máy** ở ghế trống. Máy luôn sẵn sàng, đồng ý chơi lại và cho đi lại, chỉ đồng ý hòa khi bàn gần kín. Máy Khó tìm trước vài nước (alpha-beta), chỉ nghĩ dưới 0,5 giây mỗi nước (`shared/src/caroBot.js`)
 
 **Nối từ** (2–8 người)
 - Mỗi từ gồm **2 chữ**, chữ đầu phải trùng chữ cuối của từ trước: *con mèo → mèo con → con đường*; không lặp từ trong ván
@@ -39,6 +40,19 @@
 - Từ vô nghĩa? Bạn bè bấm **❌ phản đối** — quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại
 - Mỗi lượt 10–60 giây, hết giờ mất 1 mạng (1–3 mạng), hết mạng bị loại; người cuối cùng còn lại thắng. Có bảng thắng qua các ván
 - Khi tới lượt, ô nhập tự điền sẵn chữ đầu — chỉ cần gõ chữ thứ hai rồi `Enter`
+- **Chơi với máy** (tối đa 3 máy mỗi bàn): chọn khi tạo bàn hoặc bấm **Chơi với máy / Thêm máy**. Máy chỉ dùng từ có trong từ điển. Máy Dễ hay bí, máy Vừa nối ngẫu nhiên, máy Khó chọn từ có chữ cuối khó nối tiếp nhất. Máy không bỏ phiếu phản đối và không được tính vào số phiếu cần để gỡ từ. Bàn đầy thì người mới vào được nhường ghế của một máy (`shared/src/wordchainBot.js`)
+
+**Đố vui** (kiểu Kahoot, 1–30 người, chơi một mình cũng được)
+- Câu hỏi trắc nghiệm 2–4 đáp án (▲ ◆ ● ■), mỗi câu 5–60 giây. Đúng được tới 1.000 điểm, trả lời càng nhanh càng nhiều điểm (`1000 × (1 − thời gian/2)`, trong 0,5 giây được trọn điểm). Đúng liên tiếp được thưởng chuỗi +100 … +500
+- **Bộ câu hỏi có sẵn** (`server/src/data/quiz-vi.json`, 423 câu, 17 chủ đề): lấy ngẫu nhiên, ít lặp lại trong phòng, chọn được chủ đề và số câu
+- **Tự soạn bộ câu hỏi** bằng văn bản đơn giản (`? câu hỏi`, `* đáp án đúng`, `- đáp án sai`, `# tên bộ`), kiểm tra ngay khi gõ, lưu nhiều bộ trên trình duyệt, bấm "Dùng bộ này" để cả phòng chơi
+- Sau mỗi câu: đáp án đúng, số người chọn từng đáp án, bảng xếp hạng; cuối ván có bục trao giải. Server giữ đáp án và tự đo thời gian, client không biết đáp án trước
+- **Phím tắt:** `1`–`4` chọn đáp án · `Enter`/`→` câu tiếp
+
+**Đoán chữ** (kiểu Wordle tiếng Việt, 1–10 người)
+- Đoán từ **2 chữ** trong 6 lượt. Mỗi chữ chấm theo **âm đầu · vần · thanh**: 🟩 đúng chỗ, 🟨 có ở chữ kia, ⬛ không có. Có bảng tổng hợp các âm đầu / vần / thanh đã thử
+- **Đua:** cùng một từ, ai đoán ra ít lượt nhất (rồi nhanh nhất) thắng; trong lúc chơi chỉ thấy màu ô của người khác. **Cùng đoán:** cả phòng chung 6 lượt. **Từ của ngày:** mọi người cùng một từ mỗi ngày
+- Đáp án lấy từ `server/src/data/vi-words-doanchu.txt` (639 từ thông dụng), từ đoán kiểm tra bằng từ điển của Nối từ
 
 **Vẽ đoán** (2–12 người)
 - Mỗi vòng ai cũng được vẽ một lần (1–6 vòng). Người vẽ chọn 1 trong 3 từ (~400 từ tiếng Việt dễ vẽ, chủ phòng có thể thêm từ riêng hoặc chỉ dùng từ riêng), vẽ trong 30–180 giây

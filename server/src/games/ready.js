@@ -1,6 +1,8 @@
 // Luật bắt đầu ván dùng chung cho mọi trò: không tự bắt đầu.
 // Người ngồi bàn bấm "Sẵn sàng"; khi mọi người đã sẵn sàng thì chủ phòng bấm "Bắt đầu".
 // Chủ phòng (nếu đang ngồi) không cần bấm sẵn sàng — bấm "Bắt đầu" là đã sẵn sàng.
+// Máy (bot) luôn được coi là đã sẵn sàng.
+import { isBot } from './bots.js';
 
 export class ReadyGate {
   constructor(room) {
@@ -8,7 +10,7 @@ export class ReadyGate {
     this.ids = new Set();
   }
 
-  has(id) { return this.ids.has(id); }
+  has(id) { return isBot(id) || this.ids.has(id); }
   delete(id) { this.ids.delete(id); }
   clear() { this.ids.clear(); }
   toggle(id) {
@@ -17,7 +19,7 @@ export class ReadyGate {
   }
 
   /** Những người ngồi bàn chưa sẵn sàng (không tính chủ phòng). */
-  waitingFor(ids) { return ids.filter((id) => id !== this.room.ownerId && !this.ids.has(id)); }
+  waitingFor(ids) { return ids.filter((id) => id !== this.room.ownerId && !this.has(id)); }
 
   /**
    * Chủ phòng bấm bắt đầu: kiểm tra quyền, số người và mọi người đã sẵn sàng.
@@ -36,6 +38,6 @@ export class ReadyGate {
 
   /** Phần gửi xuống client. */
   view(ids) {
-    return { ready: ids.filter((id) => this.ids.has(id)), waitingFor: this.waitingFor(ids) };
+    return { ready: ids.filter((id) => this.has(id)), waitingFor: this.waitingFor(ids) };
   }
 }

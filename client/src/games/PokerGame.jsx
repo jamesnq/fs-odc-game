@@ -22,13 +22,9 @@ export default function PokerGame({ room, state: s }) {
   const mySeat = s.mySeat;
   const base = mySeat >= 0 ? mySeat : 0;
   const o = s.options;
-  const [showRules, setShowRules] = useState(() => {
-    try { return localStorage.getItem('pk-rules') === '1'; } catch { return false; }
-  });
-  const toggleRules = () => setShowRules((v) => {
-    try { localStorage.setItem('pk-rules', v ? '0' : '1'); } catch { /* bỏ qua */ }
-    return !v;
-  });
+  // Luật chơi mở dạng popup (không đẩy nội dung xuống dưới bàn)
+  const [showRules, setShowRules] = useState(false);
+  const toggleRules = () => setShowRules((v) => !v);
   const hole = myHole(s);
   const myCat = useMemo(() => (hole ? describeHand(hole, h?.board || []).cat : -1), [hole?.join(), h?.board?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   useHotkeys({
@@ -147,11 +143,15 @@ export default function PokerGame({ room, state: s }) {
       <div className="pk-extras">
         <BestHandPanel s={s} />
         <div className="row pk-extras-bar">
-          <button className={`btn sm ${showRules ? 'primary' : 'ghost'}`} aria-expanded={showRules} onClick={toggleRules}>
-            <BookOpen size={14} aria-hidden /> <kbd>L</kbd> {showRules ? 'Ẩn luật chơi' : 'Xem luật chơi'}
+          <button className="btn sm ghost" aria-haspopup="dialog" onClick={toggleRules}>
+            <BookOpen size={14} aria-hidden /> <kbd>L</kbd> Xem luật chơi
           </button>
         </div>
-        {showRules && <PokerRules s={s} current={myCat} />}
+        {showRules && (
+          <Modal title="Luật Texas Hold'em" onClose={() => setShowRules(false)} wide>
+            <PokerRules s={s} current={myCat} bare />
+          </Modal>
+        )}
       </div>
       <GameInfo>
         {mySeat >= 0 && (
