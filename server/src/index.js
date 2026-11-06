@@ -8,6 +8,7 @@ import { ConnectionCounter } from './rateLimit.js';
 import { Lobby } from './lobby.js';
 import { handleConnection } from './connection.js';
 import { Voice } from './voice.js';
+import { createMetrics } from './metrics.js';
 
 // Voice chat: tắt / bật lại (vd. hết hạn mức TURN miễn phí) → báo mọi người, đưa tất cả ra khỏi kênh thoại khi tắt
 const voice = new Voice({
@@ -26,6 +27,11 @@ const io = new Server(server, {
 });
 const lobby = new Lobby(io);
 const connections = new ConnectionCounter(); // số socket đồng thời theo IP
+const metrics = createMetrics();
+const metricsTimer = setInterval(() => {
+  console.log(JSON.stringify({ event: 'runtime.metrics', ...metrics.snapshot(lobby, io) }));
+}, 60_000);
+metricsTimer.unref();
 
 io.use(authGate(connections));
 io.on('connection', (socket) => handleConnection(socket, { lobby, voice, connections }));
