@@ -396,3 +396,631 @@ tảng băng
 chim đại bàng
 con hạc
 con cò
+con chuồn chuồn kim
+con bọ rùa
+con bọ ngựa
+con châu chấu
+con dế
+con ve sầu
+con sâu
+con đom đóm
+con giun
+con cuốn chiếu
+con rết
+con bọ cạp
+con tắc kè
+con kỳ nhông
+con cóc
+con trăn
+rắn hổ mang
+rùa biển
+cá ngựa
+cá đuối
+cá nóc
+cá kiếm
+cá vàng
+cá chép
+cá trê
+cá sấu con
+tôm hùm
+cua hoàng đế
+con sò
+con hàu
+san hô
+hải cẩu
+sư tử biển
+rái cá
+thú mỏ vịt
+gấu Bắc Cực
+gấu túi
+con lười
+con chồn
+con lợn rừng
+con linh dương
+con bò tót
+con tuần lộc
+chim bồ câu
+chim sẻ
+chim én
+chim gõ kiến
+chim hồng hạc
+chim bồ nông
+thiên nga
+ngỗng
+gà tây
+gà trống
+gà con
+vịt con
+tổ chim
+trứng nở
+dấu chân
+mạng nhện
+tổ ong
+kén bướm
+quả thanh long
+quả chôm chôm
+quả vải
+quả nhãn
+quả sầu riêng
+quả măng cụt
+quả mít
+quả ổi
+quả đu đủ
+quả khế
+quả lựu
+quả hồng
+quả quýt
+quả bưởi
+quả mận
+quả dưa lưới
+quả dưa leo
+củ cải
+củ gừng
+củ khoai lang
+củ khoai môn
+củ sen
+rau muống
+rau xà lách
+súp lơ
+quả cà tím
+quả đậu bắp
+quả mướp
+quả bầu
+đậu Hà Lan
+hạt đậu phộng
+hạt dẻ
+hạt hướng dương
+bánh bao
+bánh giò
+bánh cuốn
+bánh tét
+bánh giầy
+bánh đúc
+bánh bèo
+bánh khọt
+bánh tráng
+bánh quy
+bánh rán
+bánh quẩy
+bánh sừng bò
+bánh su kem
+bánh donut
+bánh flan
+rau câu
+chè đậu đỏ
+chè trôi nước
+xôi
+bún bò
+bún chả
+bún đậu
+hủ tiếu
+mì gói
+mì Ý
+mì xào
+cơm tấm
+cơm cuộn
+sushi
+gỏi cuốn
+chả giò
+nem chua
+thịt xiên
+gà rán
+vịt quay
+cá chiên
+trứng chiên
+trứng luộc
+trứng ốp la
+khoai tây chiên
+bỏng ngô
+kẹo bông gòn
+kẹo que
+mứt dừa
+hũ mật ong
+lọ muối
+chai nước mắm
+hộp sữa
+sữa chua
+nước cam
+nước mía
+nước dừa
+ly sinh tố
+ấm trà
+tách trà
+viên đá
+ống hút
+que kem
+hộp cơm
+lồng bàn
+rổ rau
+rá vo gạo
+cái rây
+cái phễu
+cái vá
+cây cán bột
+kẹp gắp
+găng tay lò nướng
+tạp dề
+bình giữ nhiệt
+máy xay sinh tố
+máy nướng bánh mì
+ấm siêu tốc
+máy hút bụi
+bàn là
+cầu là
+máy sấy tóc
+máy khâu
+kim chỉ
+cuộn len
+kim đan
+cúc áo
+khóa kéo
+móc áo
+giỏ quần áo
+chậu rửa
+miếng bọt biển
+chai dầu gội
+bánh xà phòng
+dao cạo râu
+lọ nước hoa
+thỏi son
+hộp phấn
+sơn móng tay
+dây buộc tóc
+kẹp tóc
+bờm tóc
+áo mưa
+áo khoác
+áo len
+áo phao
+áo sơ mi
+áo thun
+quần đùi
+quần yếm
+đồ bơi
+đồ ngủ
+giày cao gót
+ủng
+giày trượt patin
+nón lá
+mũ đầu bếp
+mũ len
+kính râm
+kính bơi
+đồng hồ cát
+đồng hồ bỏ túi
+vòng tay
+khuyên tai
+huy chương
+cúp vô địch
+huy hiệu
+quạt giấy
+quạt trần
+rèm cửa
+thảm chùi chân
+kệ sách
+ghế sofa
+ghế bập bênh
+ghế đẩu
+giường tầng
+đèn bàn
+đèn pin
+đèn dầu
+đèn chùm
+đèn ngủ
+đèn đường
+chậu hoa
+bình hoa
+khung ảnh
+tranh treo tường
+tủ giày
+thùng rác
+túi rác
+chổi lông gà
+cây lau nhà
+cuộn giấy vệ sinh
+hộp khăn giấy
+ổ điện
+phích cắm
+điều khiển từ xa
+máy in
+máy chiếu
+máy chơi game
+tay cầm chơi game
+loa phóng thanh
+máy bộ đàm
+ăng ten
+vệ tinh
+kính thiên văn
+kính hiển vi
+ống nhòm
+máy tính bỏ túi
+bút mực
+bút màu
+bút dạ quang
+lọ mực
+gọt bút chì
+hộp bút
+giấy nhớ
+kẹp giấy
+ghim bấm
+băng dính
+lọ keo
+compa
+ê ke
+bảng màu
+giá vẽ
+tấm bảng trắng
+xe đạp đôi
+xe ba bánh
+xe xích lô
+xe kéo
+xe cút kít
+xe trượt tuyết
+xe đua
+xe bán kem
+xe chở rác
+xe lu
+xe đầu kéo
+xe nâng
+xe điện
+tàu điện ngầm
+tàu cao tốc
+tàu cướp biển
+thuyền thúng
+thuyền kayak
+ca nô
+phà
+bè tre
+cáp treo
+dù lượn
+ván trượt
+ván lướt sóng
+phao bơi
+mái chèo
+phao cứu sinh
+dây an toàn
+trạm xăng
+bến xe
+nhà ga
+sân bay
+bến cảng
+bãi đỗ xe
+trạm xe buýt
+vạch qua đường
+vòng xuyến
+đường hầm
+đường ray
+cầu treo
+cầu gỗ
+trường học
+bệnh viện
+siêu thị
+cửa hàng tạp hóa
+tiệm bánh
+tiệm cắt tóc
+quán cà phê
+nhà hàng
+rạp chiếu phim
+rạp xiếc
+thư viện
+bưu điện
+ngân hàng
+khách sạn
+bảo tàng
+sân vận động
+sân bóng
+công viên
+sở thú
+vườn hoa
+vườn rau
+trang trại
+chuồng gà
+chuồng ngựa
+nhà kính
+nhà sàn
+nhà rông
+lều tuyết
+kim tự tháp
+Vạn Lý Trường Thành
+tháp Eiffel
+tượng Nữ thần Tự do
+tháp nghiêng Pisa
+Chùa Một Cột
+chợ nổi
+ruộng bậc thang
+đồng lúa
+đồi chè
+đầm sen
+ao cá
+giàn nho
+bụi tre
+cây chuối
+cây đa
+cây liễu
+cây phong
+cây cọ
+cây bàng
+cây phượng
+hoa mai
+hoa đào
+hoa cúc
+hoa tulip
+hoa lan
+hoa bồ công anh
+hoa cẩm tú cầu
+cỏ bốn lá
+mầm cây
+gốc cây
+khúc gỗ
+rễ cây
+hạt giống
+giọt sương
+vũng nước
+sóng biển
+vỏ sò
+hòn sỏi
+tảng đá
+vách núi
+thung lũng
+đồi cát
+ốc đảo
+sông băng
+băng trôi
+suối nước nóng
+xoáy nước
+lốc xoáy
+bão tuyết
+mưa đá
+sương mù
+cực quang
+sao chổi
+sao băng
+thiên thạch
+sao Thổ
+Trái Đất
+hệ mặt trời
+nhật thực
+trăng khuyết
+trăng tròn
+thợ xây
+thợ mộc
+thợ điện
+thợ sửa xe
+thợ cắt tóc
+thợ may
+thợ sơn
+ngư dân
+giáo viên
+học sinh
+họa sĩ
+nhạc trưởng
+nhiếp ảnh gia
+ảo thuật gia
+diễn viên
+người đưa thư
+người giao hàng
+người bán kem
+người quét đường
+thợ làm bánh
+vận động viên
+trọng tài
+chú rể
+công chúa
+hoàng tử
+nhà vua
+hoàng hậu
+hiệp sĩ
+ninja
+thám tử
+thuyền trưởng
+thần đèn
+người khổng lồ
+người lùn
+ma cà rồng
+ma sói
+thần chết
+bà tiên
+cây chổi bay
+đũa thần
+quả cầu pha lê
+thảm bay
+chiếc đèn thần
+rương báu
+chai phép thuật
+đọc báo
+viết thư
+vẽ tranh
+tô màu
+gấp giấy
+thả diều
+tưới cây
+trồng cây
+hái quả
+nhổ cỏ
+quét nhà
+lau nhà
+rửa bát
+giặt đồ
+phơi quần áo
+ủi quần áo
+gấp quần áo
+rửa tay
+rửa mặt
+chải tóc
+cắt tóc
+buộc tóc
+mặc áo
+buộc dây giày
+che ô
+đạp xe
+chèo thuyền
+lướt sóng
+trượt tuyết
+trượt băng
+nhảy dù
+đá cầu
+đánh cầu lông
+đánh bóng bàn
+chơi bóng chuyền
+chơi bóng rổ
+đánh golf
+bắn cung
+đấu kiếm
+đấm bốc
+kéo co
+đẩy tạ
+chạy vượt rào
+nhảy cao
+nhảy xa
+trồng cây chuối
+nhào lộn
+chống đẩy
+tập yoga
+ngồi thiền
+cõng em bé
+đẩy xe nôi
+dắt chó đi dạo
+cho cá ăn
+vắt sữa bò
+cưỡi ngựa
+cưỡi voi
+đuổi bướm
+bắt đom đóm
+nặn người tuyết
+xây lâu đài cát
+nướng thịt
+chiên trứng
+cán bột
+gói bánh chưng
+thổi nến
+thổi bong bóng
+thổi sáo
+đánh trống
+chơi đàn
+hát karaoke
+múa lân
+rước đèn
+gói quà
+mở quà
+bắt tay
+vẫy tay
+vỗ tay
+ôm nhau
+ngáp
+hắt hơi
+ho
+ngáy
+té ngã
+trượt vỏ chuối
+soi gương
+đeo kính
+đo nhiệt độ
+khám bệnh
+nhổ răng
+băng bó
+chống nạng
+đào đất
+đóng đinh
+cưa gỗ
+sơn tường
+xây tường
+sửa xe
+bơm xe
+rửa xe
+đổ xăng
+đẩy xe
+kéo vali
+leo cầu thang
+đi thang máy
+chờ xe buýt
+mua vé
+đi chợ
+trả tiền
+bán hàng
+gánh hàng
+gặt lúa
+cấy lúa
+phơi thóc
+kéo lưới
+thả câu
+chong chóng
+vòng hula
+dây nhảy
+quả bóng chày
+găng tay bóng chày
+vợt tennis
+quả bóng tennis
+gậy golf
+bia bắn tên
+bao cát đấm bốc
+bàn bi lắc
+bàn bi a
+quả bi ve
+quân domino
+khối rubik
+miếng xếp hình
+ngựa gỗ
+xe đồ chơi
+tàu lượn siêu tốc
+vòng đu quay
+nhà bóng
+bập bênh
+súng nước
+bong bóng xà phòng
+đèn kéo quân
+trống cơm
+đàn tranh
+đàn bầu
+đàn violin
+đàn accordion
+chuông gió
+lục lạc
+vé xem phim
+màn sân khấu
+ghế khán giả
+bục phát biểu
+cờ đuôi nheo
+cột cờ
+lá cờ
+vòng nguyệt quế
+vòng hoa
+bó hoa
+thiệp chúc mừng
+bánh sinh nhật
+pháo giấy
+quả cầu tuyết
+đôi cánh
+cái đuôi
+chiếc sừng
+lông vũ
+bộ ria mép
+lông mày
+đầu gối
+khuỷu tay
+dấu vân tay
+lá phổi
+dạ dày
+cột sống
+bắp tay
+rốn
+gót chân

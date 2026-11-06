@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { rankOf } from '@game/shared/cards';
-import { isMeld, bestArrangement } from '@game/shared/tala';
+import { isMeld, bestArrangement, sortByMeld } from '@game/shared/tala';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import CardTable from '../components/CardTable.jsx';
@@ -16,6 +16,38 @@ const PHASE_VI = { draw: 'Bốc hoặc ăn bài', discard: 'Đánh bài', lay: '
 const sortCards = (cards, mode) => cards.slice().sort((a, b) => (mode === 'suit'
   ? a[1].localeCompare(b[1]) || rankOf(a) - rankOf(b)
   : rankOf(a) - rankOf(b) || a[1].localeCompare(b[1])));
+
+function PlayerAvatar({ index }) {
+  const colors = ['#fdba74', '#c4b5fd', '#86efac', '#93c5fd'];
+  const color = colors[index % colors.length];
+  return (
+    <span className="tl-avatar-frame" aria-hidden="true">
+    <svg className="tl-avatar" viewBox="0 0 80 112">
+      <ellipse cx="40" cy="105" rx="27" ry="5" fill="#000" opacity=".18" />
+      <g stroke="#253247" strokeWidth="2" strokeLinejoin="round">
+        <path d="M29 84v16h10l2-16m2 0v16h10V84" fill="#334155" />
+        <path d="M28 99q-8 8 1 8h11v-8m3 0v8h13q6-5-4-8" fill="#fff7ed" />
+        <path d="M26 61q-12 4-13 20l8 3 10-16m22-7q13 4 14 20l-8 3-10-16" fill={color} />
+        <path d="M14 80q-5 8 2 10 6 1 6-7m37 0q0 8 6 7 7-2 1-10" fill="#ffdbbd" />
+        <path d="M28 59q12-7 24 0l5 29q-17 6-34 0Z" fill={color} />
+        <path d="m33 62 7 8 7-8" fill="#fff7ed" />
+        <path d="M32 77h16v8H32Z" fill="#fff7ed" opacity=".65" />
+        <path d="M13 35 14 7 31 17q10-5 20 0L67 7l1 29" fill={color} />
+        <path d="m19 21-1-7 8 7m30 0 7-7-1 8" fill="#fda4af" stroke="none" />
+        <ellipse cx="40" cy="36" rx="30" ry="28" fill={color} />
+        <ellipse cx="40" cy="40" rx="24" ry="22" fill="#ffdbbd" />
+        <path d="M17 35q0-22 23-22 24 0 24 22L52 24l-4 10-11-10-10 12-1-8Z" fill={['#713f2a', '#433049', '#374151', '#775036'][index % 4]} stroke="none" />
+        <ellipse cx="30" cy="42" rx="3.5" ry="5" fill="#253247" stroke="none" />
+        <ellipse cx="50" cy="42" rx="3.5" ry="5" fill="#253247" stroke="none" />
+        <path d="M29 40h1m19 0h1" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+        <ellipse cx="23" cy="49" rx="5" ry="3" fill="#fb7185" opacity=".55" stroke="none" />
+        <ellipse cx="57" cy="49" rx="5" ry="3" fill="#fb7185" opacity=".55" stroke="none" />
+        <path d="M35 51q5 7 10 0" fill="#fb7185" strokeLinecap="round" />
+      </g>
+    </svg>
+    </span>
+  );
+}
 
 export default function TalaGame({ room, state: s }) {
   const { act } = useApp();
@@ -108,6 +140,10 @@ function Table({ s, g, act, timeLeft, inGame }) {
     setSortMode(m);
     setOrder(sortCards(hand, m));
   };
+  const doSortMeld = () => {
+    setOrder(sortByMeld(hand, me?.eaten || []));
+    setCursor(0);
+  };
 
   useHotkeys({
     d: doDraw,
@@ -119,6 +155,7 @@ function Table({ s, g, act, timeLeft, inGame }) {
     g: () => doSend(),
     u: doU,
     s: doSort,
+    p: doSortMeld,
     Escape: () => setSelected([]),
     ArrowLeft: () => setCursor((c) => Math.max(0, c - 1)),
     ArrowRight: () => setCursor((c) => Math.min(ordered.length - 1, c + 1)),
@@ -138,8 +175,9 @@ function Table({ s, g, act, timeLeft, inGame }) {
       me: isMe,
       active: isTurn,
       node: (
-        <div className={`tl-player ${isTurn ? 'turn' : ''}`}>
+        <div className={`tl-player ${isTurn ? 'turn' : ''} ${!isMe && p.eaten.length > 0 && !p.finished ? 'has-eaten' : ''}`}>
           <div className="tl-head">
+            <PlayerAvatar index={i} />
             <b className="seat-name">{p.name}</b>{isMe && <span className="seat-me">bạn</span>}
             {i === g.first && <span className="badge">Đi đầu</span>}
             {seat?.left && <span className="badge warn">Đã rời</span>}
@@ -155,8 +193,11 @@ function Table({ s, g, act, timeLeft, inGame }) {
               {!p.hand && <span className="felt-muted small">{p.handCount} lá</span>}
             </div>
           )}
-          {p.eaten.length > 0 && !p.finished && (
-            <div className="tl-row"><span className="tl-lbl">Đã ăn</span>{p.eaten.map((c) => <Card key={c} card={c} size="sm" locked />)}</div>
+          {!isMe && p.eaten.length > 0 && !p.finished && (
+            <div className="tl-eaten-side" aria-label={`Bài đã ăn của ${p.name}`}>
+              <span className="tl-lbl">Đã ăn</span>
+              <div className="tl-eaten-cards">{p.eaten.map((c) => <Card key={c} card={c} size="sm" locked />)}</div>
+            </div>
           )}
           <div className="tl-row">
             <span className="tl-lbl">Đánh {p.discardCount}/4</span>
@@ -164,23 +205,37 @@ function Table({ s, g, act, timeLeft, inGame }) {
               <Card key={c} card={c} size="sm" highlight={g.lastDiscard?.card === c} />
             ))}
           </div>
-          {p.melds.length > 0 && (
-            <div className="tl-row melds">
-              <span className="tl-lbl">Phỏm</span>
-              {p.melds.map((m, kk) => (
-                <div key={kk} className={`meld ${canSendTo(i, kk) ? 'sendable' : ''}`}
-                  onClick={() => canSendTo(i, kk) && doSend({ target: i, meldIdx: kk })}
-                  title={canSendTo(i, kk) ? 'Bấm để gửi lá đang chọn vào phỏm này' : ''}>
-                  {m.cards.map((c) => <Card key={c} card={c} size="sm" />)}
-                </div>
-              ))}
-            </div>
-          )}
           {p.finished && p.melds.length === 0 && <div className="mom">MÓM</div>}
         </div>
       ),
     };
   });
+
+  const laidMelds = g.players.some((p) => p.melds.length > 0) ? (
+    <section className="tl-laid" aria-label="Phỏm đã hạ trên bàn">
+      <h3>Phỏm đã hạ</h3>
+      <div className="tl-laid-players">
+        {g.players.map((p, i) => p.melds.length > 0 && (
+          <div className="tl-laid-player" key={p.id}>
+            <div className="tl-laid-name"><b>{p.name}</b>{i === g.me && <span className="seat-me">bạn</span>}</div>
+            <div className="tl-laid-melds">
+              {p.melds.map((m, k) => {
+                const sendable = !!canSendTo(i, k);
+                return (
+                  <button type="button" key={k} className={`meld ${sendable ? 'sendable' : ''}`}
+                    disabled={!sendable} onClick={() => doSend({ target: i, meldIdx: k })}
+                    aria-label={`Phỏm ${k + 1} của ${p.name}${sendable ? ': gửi lá đang chọn' : ''}`}
+                    title={sendable ? 'Bấm để gửi lá đang chọn vào phỏm này' : `Phỏm đã hạ của ${p.name}`}>
+                    {m.cards.map((c) => <Card key={c} card={c} size="sm" />)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  ) : null;
 
   const center = (
     <>
@@ -202,7 +257,7 @@ function Table({ s, g, act, timeLeft, inGame }) {
 
   return (
     <div className="tl-board">
-      <CardTable seats={seats} center={center} className="ct-tala" />
+      <CardTable seats={seats} center={center} tableContent={laidMelds} outsideSeats className="ct-tala" />
       {inGame && (
         <div className={`ct-hand-panel ${myTurn ? 'turn' : ''}`}>
           <div className="tl-hand">
@@ -234,6 +289,7 @@ function Table({ s, g, act, timeLeft, inGame }) {
               )}
               {g.canU && <button className="btn cta" onClick={doU}><kbd>U</kbd> Ù!</button>}
               <button className="btn ghost sm" onClick={doSort}><ArrowDownUp size={14} aria-hidden /> <kbd>S</kbd> Xếp theo {sortMode === 'rank' ? 'chất' : 'số'}</button>
+              <button className="btn ghost sm" onClick={doSortMeld} title="Gom phỏm lên trước, bài rác ra sau (P)"><ArrowDownUp size={14} aria-hidden /> <kbd>P</kbd> Xếp theo phỏm</button>
             </div>
           )}
         </div>
