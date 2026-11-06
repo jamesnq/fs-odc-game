@@ -108,7 +108,7 @@ export function BoardActions({ s, my, opp, sitLabel, rematchLabel, extra }: any)
   const { act, call } = useApp();
   const [resign, setResign] = useState(false);
   const pending = s.pending;
-  let main: any = null;
+  let main: any;
   const players = Object.values(s.seats).filter(Boolean);
   const ready = Object.entries(s.ready).filter(([, v]) => v).map(([c]) => s.seats[c]?.id);
   const over = s.status === 'over';

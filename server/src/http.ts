@@ -6,11 +6,12 @@ import path from 'node:path';
 import { APP_VERSION, CLIENT_DIST, CORS_ORIGINS, TRUST_PROXY } from './config.js';
 
 /** @param {{ micPolicy: string }} voice quyền micro phụ thuộc voice chat có bật hay không */
-export function createApp(voice: {micPolicy: string}) {
+export function createApp(voice: {micPolicy: string}, { ready = () => true }: {ready?: () => boolean} = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use(securityHeaders(voice));
   app.get('/health', (_req, res) => res.json({ ok: true, version: APP_VERSION }));
+  app.get('/ready', (_req, res) => { const ok = ready(); res.status(ok ? 200 : 503).json({ ok }); });
   if (fs.existsSync(CLIENT_DIST)) {
     app.use(express.static(CLIENT_DIST, { index: false, maxAge: '1h' }));
     app.get('*', (_req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
@@ -23,7 +24,7 @@ export function createApp(voice: {micPolicy: string}) {
 /** Header bảo mật cho mọi phản hồi HTTP (tương đương helmet, không cần thêm thư viện). */
 function securityHeaders(voice: {micPolicy: string}) {
   const middleware: RequestHandler = (req, res, next) => {
-    const host = String(req.headers.host || '').replace(/[^\w.:\-\[\]]/g, '');
+    const host = String(req.headers.host || '').replace(/[^\w.:\-[\]]/g, '');
     const ws = host ? ` wss://${host} ws://${host}` : '';
     res.setHeader('Content-Security-Policy', [
       "default-src 'self'",

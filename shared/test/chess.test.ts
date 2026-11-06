@@ -5,9 +5,7 @@ import {
   makeMove,
   legalMovesFrom,
   undoMoves,
-  isInCheck,
   squareFromAlgebraic,
-  squareName,
   isInsufficientMaterial,
 } from '../src/chess.js';
 

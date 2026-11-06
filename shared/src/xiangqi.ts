@@ -222,7 +222,7 @@ export function makeMove(state: XiangqiState, from: number, to: number) {
 
 /** Hoàn tác n nước cuối. */
 export function undoMoves(state: XiangqiState, n = 1) {
-  let board = state.board.slice();
+  const board = state.board.slice();
   const history = state.history.slice();
   let turn = state.turn;
   for (let k = 0; k < n && history.length; k++) {

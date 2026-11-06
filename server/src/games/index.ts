@@ -10,6 +10,7 @@ import { WordGuessHandler } from './wordguess.js';
 import { ScribbleHandler } from './scribble.js';
 import { TelephoneHandler } from './telephone.js';
 import { OnetHandler } from './onet.js';
+import { SnakeHandler } from './snake.js';
 
 /**
  * Các trò chơi. Mỗi Handler điều khiển một bàn trong một phòng và cần có:
@@ -31,6 +32,7 @@ export const GAMES = {
   scribble: { name: 'Vẽ đoán', Handler: ScribbleHandler },
   telephone: { name: 'Tam sao thất bản', Handler: TelephoneHandler },
   onet: { name: 'Nối thú', Handler: OnetHandler },
+  snake: { name: 'Rắn săn mồi', Handler: SnakeHandler },
 };
 
 export type GameId = keyof typeof GAMES;

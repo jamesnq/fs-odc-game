@@ -1,6 +1,6 @@
 import type { Room } from '../lobby.js';
 import { createGame, makeMove, undoMoves, coord, MIN_SIZE, MAX_SIZE } from '@game/shared/caro';
-import { chooseMove } from '@game/shared/caroBot';
+import { botPool } from '../botPool.js';
 import { botLevel } from './bots.js';
 import { DuelHandler } from './duel.js';
 import { bool, clampInt } from './options.js';
@@ -24,7 +24,7 @@ export class CaroHandler extends DuelHandler {
     if (bot) this._addBot(room.ownerId, { level: bot, seat: 'o' });
   }
 
-  _botMove(game: any, level: any) { return { cell: chooseMove(game, level) }; }
+  _botMove(game: import('@game/shared/caro').CaroState, level: string) { return botPool.run(game, level); }
 
   _newGame() { return createGame({ size: this.options.size, blockTwoEnds: this.options.blockTwoEnds }); }
   _move(game: any, a: any) { return makeMove(game, Number(a.cell)); }

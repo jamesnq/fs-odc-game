@@ -58,7 +58,7 @@ function Table({ s, g, act, timeLeft }: any) {
   useEffect(() => {
     setSelected((sel) => sel.filter((c) => hand.includes(c)));
     setCursor((c) => Math.min(c, Math.max(0, hand.length - 1)));
-  }, [handKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handKey]);
   const toggle = (c: any) => setSelected((sel) => (sel.includes(c) ? sel.filter((x) => x !== c) : [...sel, c]));
 
   const lastCombo = useMemo(() => (g.lastPlay ? classify(g.lastPlay.cards) : null), [g.lastPlay]);

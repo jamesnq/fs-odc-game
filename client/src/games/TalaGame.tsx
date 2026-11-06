@@ -104,7 +104,7 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
       return kept.length === 0 ? sortCards(hand, sortMode) : [...kept, ...added];
     });
     setSelected((sel) => sel.filter((c) => hand.includes(c)));
-  }, [handKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handKey]);
   const ordered = order.filter((c) => hand.includes(c));
   useEffect(() => { if (cursor >= ordered.length) setCursor(Math.max(0, ordered.length - 1)); }, [ordered.length, cursor]);
 
@@ -113,7 +113,7 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
     if (!hand.length) return new Set();
     const b = bestArrangement(hand, me?.eaten || []);
     return new Set(b ? b.melds.flat() : []);
-  }, [handKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handKey]);
 
   const toggle = (c: any) => setSelected((sel) => (sel.includes(c) ? sel.filter((x) => x !== c) : [...sel, c]));
   const target = selected.length === 1 ? selected[0] : selected.length === 0 ? ordered[cursor] : null;

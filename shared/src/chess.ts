@@ -438,7 +438,6 @@ export function isInsufficientMaterial(board: string[]) {
 export function getMoveNotation(state: ChessPosition, from: number, to: number, promotion: string | null) {
   const p = state.board[from];
   const type = typeOf(p);
-  const color = colorOf(p);
   const isCapture = state.board[to] !== '.' || (type === 'P' && to === state.enPassant);
 
   // 1. Nhập thành
@@ -448,7 +447,7 @@ export function getMoveNotation(state: ChessPosition, from: number, to: number, 
 
   // 2. Nước đi tốt
   if (type === 'P') {
-    let san = '';
+    let san: string;
     if (isCapture) {
       san = `${'abcdefgh'[colOf(from)]}x${squareName(to)}`;
     } else {

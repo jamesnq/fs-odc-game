@@ -111,7 +111,7 @@ export class TelephoneHandler {
         if (this.isPlaying()) throw new Error('Ván đang diễn ra');
         return this.ready.toggle(id);
       case 'text': { // bản nháp / nộp câu chữ ở bước viết
-        const i = this._requireTask(id);
+        this._requireTask(id);
         if (this.kind !== 'text') throw new Error('Bước này là bước vẽ');
         this.drafts.get(id).text = cleanText(a.text);
         return this._setDone(id, !!a.done);

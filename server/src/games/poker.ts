@@ -64,7 +64,7 @@ export class PokerHandler {
 
   sit(user: any, seat: any) {
     if (this.game.seatOf(user.id) >= 0) throw new Error('Bạn đã ngồi rồi');
-    let s = Number.isInteger(seat) ? seat : this.game.seats.findIndex((x: any) => !x);
+    const s = Number.isInteger(seat) ? seat : this.game.seats.findIndex((x: any) => !x);
     if (s < 0 || s >= this.game.seats.length || this.game.seats[s]) throw new Error('Không còn ghế trống');
     let chips = this.stacks.get(user.id);
     if (!chips || chips <= 0) chips = this.options.buyIn;

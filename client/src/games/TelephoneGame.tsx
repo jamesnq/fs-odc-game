@@ -137,7 +137,7 @@ function TextTask({ task, act }: any) {
     if (task.done || text === task.text) return undefined;
     const t = setTimeout(() => request('game:action', { type: 'text', text, done: false }).catch(() => {}), 500);
     return () => clearTimeout(t);
-  }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [text]);
   const submit = (e: any) => {
     e.preventDefault();
     act({ type: 'text', text, done: !task.done });

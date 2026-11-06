@@ -27,7 +27,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
+      - run: npm run check
       - run: npm test
       - run: npm run build
       - name: Kiểm thử tích hợp

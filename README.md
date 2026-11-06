@@ -1,6 +1,8 @@
-# 🎲 Sảnh Trò Chơi — Cờ vua · Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Đố vui · Đoán chữ
+# 🎲 Sảnh Trò Chơi — Cờ vua · Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Rắn săn mồi · Đố vui · Đoán chữ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
+
+**Tài liệu cho phát triển và AI:** [AGENTS.md](AGENTS.md) · [Kiến trúc hệ thống](docs/architecture.md) · [Convention](docs/conventions.md) · [Thêm feature](docs/feature-development.md).
 
 - **Frontend:** React 18 + Vite + TypeScript/TSX
 - **Backend:** Node.js 22+ + Express + Socket.IO + TypeScript (server giữ toàn bộ luật chơi, client không gian lận được)
@@ -76,6 +78,13 @@
 - **Gợi ý** và **đổi hình** (xáo bàn) có giới hạn lượt; hết nước đi thì bàn **tự xáo** miễn phí. Tùy chọn **trọng lực**: nối xong các hình phía trên rơi xuống
 - Server kiểm tra mọi nước nối; người xem bấm tên người chơi để xem bàn của họ. Điện thoại dọc: bàn tự xoay dọc cho ô to hơn
 - **Phím tắt:** `H` gợi ý · `S` đổi hình · `Esc` bỏ chọn
+- **Kiểu hình:** mặc định là 36 quái thú **pixel 16×16** tự vẽ theo phong cách game cầm tay cổ điển (`client/src/games/onetSprites.ts`); chuyển lại emoji ở khung Thông tin, lựa chọn lưu theo máy
+
+**Rắn săn mồi** (1–8 người, kiểu rắn trên điện thoại đen trắng đời đầu)
+- Màn hình LCD xanh 24×14 ô vẽ bằng từng điểm ảnh, điểm 4 chữ số, tiếng bíp sóng vuông khi ăn mồi. 9 cấp tốc độ, mỗi mồi được điểm bằng cấp; cứ 5 mồi hiện một **con thưởng** trong 40 bước, ăn càng sớm càng nhiều điểm
+- Mê cung: Không tường (đi xuyên mép) · Hộp kín · Đường hầm · Bốn phòng · Đường ray. Tùy chọn giới hạn thời gian
+- Mọi người cùng hạt giống, ai nhiều điểm nhất thắng. Client tự chạy rắn và gửi lượt rẽ `[bước, hướng]`; server **phát lại** để tự tính điểm (`shared/src/snake.ts`), không tin điểm client gửi. Nhiều người thì không được dừng — ai im lặng quá 4 giây, server cho rắn bò tiếp
+- **Phím:** mũi tên / `W A S D` / `2 4 6 8` · `P`/`Space` tạm dừng (chơi một mình) · điện thoại: vuốt hoặc bàn phím ảo
 
 **Bảng điểm (Cờ vua, Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người

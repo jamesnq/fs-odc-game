@@ -7,7 +7,7 @@ COPY server/package.json server/
 COPY client/package.json client/
 RUN npm ci
 COPY . .
-RUN npm run typecheck && npm test && npm run build
+RUN npm run check && npm test && npm run build
 
 # ---------- Runtime: chỉ server + client đã build ----------
 FROM node:22-alpine

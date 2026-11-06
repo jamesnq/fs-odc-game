@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Undo2, Handshake, Flag, RotateCcw, ArrowUpDown } from 'lucide-react';
-import { legalMovesFrom, colorOf, typeOf, rowOf, colOf, idx, squareName } from '@game/shared/chess';
+import { legalMovesFrom, colorOf, typeOf, rowOf, colOf } from '@game/shared/chess';
 import { useApp } from '../store.js';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.js';
@@ -14,7 +14,7 @@ const PIECE_VALUES: Record<string, any> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 }
 const STARTING_COUNTS: Record<string, any> = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
 
 export default function ChessGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+  const { act, call } = useApp();
   const [sel, setSel] = useState<any>(null);
   const [manualFlip, setManualFlip] = useState(false);
   const [promo, setPromo] = useState<any>(null); // { from, to } nếu đang chờ chọn quân phong cấp
@@ -145,10 +145,6 @@ export default function ChessGame({ room, state: s }: any) {
               const [x, y] = pos(i);
               const r = rowOf(i), c = colOf(i);
               const isLight = (r + c) % 2 === 0;
-              const isSel = sel === i;
-              const isTarget = targets.includes(i);
-              const isLastMove = s.lastMove && (s.lastMove.from === i || s.lastMove.to === i);
-              const isCheckKing = checkedKing === i;
 
               return (
                 <rect
@@ -197,7 +193,6 @@ export default function ChessGame({ room, state: s }: any) {
 
             {/* Vua bị chiếu */}
             {checkedKing >= 0 && (() => {
-              const [x, y] = pos(checkedKing);
               return (
                 <radialGradient id="check-glow" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stopColor="rgba(239, 68, 68, 0.85)" />

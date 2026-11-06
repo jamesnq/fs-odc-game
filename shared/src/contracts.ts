@@ -8,6 +8,7 @@ export type VoiceSignal = { description: { type: 'offer' | 'answer'; sdp: string
   | { candidate: { candidate?: string; sdpMid?: string | null; sdpMLineIndex?: number | null; usernameFragment?: string | null } | null; description?: never };
 export interface IncomingSignal { from: string; data: VoiceSignal }
 export type GameAction =
+  | { type: 'sync'; tick: number; inputs: import('./snake.js').SnakeInput[] }
   | { type: 'ready' | 'start' | 'rematch' | 'resign' | 'offerDraw' | 'requestUndo' | 'cancelRequest' | 'resetScore' | 'draw' | 'eat' | 'autoLay' | 'u' | 'next' | 'stop' | 'object' | 'giveup' | 'pause' | 'rabbit' | 'show' | 'rebuy' | 'sitout' | 'hint' | 'shuffle' | 'pass' }
   | { type: 'move'; from: number; to: number; promotion?: string }
   | { type: 'move'; cell: number }
@@ -76,8 +77,9 @@ export interface Responses {
   'voice:join': { iceServers: IceServer[]; peers: string[] };
 }
 export type RequestEvent = keyof Requests;
-export type Response<E extends RequestEvent> = (E extends keyof Responses ? Responses[E] : {}) & { warning?: string | null };
-export type Ack<E extends RequestEvent> = ({ ok: true } & Response<E>) | { ok: false; error: string };
+export type Response<E extends RequestEvent> = (E extends keyof Responses ? Responses[E] : object) & { warning?: string | null };
+export interface RouteRedirect { redirect: {nodeId: string} }
+export type Ack<E extends RequestEvent> = ({ ok: true; redirect?: never } & Response<E>) | ({ok: true} & RouteRedirect) | { ok: false; error: string };
 export type ClientToServerEvents = { [E in Exclude<RequestEvent, 'game:stream'>]: (payload: Requests[E], ack: (response: Ack<E>) => void) => void } & { 'game:stream': (payload: Requests['game:stream'], ack?: (response: Ack<'game:stream'>) => void) => void };
 export interface ServerToClientEvents {
   'app:version': (payload: { version: string | null }) => void;

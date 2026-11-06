@@ -50,6 +50,7 @@ export const LIMITS = {
   userIdleMs: 24 * 3600_000, // xóa danh tính không hoạt động sau 24 giờ
   roomsPerServer: 200, // tổng số phòng mỗi server (sảnh)
   roomsPerUser: 5,
+  spectatorsPerRoom: Math.max(0, Math.min(500, Number.parseInt(env.MAX_SPECTATORS_PER_ROOM || '30', 10) || 0)),
   chatHistory: 100, // số tin nhắn giữ lại mỗi phòng
   // token bucket mỗi socket: [sức chứa, số lượt hồi mỗi giây]
   events: [40, 15],

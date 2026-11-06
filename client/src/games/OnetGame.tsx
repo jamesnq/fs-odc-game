@@ -7,12 +7,31 @@ import GameInfo from '../components/GameInfo.js';
 import ConfirmDialog from '../components/ConfirmDialog.js';
 import StartBar, { ReadyMark } from '../components/StartBar.js';
 import GameOverDialog, { GoRanking } from '../components/GameOverDialog.js';
+import { SPRITES, SPRITE_NAMES } from './onetSprites.js';
 
 // 36 hình thú (emoji) — chỉ số 1..36 khớp với giá trị ô trên server
 const ANIMALS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
   '🐧', '🐦', '🐤', '🦆', '🦉', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐢', '🐍', '🐙', '🦀', '🐠', '🐬'];
 // Mỗi loại một sắc nền nhẹ để dễ phân biệt (và để vẽ bàn thu nhỏ của người khác)
 const hue = (v: any) => (v * 137) % 360;
+
+// Kiểu hình: quái thú pixel cổ điển (mặc định) hoặc emoji — lưu theo từng máy
+const SKIN_KEY = 'gl_onet_skin';
+function useSkin() {
+  const [skin, setSkin] = useState(() => { try { return localStorage.getItem(SKIN_KEY) || 'pixel'; } catch { return 'pixel'; } });
+  const set = (v: string) => { setSkin(v); try { localStorage.setItem(SKIN_KEY, v); } catch { /* bỏ qua */ } };
+  return [skin, set] as const;
+}
+
+/** Hình trên ô: quái pixel 16×16 phóng ×2, hoặc emoji. */
+function TileArt({ v, skin }: {v: number; skin: string}) {
+  if (skin === 'emoji') return <text x={CW / 2} y={CH / 2 + 1} className="onet-emoji">{ANIMALS[v - 1]}</text>;
+  return (
+    <g transform={`translate(${(CW - 32) / 2},${(CH - 5 - 32) / 2}) scale(2)`} className="onet-pixel" shapeRendering="crispEdges">
+      {SPRITES[v - 1].map((x) => <path key={x.fill} fill={x.fill} d={x.d} />)}
+    </g>
+  );
+}
 
 const CW = 40; // bề rộng ô (đơn vị SVG)
 const CH = 46; // chiều cao ô
@@ -49,6 +68,7 @@ export default function OnetGame({ room, state: s }: any) {
   const timeLeft = useCountdown(classic ? (shown?.timeLeft ?? 0) : s.timeLeft, room.receivedAt, clockRunning);
   const [giveup, setGiveup] = useState(false);
   const canPlay = playing && me && !me.done;
+  const [skin, setSkin] = useSkin();
 
   useHotkeys({
     h: () => canPlay && me.hintsLeft > 0 && act({ type: 'hint' }),
@@ -92,7 +112,7 @@ export default function OnetGame({ room, state: s }: any) {
         <div className="panel onet-stage">
           {shown && s.status !== 'waiting' ? (
             <Board key={`${s.gameNo}-${shown.id}-${shown.level}`} p={shown} rows={s.options.rows} cols={s.options.cols}
-              interactive={!!canPlay} act={act} />
+              interactive={!!canPlay} act={act} skin={skin} />
           ) : (
             <div className="onet-wait">
               <div className="onet-big">🐾 Nối thú</div>
@@ -143,6 +163,13 @@ export default function OnetGame({ room, state: s }: any) {
 
       <GameInfo>
         <Wins wins={s.wins} me={user.id} />
+        <div className="panel small onet-skin">
+          <b>Kiểu hình</b>
+          <div className="onet-skin-btns" role="radiogroup" aria-label="Kiểu hình">
+            <button type="button" role="radio" aria-checked={skin === 'pixel'} className={`btn sm ${skin === 'pixel' ? 'primary' : 'ghost'}`} onClick={() => setSkin('pixel')}>👾 Pixel cổ điển</button>
+            <button type="button" role="radio" aria-checked={skin === 'emoji'} className={`btn sm ${skin === 'emoji' ? 'primary' : 'ghost'}`} onClick={() => setSkin('emoji')}>🐶 Emoji</button>
+          </div>
+        </div>
         <div className="panel small muted">
           <b>Luật chơi</b>
           <ul>
@@ -164,7 +191,7 @@ export default function OnetGame({ room, state: s }: any) {
   );
 }
 
-function Board({ p, rows, cols, interactive, act }: any) {
+function Board({ p, rows, cols, interactive, act, skin }: any) {
   const [sel, setSel] = useState<any>(null); // [r,c]
   const [bad, setBad] = useState<any>(null); // hai ô vừa chọn sai (rung)
   const [flash, setFlash] = useState<any>(null); // { path, cells: [[r,c,v]...], key }
@@ -204,7 +231,7 @@ function Board({ p, rows, cols, interactive, act }: any) {
   useHotkeys({ Escape: () => setSel(null) });
 
   const hidden = (r: any, c: any) => pending?.some(([pr, pc]: any) => pr === r && pc === c);
-  const grid = pending ? p.grid.map((row: any, r: any) => row.map((v: any, c: any) => (hidden(r, c) ? 0 : v))) : p.grid;
+  const grid: number[][] = pending ? p.grid.map((row: any, r: any) => row.map((v: any, c: any) => (hidden(r, c) ? 0 : v))) : p.grid;
 
   const click = async (r: any, c: any) => {
     if (!interactive || !grid[r][c]) return;
@@ -231,16 +258,16 @@ function Board({ p, rows, cols, interactive, act }: any) {
   const pt = ([r, c]: any) => { const [x, y] = xy(r, c); return `${x + CW / 2},${y + CH / 2}`; };
 
   return (
-    <svg className="onet-board" viewBox={`0 0 ${W} ${H}`} role="grid" aria-label={`Bàn của ${p.name}, còn ${p.left} ô`}>
-      {grid.map((row: any, r: any) => row.map((v: any, c: any) => v ? (
+    <svg className={`onet-board ${skin === 'pixel' ? 'pixel' : ''}`} viewBox={`0 0 ${W} ${H}`} role="grid" aria-label={`Bàn của ${p.name}, còn ${p.left} ô`}>
+      {grid.map((row, r) => row.map((v, c) => v ? (
         <g key={`${r}-${c}`} className={`onet-tile ${sel && sel[0] === r && sel[1] === c ? 'sel' : ''} ${isHint(r, c) ? 'hint' : ''} ${isBad(r, c) ? 'bad' : ''}`}
           transform={`translate(${xy(r, c).join(',')})`} onClick={() => click(r, c)} role="gridcell"
-          aria-label={`Hàng ${r + 1} cột ${c + 1}`}>
+          aria-label={`Hàng ${r + 1} cột ${c + 1}${skin === 'pixel' ? `: ${SPRITE_NAMES[v - 1]}` : ''}`}>
           <g className="onet-in">
             <rect x="1.5" y="1.5" width={CW - 3} height={CH - 3} rx="6" className="onet-tile-face"
-              style={{ fill: `hsl(${hue(v)} 70% 92%)` }} />
+              style={{ fill: skin === 'pixel' ? `hsl(${hue(v)} 45% 95%)` : `hsl(${hue(v)} 70% 92%)` }} />
             <rect x="1.5" y={CH - 7} width={CW - 3} height="5.5" rx="2" className="onet-tile-edge" />
-            <text x={CW / 2} y={CH / 2 + 1} className="onet-emoji">{ANIMALS[v - 1]}</text>
+            <TileArt v={v} skin={skin} />
           </g>
         </g>
       ) : null))}
@@ -249,7 +276,7 @@ function Board({ p, rows, cols, interactive, act }: any) {
           {flash.cells.map(([r, c, v]: any) => (
             <g key={`${r}-${c}`} transform={`translate(${xy(r, c).join(',')})`} className="onet-gone">
               <rect x="1.5" y="1.5" width={CW - 3} height={CH - 3} rx="6" className="onet-tile-face sel-face" />
-              <text x={CW / 2} y={CH / 2 + 1} className="onet-emoji">{ANIMALS[v - 1]}</text>
+              <TileArt v={v} skin={skin} />
             </g>
           ))}
           <polyline points={flash.path.map(pt).join(' ')} className="onet-path" />

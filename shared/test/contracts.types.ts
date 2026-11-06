@@ -18,5 +18,5 @@ request('game:action', { type: 'teleport' });
 request('hello').then((response) => {
   response.user.id.toUpperCase();
   // @ts-expect-error response fields are correlated with the request
-  response.iceServers;
+  void response.iceServers;
 });

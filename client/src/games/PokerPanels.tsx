@@ -55,7 +55,7 @@ export function myHole(s: any) {
 export function BestHandPanel({ s }: any) {
   const hole = myHole(s);
   const board = s.hand?.board || [];
-  const info = useMemo(() => (hole ? describeHand(hole, board) : null), [hole?.join(), board.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const info = useMemo(() => (hole ? describeHand(hole, board) : null), [hole?.join(), board.join()]);
   if (!info) return null;
   const used = new Set(info.used);
   const folded = s.seats[s.mySeat]?.folded;

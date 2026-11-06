@@ -17,6 +17,7 @@ import WordChainGame from '../games/WordChainGame.js';
 import ScribbleGame from '../games/ScribbleGame.js';
 import TelephoneGame from '../games/TelephoneGame.js';
 import OnetGame from '../games/OnetGame.js';
+import SnakeGame from '../games/SnakeGame.js';
 import QuizGame from '../games/QuizGame.js';
 import WordGuessGame from '../games/WordGuessGame.js';
 import FairnessBadge from './FairnessBadge.js';
@@ -24,7 +25,7 @@ import { useHotkeys } from '../hooks.js';
 
 const GAME_COMPONENT: Record<string, any> = {
   chess: ChessGame, xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame,
-  scribble: ScribbleGame, telephone: TelephoneGame, onet: OnetGame, quiz: QuizGame, wordguess: WordGuessGame,
+  scribble: ScribbleGame, telephone: TelephoneGame, onet: OnetGame, snake: SnakeGame, quiz: QuizGame, wordguess: WordGuessGame,
 };
 
 export const SHORTCUTS: Record<string, any> = {
@@ -51,6 +52,7 @@ export const SHORTCUTS: Record<string, any> = {
   scribble: [
     ['Enter', 'Gửi câu đoán'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi đang vẽ)'], ['Z', 'Hoàn tác nét vừa vẽ'], ['1 – 5', 'Cỡ nét'],
   ],
+  snake: [['← ↑ → ↓ / W A S D', 'Đổi hướng'], ['2 4 6 8', 'Đổi hướng kiểu bàn phím điện thoại'], ['P / Space', 'Tạm dừng (chỉ khi chơi một mình)'], ['Vuốt', 'Đổi hướng trên điện thoại']],
   onet: [['Click', 'Chọn ô, rồi chọn ô cùng hình để nối'], ['H', 'Gợi ý'], ['S', 'Đổi hình (xáo bàn)'], ['Esc', 'Bỏ chọn']],
   telephone: [
     ['Enter', 'Nộp câu chữ'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi vẽ)'], ['Z', 'Hoàn tác'], ['1 – 5', 'Cỡ nét'],
@@ -238,7 +240,7 @@ function ChatPeek({ chat, me, onOpen }: any) {
     setMsg(last);
     const t = setTimeout(() => setMsg(null), 5000);
     return () => clearTimeout(t);
-  }, [last?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [last?.id]);
   if (!msg) return null;
   return (
     <button className="chat-peek" onClick={() => { setMsg(null); onOpen(); }} aria-label={`Tin nhắn mới từ ${msg.name}: ${msg.text}. Bấm để mở trò chuyện`}>

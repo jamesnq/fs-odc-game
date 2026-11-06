@@ -16,6 +16,7 @@ const DEFAULTS = {
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
   scribble: { maxSeats: 8, rounds: 3, drawSeconds: 80, hints: true, customWords: '', onlyCustom: false },
   telephone: { mode: 'classic', maxSeats: 8, writeSeconds: 40, drawSeconds: 90, suggest: true },
+  snake: { maxSeats: 4, level: 5, maze: 'none', minutes: 0 },
   onet: { mode: 'race', maxSeats: 4, rows: 9, cols: 16, minutes: 8, hints: 3, shuffles: 3, gravity: false },
 };
 
@@ -91,6 +92,12 @@ const FIELDS: Record<string, any> = {
     ['hints', 'Số lượt gợi ý', 0, 20],
     ['shuffles', 'Số lượt đổi hình (xáo bàn)', 0, 20],
     ['gravity', 'Trọng lực: nối xong các hình rơi xuống lấp chỗ trống (khó hơn)', 'bool'],
+  ],
+  snake: [
+    ['level', 'Cấp tốc độ (1 chậm – 9 nhanh, điểm mỗi mồi = cấp)', 1, 9],
+    ['maze', 'Mê cung', 'select', [['none', 'Không tường — đi xuyên mép'], ['box', 'Hộp kín — đụng viền là thua'], ['tunnel', 'Đường hầm — hai thanh ngang'], ['rooms', 'Bốn phòng — chữ thập có cửa'], ['rails', 'Đường ray — viền có cửa + hai thanh dọc']]],
+    ['maxSeats', 'Số người chơi tối đa (1 = chơi một mình)', 1, 8],
+    ['minutes', 'Giới hạn thời gian (phút, 0 = chơi tới khi đâm)', 0, 30],
   ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],

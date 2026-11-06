@@ -51,7 +51,7 @@ if (PASSWORD) {
   // Phiên đăng nhập: hello trả session, lần sau vào bằng session không cần mật khẩu
   const session = await new Promise<any>((res: any, rej: any) => {
     const s = io(URL, { transports: ['websocket'], forceNew: true, reconnection: false, auth: { password: PASSWORD } });
-    s.on('connect', () => s.emit('hello', { name: 'Phiên' }, (r: any) => { s.close(); r.ok ? res(r.session) : rej(new Error(r.error)); }));
+    s.on('connect', () => s.emit('hello', { name: 'Phiên' }, (r: any) => { s.close(); if (r.ok) res(r.session); else rej(new Error(r.error)); }));
   });
   assert.match(session, /^[\w-]+\.\d+\.[\w-]+$/);
   assert.equal(await tryConnect({ session }), 'ok');
@@ -584,6 +584,64 @@ if (OTHER_PASSWORD) {
   await wait(1500);
   await a.req('room:delete', { roomId });
   console.log('✔ Nối thú cổ điển OK');
+}
+
+// ---------- Rắn săn mồi ----------
+{
+  const { SnakeGame, W, DIRS } = await import('@game/shared/snake');
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Rắn test', game: 'snake', options: { level: 9, maze: 'box', maxSeats: 2 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => c.state?.state.seats.length === 2);
+  await b.act({ type: 'ready' });
+  await a.act({ type: 'start' });
+  await until(() => c.state.state.status === 'playing' && c.state.state.seed);
+  const s0 = c.state.state;
+  assert.equal(s0.tickMs, 70);
+  assert.ok(s0.startIn > 2000, 'có đếm ngược trước khi bò');
+  const mine = (p: any) => p.state.state.players.find((x: any) => x.id === p.user.id);
+  const opts = { seed: s0.seed, maze: 'box', level: 9 };
+  // Không cho chạy trước đồng hồ server
+  await assert.rejects(b.act({ type: 'sync', tick: 500, inputs: [] }), /lệch/);
+  await assert.rejects(c.act({ type: 'sync', tick: 1, inputs: [] }), /xem/);
+
+  // b: máy tham ăn chơi trước ở máy mình, rồi gửi lượt rẽ — server phải ra đúng điểm đó
+  const g = new SnakeGame(opts);
+  const inputs = [];
+  const safe = (d: any) => { const n = g.next(g.head, d); return !g.walls.has(n) && !g.snake.slice(0, -1).includes(n); };
+  for (let t = 0; t < 50 && g.alive; t++) {
+    const fx = g.food % W, fy = Math.floor(g.food / W), hx = g.head % W, hy = Math.floor(g.head / W);
+    const want = [fx > hx && 'right', fx < hx && 'left', fy > hy && 'down', fy < hy && 'up'].filter(Boolean);
+    const pick = [...want, ...Object.keys(DIRS)].find((d) => safe(d) && (d === g.dir || g.turn(d as unknown as Parameters<typeof g.turn>[0]) || false));
+    if (pick && pick !== g.dir && g.queue.includes(pick as unknown as Parameters<typeof g.queue.includes>[0])) inputs.push([g.tick, pick]);
+    g.step();
+  }
+  assert.ok(g.alive, 'máy còn sống sau 50 bước');
+  await wait(Math.max(0, s0.startIn + 50 * 70 - 1500));
+  await b.act({ type: 'sync', tick: 25, inputs: inputs.filter(([t]) => Number(t) < 25) });
+  await b.act({ type: 'sync', tick: 50, inputs: inputs.filter(([t]) => Number(t) >= 25) });
+  await until(() => mine(b).tick === 50);
+  assert.equal(mine(b).score, g.score, 'server phát lại ra đúng điểm');
+  assert.deepEqual(mine(b).snake, g.snake);
+  assert.equal(c.state.state.players.find((x: any) => x.id === b.user.id).length, g.length, 'người xem thấy rắn của b');
+
+  // a: không rẽ → đâm viền phải sau 17 bước
+  await a.act({ type: 'sync', tick: 30, inputs: [] });
+  await until(() => mine(a).done);
+  assert.equal(mine(a).dead, true);
+  assert.equal(mine(a).tick, W - 1 - 6);
+  await a.act({ type: 'sync', tick: 31, inputs: [] }); // gói đến trễ sau khi chết: bỏ qua êm
+  assert.equal(c.state.state.status, 'playing');
+  await b.act({ type: 'giveup' });
+  await until(() => c.state.state.status === 'over');
+  const exp = g.score > 0 ? b.user.id : null;
+  assert.equal(c.state.state.result.winner, exp);
+  if (exp) assert.deepEqual(c.state.state.result.ranking, [b.user.id, a.user.id]);
+  assert.equal(c.state.state.wins.find((w: any) => w.id === b.user.id).best, g.score);
+  await wait(1000);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Rắn săn mồi OK');
 }
 
 // ---------- Vẽ đoán ----------

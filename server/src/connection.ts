@@ -6,7 +6,7 @@ import { cleanName } from './lobby.js';
 import { GAMES, isGame } from './games/index.js';
 import { cleanSignal } from './voice.js';
 import type { GameSocket } from './socketTypes.js';
-import type { ClientToServerEvents, RequestEvent, Requests, Response } from '@game/shared/contracts';
+import type { ClientToServerEvents, RequestEvent, Requests, Response, RouteRedirect } from '@game/shared/contracts';
 
 const newUsersByIp = new WindowCounter(3600_000);
 const isPlainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -46,13 +46,16 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
    * Đăng ký sự kiện: giới hạn tần suất, kiểm tra dữ liệu, bắt lỗi và trả kết quả qua ack.
    * @param {{ auth?: boolean, kind?: 'chat'|'create'|'signal'|'draw' }} opts auth=false: không cần đăng nhập
    */
-  const on = <E extends RequestEvent>(event: E, fn: (payload: Requests[E]) => Response<E> | void | Promise<Response<E> | void>, { auth = true, kind = null }: { auth?: boolean; kind?: 'chat'|'create'|'signal'|'draw'|null } = {}) => {
+  const on = <E extends RequestEvent>(event: E, fn: (payload: Requests[E]) => Response<E> | RouteRedirect | void | Promise<Response<E> | RouteRedirect | void>, { auth = true, kind = null }: { auth?: boolean; kind?: 'chat'|'create'|'signal'|'draw'|null } = {}) => {
     const listener = async (payload: unknown, ack: unknown) => {
       const reply = typeof ack === 'function' ? ack : () => {};
       try {
+        if (lobby.frozen) throw new Error('Máy chủ đang cập nhật, hãy kết nối lại');
         if (tooFast(kind)) throw new Error('Thao tác quá nhanh, hãy chậm lại');
         if (payload !== undefined && !isPlainObject(payload)) throw new Error('Dữ liệu không hợp lệ');
         if (auth && !user) throw new Error('Chưa đăng nhập');
+        if (auth && user?.transferred) throw new Error('Danh tính đã chuyển sang máy chủ khác');
+        if (lobby.cluster && (!lobby.cluster.ready || Date.now() - lobby.cluster.renewedAt > 5000)) throw new Error('Máy chủ đang kết nối lại');
         if (user) user.lastSeen = Date.now();
         const res = await fn((payload || {}) as Requests[E]);
         reply({ ok: true, ...res });
@@ -71,9 +74,14 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
 
   // ---------- Danh tính ----------
 
-  on('hello', ({ token, tokens, name }) => {
+  on('hello', async ({ token, tokens, name }) => {
     // Mỗi server một danh tính riêng: tokens = { [serverId]: token }
-    let u = lobby.findUser((isPlainObject(tokens) && tokens![srv.id]) || token, srv.id);
+    const identityToken = (isPlainObject(tokens) && tokens[srv.id]) || token;
+    let u = lobby.findUser(identityToken, srv.id);
+    if (lobby.cluster) {
+      const identity = await lobby.cluster.identity(identityToken, srv.id);
+      if (identity) u = lobby.importUser(identity);
+    }
     if (!u) {
       const nm = cleanName(name);
       if (!nm) throw new Error('Hãy nhập tên');
@@ -82,6 +90,12 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
       newUsersByIp.add(ip);
       u = lobby.createUser(nm, srv.id);
     }
+    if (lobby.cluster) {
+      await lobby.cluster.saveIdentity(u);
+      const nodeId = await lobby.cluster.claimUser(u);
+      if (nodeId !== lobby.cluster.nodeId) return { redirect: { nodeId } };
+    }
+    u.transferred = false;
     if (user && user !== u) user.sockets.delete(socket.id); // gọi hello lần nữa với danh tính khác
     clearTimeout(u.graceTimer ?? undefined);
     u.lastSeen = Date.now();
@@ -123,18 +137,30 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
 
   on('lobby:list', () => ({ rooms: lobby.roomList(user.server), online: lobby.onlineList(user.server) }));
 
-  on('room:create', ({ name, game, options }) => {
+  on('room:create', async ({ name, game, options }) => {
     if (!isGame(game)) throw new Error('Trò chơi không hợp lệ');
+    if (lobby.draining) throw new Error('Máy chủ đang cập nhật, hãy thử lại sau');
+    if (lobby.cluster) {
+      await lobby.cluster.tick();
+      const nodeId = lobby.cluster.placement();
+      if (nodeId !== lobby.cluster.nodeId) return lobby.cluster.transfer(user, nodeId);
+    }
     const room = lobby.createRoom(user, {
       name: cleanName(name, 40) || `Bàn ${(GAMES as Record<string, any>)[game].name} của ${user.name}`,
       game,
       options: isPlainObject(options) ? options : {},
     });
     const warning = lobby.join(user, room, 'play');
+    if (lobby.cluster) await lobby.cluster.tick();
     return { roomId: room.id, warning };
   }, { kind: 'create' });
 
-  on('room:join', ({ roomId, mode }) => {
+  on('room:join', async ({ roomId, mode }) => {
+    if (lobby.cluster && !lobby.rooms.has(roomId)) {
+      await lobby.cluster.tick();
+      const nodeId = lobby.cluster.ownerOfRoom(roomId, user.server);
+      if (nodeId && nodeId !== lobby.cluster.nodeId) return lobby.cluster.transfer(user, nodeId);
+    }
     const room = lobby.roomFor(user, roomId);
     if (!room) throw new Error('Phòng không tồn tại');
     const warning = lobby.join(user, room, mode === 'watch' ? 'watch' : 'play');
@@ -264,6 +290,7 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
 
   socket.on('disconnect', () => {
     connections.dec(ip);
+    if (lobby.frozen) return;
     if (!user) return;
     const u = user;
     u.sockets.delete(socket.id);

@@ -26,7 +26,7 @@ export default function PokerGame({ room, state: s }: any) {
   const [showRules, setShowRules] = useState(false);
   const toggleRules = () => setShowRules((v) => !v);
   const hole = myHole(s);
-  const myCat = useMemo(() => (hole ? describeHand(hole, h?.board || []).cat : -1), [hole?.join(), h?.board?.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const myCat = useMemo(() => (hole ? describeHand(hole, h?.board || []).cat : -1), [hole?.join(), h?.board?.join()]);
   useHotkeys({
     t: () => s.canRabbit && act({ type: 'rabbit' }),
     s: () => s.canShow && act({ type: 'show' }),
@@ -179,7 +179,7 @@ function ActionBar({ s, o, act, myTurn, timeLeft }: any) {
   // Chuỗi đang gõ trong ô số tiền (null = hiển thị amount). Tách riêng để xóa hết được số cũ, kể cả số 0.
   const [draft, setDraft] = useState<any>(null);
   const key = o ? `${s.hand?.no}:${o.currentBet}:${o.minTo}` : '';
-  useEffect(() => { if (o) { setAmount(o.minTo); setDraft(null); } }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (o) { setAmount(o.minTo); setDraft(null); } }, [key]);
 
   const canBR = o && (o.canBet || o.canRaise);
   const clamp = (v: any) => (o ? Math.max(o.minTo, Math.min(o.maxTo, Math.round(v))) : v);
