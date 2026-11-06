@@ -489,7 +489,7 @@ if (OTHER_PASSWORD) {
     const mv = findMove(mine(a).grid);
     await a.act({ type: 'match', a: mv[0], b: mv[1] });
     await until(() => mine(a).seq > seq);
-    await wait(80); // giới hạn tần suất ~15 thao tác/giây
+    await wait(120); // giới hạn tần suất ~15 thao tác/giây: chừa token cho các phần sau
   }
   assert.ok(mine(a).done && mine(a).finishedAt != null, 'a dọn sạch bàn');
   await assert.rejects(a.act({ type: 'hint' }), /dọn xong/);
@@ -499,6 +499,7 @@ if (OTHER_PASSWORD) {
   assert.equal(c.state.state.result.winner, a.user.id);
   assert.deepEqual(c.state.state.result.ranking, [a.user.id, b.user.id]);
   assert.equal(c.state.state.wins[0].id, a.user.id);
+  await wait(1500); // cho bucket tần suất của a hồi lại trước các phần sau
   await a.req('room:delete', { roomId });
   console.log('✔ Nối thú OK');
 }
