@@ -9,6 +9,32 @@ on:
     branches-ignore: [main]
 
 jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run the complete cluster through Nginx
+        env:
+          APP_PASSWORD: compose-ci-password
+          REDIS_PASSWORD: compose-ci-redis
+          SNAPSHOT_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        run: |
+          docker compose up -d --build --wait --wait-timeout 180
+          curl --fail --retry 10 --retry-delay 2 --retry-all-errors http://127.0.0.1:3001/ready
+          node server/test/compose-smoke.mjs http://127.0.0.1:3001
+      - name: Container logs
+        if: failure()
+        env:
+          APP_PASSWORD: compose-ci-password
+          REDIS_PASSWORD: compose-ci-redis
+          SNAPSHOT_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        run: docker compose logs --tail=100
   test:
     runs-on: ubuntu-latest
     services:
