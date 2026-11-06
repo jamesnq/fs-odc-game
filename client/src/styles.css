@@ -1572,6 +1572,13 @@ button.onet-racer { cursor: pointer; }
 .onet-progress { height: 5px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
 .onet-progress div { height: 100%; background: linear-gradient(90deg, #22c55e, #a3e635); transition: width .3s var(--ease-out); }
 .onet-bar { display: flex; align-items: center; gap: 10px; }
+.onet-level { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; flex: none; }
+.onet-level b { color: var(--gold); }
+.onet-shift { font-size: 12px; color: var(--muted); }
+.onet-levelup { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; padding: 10px 18px; border-radius: 12px;
+  background: rgba(15,23,42,.9); border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: 18px; white-space: nowrap;
+  animation: onet-levelup 1.8s forwards; }
+@keyframes onet-levelup { 0% { opacity: 0; } 12%, 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
 .onet-time { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 64px; }
 .onet-time.low { color: #f87171; }
 .onet-timebar { flex: 1; min-width: 40px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; }
@@ -1608,5 +1615,5 @@ button.onet-racer { cursor: pointer; }
 .onet-rank li::before { content: counter(r); width: 18px; color: var(--muted); font-weight: 700; }
 .onet-rank li.me { border-color: var(--gold); }
 .onet-rank .onet-rname { flex: 1; }
-@media (max-width: 640px) { .onet { padding: 6px; } .onet-tl, .onet-score-unit { display: none; } .onet-bar { gap: 6px; } .onet-tools .btn { padding: 0 8px; } .onet-stage { padding: 2px; } .onet-racer { flex-basis: 100px; padding: 4px 8px; } }
-@media (prefers-reduced-motion: reduce) { .onet-tile.hint .onet-tile-face, .onet-tile.bad .onet-in, .onet-gone { animation: none; } }
+@media (max-width: 640px) { .onet { padding: 6px; } .onet-tl, .onet-score-unit, .onet-shift { display: none; } .onet-bar { gap: 6px; } .onet-tools .btn { padding: 0 8px; } .onet-stage { padding: 2px; } .onet-racer { flex-basis: 100px; padding: 4px 8px; } }
+@media (prefers-reduced-motion: reduce) { .onet-tile.hint .onet-tile-face, .onet-tile.bad .onet-in, .onet-gone { animation: none; } .onet-levelup { animation-duration: .01s; animation-delay: 1.5s; } }

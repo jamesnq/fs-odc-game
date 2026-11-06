@@ -1,9 +1,13 @@
-import { createBoard, OnetBoard, rng } from '@game/shared/onet';
+import { createBoard, OnetBoard, rng, SHIFTS } from '@game/shared/onet';
 import { bool, clampInt } from './options.js';
 import { ReadyGate } from './ready.js';
 
 // Nối thú: mọi người chơi CÙNG một bàn (cùng hạt giống), mỗi người tự nối trên bàn của mình.
-// Ai dọn sạch bàn trước thắng; hết giờ thì xếp theo điểm.
+// Kiểu đua (race): ai dọn sạch bàn trước thắng; hết giờ thì xếp theo điểm.
+// Kiểu cổ điển (classic): qua lần lượt LEVELS màn, mỗi màn tính giờ riêng và các hình dồn theo
+// một hướng khác (SHIFTS). Hết giờ ở màn nào thì dừng ở màn đó; xếp theo màn đạt được rồi điểm.
+
+export const LEVELS = SHIFTS.length;
 
 const cell = (p, rows, cols) => {
   if (!Array.isArray(p) || p.length !== 2) throw new Error('Ô không hợp lệ');
@@ -19,13 +23,14 @@ export class OnetHandler {
     let cols = clampInt(options.cols, 4, 18, 16);
     if ((rows * cols) % 2) cols = cols < 18 ? cols + 1 : cols - 1; // số ô phải chẵn
     this.options = {
+      mode: options.mode === 'classic' ? 'classic' : 'race',
       maxSeats: clampInt(options.maxSeats, 1, 8, 4),
       rows,
       cols,
       minutes: clampInt(options.minutes, 1, 30, 8),
       hints: clampInt(options.hints, 0, 20, 3),
       shuffles: clampInt(options.shuffles, 0, 20, 3),
-      gravity: bool(options.gravity, false),
+      gravity: options.mode !== 'classic' && bool(options.gravity, false),
     };
     this.seats = [];
     this.ready = new ReadyGate(room);
@@ -44,6 +49,7 @@ export class OnetHandler {
   isPlaying() { return this.status === 'playing'; }
   seated(id) { return this.seats.some((s) => s.id === id); }
   player(id) { return this.players.find((p) => p.id === id); }
+  get classic() { return this.options.mode === 'classic'; }
 
   rename(id, name) {
     for (const s of this.seats) if (s.id === id) s.name = name;
@@ -66,6 +72,7 @@ export class OnetHandler {
     if (this.status === 'playing' && p && !p.done) {
       p.gaveUp = true;
       p.done = true;
+      clearTimeout(p.timer);
       this.room.system(`${p.name} rời bàn — bỏ cuộc`);
       this._checkEnd();
     }
@@ -100,6 +107,10 @@ export class OnetHandler {
         p.seq++;
         p.last = { seq: p.seq, path, cells: [x, y], points, combo: p.board.combo, autoShuffled };
         p.hint = null;
+        if (p.board.cleared && this.classic) {
+          this._levelCleared(p);
+          return;
+        }
         if (p.board.cleared) {
           p.done = true;
           p.finishedAt = Date.now() - this.startedAt;
@@ -131,6 +142,7 @@ export class OnetHandler {
       case 'giveup': {
         p.gaveUp = true;
         p.done = true;
+        clearTimeout(p.timer);
         this.room.system(`${p.name} bỏ cuộc`);
         this._checkEnd();
         return;
@@ -143,11 +155,16 @@ export class OnetHandler {
   _start() {
     const seed = (Math.random() * 2 ** 32) >>> 0;
     const { rows, cols, gravity, hints, shuffles } = this.options;
+    this.seed = seed;
     const grid = createBoard(rows, cols, seed);
     this.players = this.seats.map((s, i) => ({
       id: s.id,
       name: s.name,
-      board: new OnetBoard(grid, { gravity, rand: rng(seed + 1 + i) }),
+      board: new OnetBoard(grid, { shift: this.classic ? SHIFTS[0] : gravity ? 'down' : 'none', rand: rng(seed + 1 + i) }),
+      level: 1,
+      deadline: 0,
+      timer: null,
+      timedOut: false,
       hintsLeft: hints,
       shufflesLeft: shuffles,
       hint: null,
@@ -166,6 +183,12 @@ export class OnetHandler {
     const ms = this.options.minutes * 60_000;
     this.deadline = this.startedAt + ms;
     clearTimeout(this.timer);
+    if (this.classic) {
+      for (const p of this.players) this._arm(p);
+      const who = this.players.length > 1 ? `${this.players.length} người cùng đua` : 'chơi một mình';
+      this.room.system(`Ván ${this.gameNo} (cổ điển) bắt đầu: ${LEVELS} màn ${rows}×${cols} ô, mỗi màn ${this.options.minutes} phút — ${who}.`);
+      return;
+    }
     this.timer = setTimeout(() => {
       if (this.status !== 'playing') return;
       this.room.system('⏰ Hết giờ!');
@@ -176,12 +199,53 @@ export class OnetHandler {
     this.room.system(`Ván ${this.gameNo} bắt đầu: ${rows}×${cols} ô, ${this.options.minutes} phút — ${who}. Nối nhanh lên!`);
   }
 
+  /** Chế độ cổ điển: đặt đồng hồ cho màn hiện tại của người chơi. */
+  _arm(p) {
+    const ms = this.options.minutes * 60_000;
+    p.deadline = Date.now() + ms;
+    clearTimeout(p.timer);
+    p.timer = setTimeout(() => {
+      if (this.status !== 'playing' || p.done) return;
+      p.done = true;
+      p.timedOut = true;
+      this.room.system(`⏰ ${p.name} hết giờ ở màn ${p.level}`);
+      this._checkEnd();
+      this.room.changed();
+    }, ms);
+  }
+
+  /** Chế độ cổ điển: dọn xong một màn → thưởng giờ, sang màn sau (hoặc phá đảo). */
+  _levelCleared(p) {
+    const bonus = Math.ceil(Math.max(0, p.deadline - Date.now()) / 1000);
+    p.board.score += bonus;
+    p.bonus += bonus;
+    if (p.level >= LEVELS) {
+      clearTimeout(p.timer);
+      p.done = true;
+      p.finishedAt = Date.now() - this.startedAt;
+      const rank = this.players.filter((q) => q.finishedAt != null).length;
+      this.room.system(`${rank === 1 ? '🏆' : '✅'} ${p.name} phá đảo ${LEVELS} màn sau ${fmtDur(p.finishedAt)}!`);
+      this._checkEnd();
+      return;
+    }
+    p.level++;
+    const { rows, cols } = this.options;
+    // Mọi người gặp cùng một bàn ở cùng một màn
+    p.board.load(createBoard(rows, cols, (this.seed + p.level * 7919) >>> 0), SHIFTS[p.level - 1]);
+    p.shufflesLeft++; // qua màn được thêm một lượt đổi hình
+    p.hint = null;
+    p.last = null;
+    p.seq++;
+    this._arm(p);
+  }
+
   _checkEnd() {
     if (this.status === 'playing' && this.players.every((p) => p.done)) this._finish();
   }
 
   _ranking() {
     return [...this.players].sort((x, y) => {
+      if (x.level !== y.level) return y.level - x.level;
       const fx = x.finishedAt ?? Infinity, fy = y.finishedAt ?? Infinity;
       if (fx !== fy) return fx - fy;
       if (x.gaveUp !== y.gaveUp) return x.gaveUp ? 1 : -1;
@@ -191,6 +255,7 @@ export class OnetHandler {
 
   _finish() {
     clearTimeout(this.timer);
+    for (const p of this.players) clearTimeout(p.timer);
     this.status = 'over';
     const ranking = this._ranking();
     const top = ranking[0];
@@ -221,6 +286,7 @@ export class OnetHandler {
       myId: this.seated(viewerId) ? viewerId : null,
       timeLeft: playing ? Math.max(0, this.deadline - Date.now()) : 0,
       timeTotal: this.options.minutes * 60_000,
+      levels: LEVELS,
       players: this.players.map((p) => ({
         id: p.id,
         name: p.name,
@@ -233,6 +299,10 @@ export class OnetHandler {
         gaveUp: p.gaveUp,
         finishedAt: p.finishedAt,
         bonus: p.bonus,
+        level: p.level,
+        shift: p.board.shift,
+        timedOut: p.timedOut,
+        ...(this.classic && playing ? { timeLeft: p.done ? 0 : Math.max(0, p.deadline - Date.now()) } : {}),
         seq: p.seq,
         last: p.last,
         // Gợi ý và lượt còn lại chỉ người đó thấy
@@ -243,7 +313,10 @@ export class OnetHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() {
+    clearTimeout(this.timer);
+    for (const p of this.players) clearTimeout(p.timer);
+  }
 }
 
 function fmtDur(ms) {

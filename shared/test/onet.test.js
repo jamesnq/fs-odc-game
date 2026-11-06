@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBoard, findPath, findMove, applyGravity, remaining, OnetBoard, TILE_KINDS } from '../src/onet.js';
+import { createBoard, findPath, findMove, applyGravity, applyShift, SHIFTS, remaining, OnetBoard, TILE_KINDS } from '../src/onet.js';
 
 const G = (rows) => rows.map((s) => [...s].map((ch) => (ch === '.' ? 0 : Number(ch))));
 
@@ -71,4 +71,30 @@ test('OnetBoard trọng lực: vẫn chơi hết được', () => {
     b.match(mv[0], mv[1]);
   }
   assert.ok(b.cleared);
+});
+
+test('applyShift dồn hình theo từng hướng', () => {
+  const g = G(['1.2.', '.3..', '4..5', '.6.7']);
+  assert.deepEqual(applyShift(g, 'none'), g);
+  assert.deepEqual(applyShift(g, 'left'), G(['12..', '3...', '45..', '67..']));
+  assert.deepEqual(applyShift(g, 'right'), G(['..12', '...3', '..45', '..67']));
+  assert.deepEqual(applyShift(g, 'up'), G(['1325', '46.7', '....', '....']));
+  assert.deepEqual(applyShift(g, 'down'), G(['....', '....', '13.5', '4627']));
+  // vào giữa: hàng 0-1 dồn xuống, hàng 2-3 dồn lên
+  assert.deepEqual(applyShift(g, 'vin'), G(['....', '132.', '46.5', '...7']));
+  assert.deepEqual(applyShift(g, 'vout'), G(['132.', '....', '...5', '46.7']));
+  assert.deepEqual(applyShift(g, 'hin'), G(['.12.', '.3..', '.45.', '.67.']));
+  assert.deepEqual(applyShift(g, 'hout'), G(['1..2', '3...', '4..5', '6..7']));
+  assert.equal(SHIFTS.length, 9);
+});
+
+test('OnetBoard.load sang màn mới giữ điểm', () => {
+  const b = new OnetBoard(G(['11']), { shift: 'left' });
+  b.match([0, 0], [0, 1]);
+  assert.ok(b.cleared);
+  const score = b.score;
+  b.load(G(['22', '..']), 'down');
+  assert.equal(b.left, 2);
+  assert.equal(b.shift, 'down');
+  assert.equal(b.score, score);
 });

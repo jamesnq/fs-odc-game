@@ -15,7 +15,7 @@ const DEFAULTS = {
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
   scribble: { maxSeats: 8, rounds: 3, drawSeconds: 80, hints: true, customWords: '', onlyCustom: false },
   telephone: { maxSeats: 8, writeSeconds: 40, drawSeconds: 90, suggest: true },
-  onet: { maxSeats: 4, rows: 9, cols: 16, minutes: 8, hints: 3, shuffles: 3, gravity: false },
+  onet: { mode: 'race', maxSeats: 4, rows: 9, cols: 16, minutes: 8, hints: 3, shuffles: 3, gravity: false },
 };
 
 // Tạo bàn kèm máy (Cờ caro / Nối từ)
@@ -79,10 +79,11 @@ const FIELDS = {
     ['suggest', 'Cho lấy gợi ý ở bước viết câu đầu tiên', 'bool'],
   ],
   onet: [
+    ['mode', 'Chế độ', 'select', [['race', 'Đua dọn bàn (1 bàn, ai sạch trước thắng)'], ['classic', 'Cổ điển (9 màn, hình dồn theo hướng)']]],
     ['maxSeats', 'Số người chơi tối đa (1 = chơi một mình)', 1, 8],
     ['rows', 'Số hàng', 4, 10],
     ['cols', 'Số cột (tổng số ô phải chẵn)', 4, 18],
-    ['minutes', 'Thời gian mỗi ván (phút)', 1, 30],
+    ['minutes', 'Thời gian mỗi ván / mỗi màn ở chế độ cổ điển (phút)', 1, 30],
     ['hints', 'Số lượt gợi ý', 0, 20],
     ['shuffles', 'Số lượt đổi hình (xáo bàn)', 0, 20],
     ['gravity', 'Trọng lực: nối xong các hình rơi xuống lấp chỗ trống (khó hơn)', 'bool'],
@@ -123,7 +124,7 @@ export default function CreateRoomDialog({ game: initialGame, onClose }) {
         <label>Tên phòng</label>
         <input autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)}
           placeholder={`Bàn ${GAME_META[game].name} của ${user.name}`} />
-        {FIELDS[game].filter(([key]) => key !== 'bots' || opts[game].bot).map(([key, label, min, max]) => min === 'select' ? (
+        {FIELDS[game].filter(([key]) => (key !== 'bots' || opts[game].bot) && !(key === 'gravity' && opts[game].mode === 'classic')).map(([key, label, min, max]) => min === 'select' ? (
           <div key={key}>
             <label htmlFor={`opt-${key}`}>{label}</label>
             <select id={`opt-${key}`} value={opts[game][key]}

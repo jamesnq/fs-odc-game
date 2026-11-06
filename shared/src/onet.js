@@ -166,32 +166,59 @@ function forceAdjacentPair(grid) {
   return g;
 }
 
-/** Trọng lực: các hình trong mỗi cột rơi xuống dưới, lấp ô trống. */
-export function applyGravity(grid) {
+/** Dồn các ô khác 0 của một dãy về đầu (toStart) hoặc cuối dãy. */
+const compact = (line, toStart) => {
+  const vals = line.filter(Boolean);
+  const pad = Array(line.length - vals.length).fill(0);
+  return toStart ? [...vals, ...pad] : [...pad, ...vals];
+};
+
+/**
+ * Kiểu dồn hình sau mỗi lần nối (chế độ cổ điển: mỗi màn một kiểu, theo thứ tự này).
+ * vin/hin: hai nửa dồn vào giữa; vout/hout: hai nửa tách ra hai mép.
+ */
+export const SHIFTS = ['none', 'down', 'left', 'up', 'right', 'vin', 'hin', 'vout', 'hout'];
+
+/** Dồn các hình theo kiểu `dir` (xem SHIFTS). Trả về bàn mới. */
+export function applyShift(grid, dir) {
+  if (!dir || dir === 'none') return grid.map((row) => row.slice());
   const rows = grid.length, cols = grid[0].length;
   const g = grid.map((row) => row.slice());
-  for (let c = 0; c < cols; c++) {
-    let w = rows - 1;
-    for (let r = rows - 1; r >= 0; r--) {
-      if (g[r][c]) {
-        const v = g[r][c];
-        g[r][c] = 0;
-        g[w][c] = v;
-        w--;
-      }
+  const halves = (n, toward) => (line) => {
+    const m = Math.floor(n / 2);
+    // vào giữa: nửa đầu dồn về cuối nửa, nửa sau dồn về đầu nửa; tách ra: ngược lại
+    return [...compact(line.slice(0, m), !toward), ...compact(line.slice(m), toward)];
+  };
+  const fns = {
+    down: (l) => compact(l, false), up: (l) => compact(l, true),
+    right: (l) => compact(l, false), left: (l) => compact(l, true),
+    vin: halves(rows, true), vout: halves(rows, false),
+    hin: halves(cols, true), hout: halves(cols, false),
+  };
+  const f = fns[dir];
+  if (!f) throw new Error('Kiểu dồn không hợp lệ');
+  if (['down', 'up', 'vin', 'vout'].includes(dir)) {
+    for (let c = 0; c < cols; c++) {
+      const col = f(g.map((row) => row[c]));
+      for (let r = 0; r < rows; r++) g[r][c] = col[r];
     }
+  } else {
+    for (let r = 0; r < rows; r++) g[r] = f(g[r]);
   }
   return g;
 }
+
+/** Trọng lực: các hình trong mỗi cột rơi xuống dưới, lấp ô trống. */
+export const applyGravity = (grid) => applyShift(grid, 'down');
 
 /**
  * Bàn của một người chơi. Mọi thay đổi qua match()/shuffle()/hint().
  * rand dùng cho xáo bàn (mỗi người một chuỗi riêng).
  */
 export class OnetBoard {
-  constructor(grid, { gravity = false, rand = Math.random } = {}) {
+  constructor(grid, { gravity = false, shift = gravity ? 'down' : 'none', rand = Math.random } = {}) {
     this.grid = grid.map((row) => row.slice());
-    this.gravity = gravity;
+    this.shift = shift;
     this.rand = rand;
     this.left = remaining(this.grid);
     this.pairs = 0;
@@ -209,7 +236,7 @@ export class OnetBoard {
     if (!path) throw new Error('Hai ô này không nối được');
     this.grid[a[0]][a[1]] = 0;
     this.grid[b[0]][b[1]] = 0;
-    if (this.gravity) this.grid = applyGravity(this.grid);
+    this.grid = applyShift(this.grid, this.shift);
     this.left -= 2;
     this.pairs++;
     this.combo = now - this.lastMatchAt <= 3000 ? this.combo + 1 : 1;
@@ -222,6 +249,15 @@ export class OnetBoard {
       autoShuffled = true;
     }
     return { path, points, autoShuffled };
+  }
+
+  /** Sang bàn mới (màn tiếp theo ở chế độ cổ điển): giữ điểm, đổi bàn và kiểu dồn. */
+  load(grid, shift = 'none') {
+    this.grid = grid.map((row) => row.slice());
+    this.shift = shift;
+    this.left = remaining(this.grid);
+    this.combo = 0;
+    this.lastMatchAt = 0;
   }
 
   shuffle() { this.grid = ensureMove(shuffleBoard(this.grid, this.rand), this.rand); }
