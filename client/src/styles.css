@@ -230,6 +230,27 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
 .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 10px; }
 .room-item { display: flex; gap: 14px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; transition: border-color .15s; }
 .room-item:hover { border-color: var(--line-strong); }
+
+/* Danh sách người đang online: cột bên phải trên màn rộng, nằm giữa thẻ game và danh sách phòng trên màn hẹp */
+.lobby { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "games" "online" "rooms"; }
+.lobby-games { grid-area: games; }
+.room-list { grid-area: rooms; }
+.online-panel { grid-area: online; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+@media (min-width: 1100px) {
+  .lobby { grid-template-columns: minmax(0, 1fr) 280px; grid-template-areas: "games online" "rooms online"; column-gap: 20px; align-items: start; }
+  .online-panel { position: sticky; top: calc(var(--topbar-h, 60px) + 16px); max-height: calc(100vh - var(--topbar-h, 60px) - 40px); }
+}
+.op-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.op-head h2 { font-size: 17px; display: flex; align-items: center; }
+.online-panel .search { max-width: none; }
+.op-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; max-height: 320px; }
+@media (min-width: 1100px) { .op-list { max-height: none; } }
+.op-list li { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 10px; min-width: 0; }
+.op-list li:hover { background: rgba(255,255,255,.04); }
+.op-avatar { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--panel-2); font-weight: 700; font-size: 14px; }
+.op-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.op-body b, .op-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ri-icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--panel-2); color: var(--gc-fg, #fff); }
 .ri-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .ri-title { display: flex; align-items: center; min-width: 0; }

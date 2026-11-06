@@ -19,6 +19,7 @@ export function AppProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [user, setUser] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [online, setOnline] = useState([]); // người đang kết nối cùng server
   const [room, setRoom] = useState(null); // trạng thái phòng hiện tại
   const [toasts, setToasts] = useState([]);
   // Luồng vào app — một trạng thái duy nhất để các màn hình không giành nhau (tránh nhấp nháy):
@@ -47,6 +48,7 @@ export function AppProvider({ children }) {
     storage.name = res.user.name;
     setUser(res.user);
     setRooms(res.rooms);
+    setOnline(res.online || []);
     setPhase('ready');
     const wanted = roomFromHash();
     if (!res.roomId && wanted) {
@@ -105,6 +107,7 @@ export function AppProvider({ children }) {
     socket.on('app:version', onVersion);
     socket.on('voice:status', setVoiceStatus);
     socket.on('lobby:rooms', onRooms);
+    socket.on('lobby:online', setOnline);
     socket.on('room:state', onState);
     socket.on('room:closed', onClosed);
     socket.on('room:left', onLeft);
@@ -116,6 +119,7 @@ export function AppProvider({ children }) {
       socket.off('app:version', onVersion);
       socket.off('voice:status', setVoiceStatus);
       socket.off('lobby:rooms', onRooms);
+      socket.off('lobby:online', setOnline);
       socket.off('room:state', onState);
       socket.off('room:closed', onClosed);
       socket.off('room:left', onLeft);
@@ -177,14 +181,15 @@ export function AppProvider({ children }) {
     setRoom(null);
     setUser(null);
     setRooms([]);
+    setOnline([]);
     setServer(null);
     setAuthError('AUTH_REQUIRED');
     setPhase('auth');
   }, [room]);
 
   const value = useMemo(() => ({
-    connected, user, setUser, rooms, room, toast, phase, hello, call, act, authError, login, newVersion, server, switchServer, voiceStatus,
-  }), [newVersion, server, switchServer, connected, user, rooms, room, toast, phase, hello, call, act, authError, login, voiceStatus]);
+    connected, user, setUser, rooms, online, room, toast, phase, hello, call, act, authError, login, newVersion, server, switchServer, voiceStatus,
+  }), [newVersion, server, switchServer, connected, user, rooms, online, room, toast, phase, hello, call, act, authError, login, voiceStatus]);
 
   return (
     <Ctx.Provider value={value}>

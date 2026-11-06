@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users, LogIn } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -29,7 +29,7 @@ export default function Lobby() {
 
   return (
     <div className="lobby">
-      <section>
+      <section className="lobby-games">
         <div className="section-head">
           <div>
             <h2>Chọn trò chơi</h2>
@@ -117,8 +117,58 @@ export default function Lobby() {
           </div>
         )}
       </section>
+      <OnlinePanel />
       {creating && <CreateRoomDialog game={creating} onClose={() => setCreating(null)} />}
     </div>
+  );
+}
+
+/** Danh sách người đang online cùng server, kèm việc họ đang làm; bấm "Vào" để vào cùng bàn. */
+function OnlinePanel() {
+  const { online, user, call } = useApp();
+  const [q, setQ] = useState('');
+  // Mình luôn đứng đầu, sau đó là người đang ở sảnh (dễ rủ chơi), rồi người đang trong phòng
+  const sorted = [...online].sort((a, b) => (b.id === user.id) - (a.id === user.id) || !!a.room - !!b.room || a.name.localeCompare(b.name, 'vi'));
+  const list = q ? sorted.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())) : sorted;
+  return (
+    <aside className="online-panel" aria-labelledby="online-title">
+      <div className="op-head">
+        <h2 id="online-title"><span className="dot on" aria-hidden />Đang online</h2>
+        <span className="tab-count">{online.length}</span>
+      </div>
+      {online.length > 8 && (
+        <label className="search">
+          <Search size={16} aria-hidden />
+          <input type="search" placeholder="Tìm người chơi…" aria-label="Tìm người chơi" value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
+      )}
+      {list.length === 0 ? (
+        <p className="muted small">{q ? 'Không tìm thấy ai' : 'Chưa có ai online'}</p>
+      ) : (
+        <ul className="op-list">
+          {list.map((p) => {
+            const me = p.id === user.id;
+            return (
+              <li key={p.id}>
+                <div className="op-avatar" aria-hidden>{p.name.trim().charAt(0).toUpperCase() || '?'}</div>
+                <div className="op-body">
+                  <b title={p.name}>{p.name}{me && <span className="muted"> (bạn)</span>}</b>
+                  <span className="muted small op-status" title={p.room?.name}>
+                    {p.room ? <>{p.room.playing ? 'Đang chơi' : 'Đang xem'} {GAME_META[p.room.game]?.name} · {p.room.name}</> : 'Ở sảnh'}
+                  </span>
+                </div>
+                {p.room && !me && (
+                  <button className="btn sm" title={`Vào phòng ${p.room.name}`} aria-label={`Vào phòng của ${p.name}`}
+                    onClick={() => call('room:join', { roomId: p.room.id, mode: 'play' })}>
+                    <LogIn size={16} aria-hidden /> Vào
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </aside>
   );
 }
 
