@@ -1761,9 +1761,8 @@ button.onet-racer { cursor: pointer; }
 .snake-big { font-size: 26px; font-weight: 800; letter-spacing: .12em; }
 .snake-pad { display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 42px); gap: 8px;
   grid-template-areas: ". up ." "left mid right" ". down ."; }
-.snake-pad .k { border: 0; border-radius: 12px; background: linear-gradient(#e8edf1, #b9c3cc); color: #1d2630; font: 700 15px/1 system-ui, sans-serif;
+.snake-pad .k { border: 0; border-radius: 12px; background: linear-gradient(#e8edf1, #b9c3cc); color: #1d2630; font: 700 18px/1 system-ui, sans-serif;
   display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; box-shadow: 0 2px 0 #6b7782; touch-action: none; }
-.snake-pad .k span { font-size: 10px; opacity: .6; }
 .snake-pad .k:active { transform: translateY(2px); box-shadow: none; }
 .snake-pad .up { grid-area: up; } .snake-pad .down { grid-area: down; } .snake-pad .left { grid-area: left; } .snake-pad .right { grid-area: right; }
 .snake-pad .mid { grid-area: mid; border-radius: 50%; width: 36px; height: 36px; justify-self: center; align-self: center; }

@@ -324,15 +324,15 @@ function LocalPlay({ s, me, room, beep, theme }) {
 
   const pad = (
     <div className="snake-pad">
-      <button type="button" className="k up" onPointerDown={(e) => { e.preventDefault(); turn('up'); }} aria-label="Lên">2<span>▲</span></button>
-      <button type="button" className="k left" onPointerDown={(e) => { e.preventDefault(); turn('left'); }} aria-label="Trái">4<span>◀</span></button>
+      <button type="button" className="k up" onPointerDown={(e) => { e.preventDefault(); turn('up'); }} aria-label="Lên">▲</button>
+      <button type="button" className="k left" onPointerDown={(e) => { e.preventDefault(); turn('left'); }} aria-label="Trái">◀</button>
       {solo ? (
         <button type="button" className="k mid" onClick={togglePause} aria-label={r.paused ? 'Chơi tiếp' : 'Tạm dừng'}>
           {r.paused ? <Play size={16} /> : <Pause size={16} />}
         </button>
       ) : <span className="k mid blank" />}
-      <button type="button" className="k right" onPointerDown={(e) => { e.preventDefault(); turn('right'); }} aria-label="Phải">6<span>▶</span></button>
-      <button type="button" className="k down" onPointerDown={(e) => { e.preventDefault(); turn('down'); }} aria-label="Xuống">8<span>▼</span></button>
+      <button type="button" className="k right" onPointerDown={(e) => { e.preventDefault(); turn('right'); }} aria-label="Phải">▶</button>
+      <button type="button" className="k down" onPointerDown={(e) => { e.preventDefault(); turn('down'); }} aria-label="Xuống">▼</button>
     </div>
   );
 
