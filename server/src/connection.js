@@ -29,10 +29,12 @@ export function handleConnection(socket, { lobby, voice, connections }) {
     chat: tokenBucket(LIMITS.chat),
     create: tokenBucket(LIMITS.create),
     signal: tokenBucket(LIMITS.signal),
+    draw: tokenBucket(LIMITS.draw),
   };
   let blocked = 0;
   const tooFast = (kind) => {
-    const ok = kind === 'signal' ? buckets.signal() : buckets.events() && (!kind || buckets[kind]());
+    // Tín hiệu WebRTC và nét vẽ đến dồn dập: dùng bucket riêng, không tính vào "events"
+    const ok = kind === 'signal' || kind === 'draw' ? buckets[kind]() : buckets.events() && (!kind || buckets[kind]());
     if (ok) return false;
     if (++blocked >= LIMITS.abuseDisconnect) socket.disconnect(true);
     return true;
@@ -40,7 +42,7 @@ export function handleConnection(socket, { lobby, voice, connections }) {
 
   /**
    * Đăng ký sự kiện: giới hạn tần suất, kiểm tra dữ liệu, bắt lỗi và trả kết quả qua ack.
-   * @param {{ auth?: boolean, kind?: 'chat'|'create'|'signal' }} opts auth=false: không cần đăng nhập
+   * @param {{ auth?: boolean, kind?: 'chat'|'create'|'signal'|'draw' }} opts auth=false: không cần đăng nhập
    */
   const on = (event, fn, { auth = true, kind = null } = {}) => {
     socket.on(event, async (payload, ack) => {
@@ -179,6 +181,7 @@ export function handleConnection(socket, { lobby, voice, connections }) {
     const room = lobby.currentRoom(user);
     const t = String(text || '').trim().slice(0, 300);
     if (!t) return;
+    room.handler.censorChat?.(user.id, t);
     room.addChat({ from: user.id, name: user.name, text: t });
     room.changed();
   }, { kind: 'chat' });
@@ -200,6 +203,15 @@ export function handleConnection(socket, { lobby, voice, connections }) {
     if (typeof room.handler.query !== 'function') throw new Error('Trò chơi không hỗ trợ');
     return { data: room.handler.query(user.id, q) };
   });
+
+  // Dữ liệu gửi liên tục của game (nét vẽ): chuyển thẳng cho các thành viên khác, không phát lại cả trạng thái phòng
+  on('game:stream', (p) => {
+    const room = lobby.currentRoom(user);
+    const out = typeof room.handler.stream === 'function' && room.handler.stream(user.id, p);
+    if (!out) return;
+    const others = [...room.members].filter((id) => id !== user.id).map((id) => 'u:' + id);
+    if (others.length) lobby.io.to(others).emit('game:stream', out);
+  }, { kind: 'draw' });
 
   // ---------- Voice chat ----------
 

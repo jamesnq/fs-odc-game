@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Undo2, Handshake, Loader2, X, Check, Trophy, Eye, Flag, RotateCcw } from 'lucide-react';
+import { Undo2, Handshake, Loader2, X, Check, Trophy, Eye, Flag } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import StartBar from './StartBar.jsx';
 import { useApp } from '../store.jsx';
 
 const KIND = {
@@ -100,7 +101,7 @@ export function ResultOverlay({ over, resetKey, title, detail, children, peek = 
 }
 
 /**
- * Hàng nút gọn ngay dưới bàn cờ (Cờ tướng / Caro): Sẵn sàng · Xin đi lại · Cầu hòa · Xin thua · Chơi lại.
+ * Hàng nút gọn ngay dưới bàn cờ (Cờ tướng / Caro): Sẵn sàng / Bắt đầu (chủ phòng) · Xin đi lại · Cầu hòa · Xin thua.
  * Xin thua hỏi lại bằng hộp xác nhận trong app. `extra`: nút riêng của từng trò (vd. lật bàn).
  */
 export function BoardActions({ s, my, opp, sitLabel, rematchLabel, extra }) {
@@ -108,33 +109,26 @@ export function BoardActions({ s, my, opp, sitLabel, rematchLabel, extra }) {
   const [resign, setResign] = useState(false);
   const pending = s.pending;
   let main = null;
-  if (!my) {
-    main = <span className="muted small ba-note">Bạn đang xem{s.status !== 'playing' ? ` · ${sitLabel}` : ''}</span>;
-  } else if (s.status === 'waiting') {
-    main = (
-      <>
-        <button className={`btn ${s.ready[my] ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })} disabled={!s.seats[opp]}>
-          {s.ready[my] ? 'Hủy sẵn sàng' : <><Check size={16} aria-hidden /> Sẵn sàng</>}
-        </button>
-        {!s.seats[opp] && <span className="muted small ba-note">Đang chờ đối thủ…</span>}
-        <button className="btn ghost" onClick={() => call('room:stand')}><span className="hide-sm">Đứng dậy xem</span><span className="show-sm">Đứng dậy</span></button>
-      </>
-    );
-  } else if (s.status === 'playing') {
-    main = (
+  const players = Object.values(s.seats).filter(Boolean);
+  const ready = Object.entries(s.ready).filter(([, v]) => v).map(([c]) => s.seats[c]?.id);
+  const over = s.status === 'over';
+  const stand = <button className="btn ghost" onClick={() => call('room:stand')}><span className="hide-sm">Đứng dậy xem</span><span className="show-sm">Đứng dậy</span></button>;
+  if (s.status === 'playing') {
+    main = my ? (
       <>
         <button className="btn" disabled={!!pending} onClick={() => act({ type: 'requestUndo' })} title="Xin đi lại (cần đối thủ đồng ý)"><Undo2 size={16} aria-hidden /> Xin đi lại</button>
         <button className="btn" disabled={!!pending} onClick={() => act({ type: 'offerDraw' })} title="Cầu hòa (cần đối thủ đồng ý)"><Handshake size={16} aria-hidden /> Cầu hòa</button>
         <button className="btn danger" onClick={() => setResign(true)}><Flag size={16} aria-hidden /> Xin thua</button>
       </>
-    );
+    ) : <span className="muted small ba-note">Bạn đang xem</span>;
   } else {
+    // Chưa chơi / vừa xong ván: sẵn sàng rồi chủ phòng bấm bắt đầu (chơi lại thì đổi bên đi trước)
     main = (
       <>
-        <button className="btn cta" disabled={s.rematch[my] || !s.seats[opp]} onClick={() => act({ type: 'rematch' })}>
-          {s.rematch[my] ? 'Đang chờ đối thủ…' : <><RotateCcw size={16} aria-hidden /> {s.rematch[opp] ? 'Đồng ý chơi lại' : rematchLabel}</>}
-        </button>
-        <button className="btn ghost" onClick={() => call('room:stand')}><span className="hide-sm">Đứng dậy xem</span><span className="show-sm">Đứng dậy</span></button>
+        {!my && <span className="muted small ba-note">Bạn đang xem · {sitLabel}</span>}
+        <StartBar players={players} ready={ready} waitingFor={s.waitingFor} seated={!!my}
+          startLabel={over ? rematchLabel : 'Bắt đầu'} readyLabel={over ? 'Muốn chơi lại' : 'Sẵn sàng'} />
+        {my && stand}
       </>
     );
   }

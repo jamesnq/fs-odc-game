@@ -53,5 +53,16 @@ chỉ giữ từ có đủ 2 chữ hợp lệ theo `vi-syllables.txt` và **chư
 Danh sách soạn tay cho trò chơi này: loại từ + danh từ thông dụng (con bò, con trâu, cái chổi, trái xoài, cây dừa…)
 mà hai nguồn trên còn thiếu. Thêm từ mới vào tệp này (mỗi dòng một từ, chữ thường) khi người chơi báo thiếu.
 
+Khi nạp, server bỏ các mục có chữ không nằm trong `vi-syllables.txt` (vd *acid amin*, *ad hoc* — không bao giờ nối được)
+và lập chỉ mục theo chữ đầu để đếm số từ còn nối tiếp: dùng cho luật "từ mở đầu không quá khó" và "nối từ cụt thì thắng luôn".
+
 Khi cần, chủ phòng vẫn có thể tắt chế độ chặt để chuyển sang chế độ thoáng
 (chỉ kiểm tra từng chữ, từ lạ bị gắn cờ ⚠ để người chơi phản đối).
+
+---
+
+# Từ cho trò Vẽ đoán
+
+`scribble-words.txt`: ~400 từ / cụm từ tiếng Việt dễ vẽ (con vật, đồ vật, món ăn, phương tiện, nghề nghiệp, hành động…),
+soạn tay cho trò chơi này. Mỗi dòng một từ, chữ thường. Thêm từ mới vào tệp này khi cần.
+Danh sách chỉ được đọc trên server; người đoán không bao giờ nhận được từ đang vẽ.
