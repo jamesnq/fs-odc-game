@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Flag, Timer, Trophy, Volume2, VolumeX, Pause, Play } from 'lucide-react';
-import { SnakeGame as Engine, replay, mazeWalls, W, H, DIRS, BONUS_TICKS } from '@game/shared/snake';
+import { SnakeGame as Engine, replay, mazeWalls, BONUS_TICKS } from '@game/shared/snake';
+import { drawClassic, drawModern, SIZE } from './snakeRender.js';
 import { useApp } from '../store.jsx';
 import { request } from '../socket.js';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
@@ -9,36 +10,28 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
 import GameOverDialog, { GoRanking } from '../components/GameOverDialog.jsx';
 
-// Rắn săn mồi — vẽ như màn hình LCD xanh của điện thoại đen trắng đời đầu:
-// mỗi ô = 4×4 "điểm ảnh LCD", điểm 4 chữ số ở góc trên, khung viền mảnh, tiếng bíp khi ăn mồi.
+// Rắn săn mồi — hai kiểu nhìn (mỗi người tự chọn, luật như nhau): "Cổ điển" màn hình LCD vàng của
+// điện thoại đen trắng, và "Hiện đại" bàn neon rắn trượt mượt. Cách vẽ nằm ở snakeRender.js.
 
 export const MAZE_LABEL = { none: 'Không tường', box: 'Hộp kín', tunnel: 'Đường hầm', rooms: 'Bốn phòng', rails: 'Đường ray' };
 
-const LCD_W = 98; // 1 viền + 24×4 + 1 viền
-const LCD_H = 67; // 9 dòng điểm + 1 viền + 14×4 + 1 viền
-const FX = 1; // gốc bàn chơi (điểm LCD)
-const FY = 10;
-const K = 6; // mỗi điểm LCD = 6×6 điểm canvas (chừa 1 khe cho giống LCD thật)
-const ON = '#2b3a26';
-const OFF = 'rgba(43, 58, 38, 0.07)';
-const BG = '#b7d7a8';
 const SYNC_MS = 300;
 
-const DIGITS = ['111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001',
-  '111100111001111', '111100111101111', '111001001001001', '111101111101111', '111101111001111'];
-// Con thưởng 7×4 điểm (chiếm 2 ô)
-const CRITTERS = [
-  ['.X...X.', 'XXXXXXX', 'X.XXX.X', '.X...X.'],
-  ['..XXX..', '.XXXXXX', 'XXXXX.X', '..X..X.'],
-  ['X.....X', '.XXXXX.', 'XX.X.XX', '.X...X.'],
-  ['...XX..', '.XXXXXX', 'XXXXXXX', '.X.X.X.'],
-];
 const KEYS = {
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
   w: 'up', s: 'down', a: 'left', d: 'right', 2: 'up', 8: 'down', 4: 'left', 6: 'right',
 };
 
 const MUTE_KEY = 'gl_snake_mute';
+const THEME_KEY = 'gl_snake_theme';
+
+function useTheme() {
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem(THEME_KEY) || 'classic'; } catch { return 'classic'; } });
+  const set = (v) => { setTheme(v); try { localStorage.setItem(THEME_KEY, v); } catch { /* bỏ qua */ } };
+  return [theme, set];
+}
+
+const paint = (theme, cv, st, f, now) => (theme === 'modern' ? drawModern(cv, st, f, now) : drawClassic(cv, st));
 
 /** Tiếng bíp sóng vuông kiểu điện thoại cổ. */
 function useBeeper() {
@@ -72,98 +65,6 @@ function useBeeper() {
   return { beep, muted, toggle };
 }
 
-/** Lớp nền: mọi điểm LCD tắt (mờ) — vẽ sẵn một lần. */
-let bgCache = null;
-function background() {
-  if (bgCache) return bgCache;
-  const c = document.createElement('canvas');
-  c.width = LCD_W * K;
-  c.height = LCD_H * K;
-  const g = c.getContext('2d');
-  g.fillStyle = BG;
-  g.fillRect(0, 0, c.width, c.height);
-  g.fillStyle = OFF;
-  for (let y = 0; y < LCD_H; y++) for (let x = 0; x < LCD_W; x++) g.fillRect(x * K, y * K, K - 1, K - 1);
-  bgCache = c;
-  return c;
-}
-
-/** Vẽ một khung hình từ trạng thái { snake, dir, food, bonus, score, walls }. */
-function draw(cv, st) {
-  const g = cv.getContext('2d');
-  g.drawImage(background(), 0, 0);
-  g.fillStyle = ON;
-  const px = (x, y) => g.fillRect(x * K, y * K, K - 1, K - 1);
-  const cellPx = (i, ox, oy) => px(FX + (i % W) * 4 + ox, FY + Math.floor(i / W) * 4 + oy);
-
-  // Điểm 4 chữ số
-  const score = String(Math.min(9999, st.score)).padStart(4, '0');
-  [...score].forEach((ch, n) => {
-    const d = DIGITS[+ch];
-    for (let k = 0; k < 15; k++) if (d[k] === '1') px(1 + n * 4 + (k % 3), 1 + Math.floor(k / 3));
-  });
-  // Con thưởng: hình nhỏ + số bước còn lại ở góc phải
-  if (st.bonus) {
-    const art = CRITTERS[st.bonus.kind % CRITTERS.length];
-    art.forEach((row, y) => [...row].forEach((ch, x) => ch === 'X' && px(LCD_W - 22 + x, 2 + y)));
-    const left = String(Math.max(0, st.bonus.ttl)).padStart(2, '0');
-    [...left].forEach((ch, n) => {
-      const d = DIGITS[+ch];
-      for (let k = 0; k < 15; k++) if (d[k] === '1') px(LCD_W - 10 + n * 4 + (k % 3), 1 + Math.floor(k / 3));
-    });
-  }
-  // Khung bàn chơi
-  for (let x = 0; x < LCD_W; x++) { px(x, FY - 1); px(x, FY + H * 4); }
-  for (let y = FY - 1; y <= FY + H * 4; y++) { px(0, y); px(LCD_W - 1, y); }
-
-  // Tường
-  for (const i of st.walls) for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) cellPx(i, x, y);
-  // Mồi: hình thoi nhỏ
-  if (st.food >= 0) { cellPx(st.food, 1, 0); cellPx(st.food, 0, 1); cellPx(st.food, 2, 1); cellPx(st.food, 1, 2); }
-  // Con thưởng trên bàn
-  if (st.bonus) {
-    const [a] = st.bonus.cells;
-    const art = CRITTERS[st.bonus.kind % CRITTERS.length];
-    art.forEach((row, y) => [...row].forEach((ch, x) => ch === 'X' && cellPx(a, x, y)));
-  }
-  // Rắn: mỗi đốt 3×3, nối liền về phía đốt kế bên (không nối khi đi xuyên mép)
-  const s = st.snake;
-  const adj = (a, b) => {
-    const ax = a % W, ay = Math.floor(a / W), bx = b % W, by = Math.floor(b / W);
-    return Math.abs(ax - bx) + Math.abs(ay - by) === 1;
-  };
-  for (let n = 0; n < s.length; n++) {
-    const i = s[n];
-    const nb = [s[n - 1], s[n + 1]].filter((j) => j !== undefined && adj(i, j));
-    if (n === 0) drawHead(cellPx, i, st.dir, st.food, st.bonus);
-    else for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) cellPx(i, x, y);
-    for (const j of nb) {
-      if (j === i + 1) for (let y = 0; y < 3; y++) cellPx(i, 3, y);
-      if (j === i + W) for (let x = 0; x < 3; x++) cellPx(i, x, 3);
-    }
-  }
-  if (st.dead && s.length) {
-    // Chết: chớp tắt đầu rắn bằng một dấu X
-    const i = s[0];
-    g.fillStyle = BG;
-    for (let k = 0; k < 3; k++) g.fillRect((FX + (i % W) * 4 + k) * K, (FY + Math.floor(i / W) * 4 + k) * K, K - 1, K - 1);
-  }
-}
-
-/** Đầu rắn: há miệng khi mồi ở ngay trước mặt, còn không thì có một con mắt. */
-function drawHead(cellPx, i, dir, food, bonus) {
-  const ahead = (() => {
-    const [dx, dy] = DIRS[dir];
-    const x = (i % W + dx + W) % W, y = (Math.floor(i / W) + dy + H) % H;
-    return y * W + x;
-  })();
-  const open = ahead === food || bonus?.cells.includes(ahead);
-  // Mẫu hướng sang phải, xoay theo hướng đi
-  const pat = open ? ['X.X', 'XX.', 'X.X'] : ['XXX', 'XX.', 'XXX'];
-  const rot = (x, y) => (dir === 'right' ? [x, y] : dir === 'left' ? [2 - x, y] : dir === 'down' ? [y, x] : [y, 2 - x]);
-  for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (pat[y][x] === 'X') { const [a, b] = rot(x, y); cellPx(i, a, b); }
-}
-
 export default function SnakeGame({ room, state: s }) {
   const { call, user } = useApp();
   const playing = s.status === 'playing';
@@ -173,6 +74,7 @@ export default function SnakeGame({ room, state: s }) {
   const timeLeft = useCountdown(s.timeLeft, room.receivedAt, playing && !!s.timeTotal);
   const [giveup, setGiveup] = useState(false);
   const { beep, muted, toggle } = useBeeper();
+  const [theme, setTheme] = useTheme();
   const canPlay = playing && me && !me.done;
 
   return (
@@ -189,6 +91,10 @@ export default function SnakeGame({ room, state: s }) {
             </span>
           )}
           <span className="snake-sp" />
+          <span className="snake-theme" role="radiogroup" aria-label="Kiểu hình">
+            <button type="button" role="radio" aria-checked={theme === 'classic'} className={theme === 'classic' ? 'on' : ''} onClick={() => setTheme('classic')}>📟 Cổ điển</button>
+            <button type="button" role="radio" aria-checked={theme === 'modern'} className={theme === 'modern' ? 'on' : ''} onClick={() => setTheme('modern')}>✨ Hiện đại</button>
+          </span>
           <button className="btn sm ghost" onClick={toggle} title={muted ? 'Bật tiếng' : 'Tắt tiếng'} aria-label={muted ? 'Bật tiếng' : 'Tắt tiếng'}>
             {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
@@ -200,12 +106,12 @@ export default function SnakeGame({ room, state: s }) {
         <div className="snake-stage">
           {shown && s.status !== 'waiting' ? (
             me && shown.id === me.id && playing ? (
-              <LocalPlay key={`${s.gameNo}-${me.id}`} s={s} me={me} room={room} beep={beep} />
+              <LocalPlay key={`${s.gameNo}-${me.id}`} s={s} me={me} room={room} beep={beep} theme={theme} />
             ) : (
-              <Phone st={shown} maze={s.options.maze} label={shown.name} />
+              <Phone theme={theme} st={shown} maze={s.options.maze} label={shown.name} />
             )
           ) : (
-            <Phone st={null} maze={s.options.maze} label="Rắn săn mồi">
+            <Phone theme={theme} st={null} maze={s.options.maze} label="Rắn săn mồi">
               <div className="snake-wait">
                 <div className="snake-big">RẮN SĂN MỒI</div>
                 <div>Dùng phím mũi tên / 2 4 6 8 để điều khiển</div>
@@ -263,19 +169,19 @@ export default function SnakeGame({ room, state: s }) {
 }
 
 /** Khung "điện thoại" chứa màn hình LCD. */
-function Phone({ st, maze, label, children, canvasRef, overlay, onTouchStart, onTouchEnd, pad }) {
+function Phone({ theme, st, maze, label, children, canvasRef, overlay, onTouchStart, onTouchEnd, pad }) {
   const own = useRef(null);
   const ref = canvasRef || own;
   useEffect(() => {
     if (canvasRef || !ref.current) return;
     const walls = wallsOf(maze);
-    draw(ref.current, st ? { ...st, walls } : { snake: [], food: -1, bonus: null, score: 0, walls });
+    paint(theme, ref.current, st ? { ...st, walls } : { snake: [], food: -1, bonus: null, score: 0, walls }, 0);
   });
   return (
-    <div className="snake-phone">
+    <div className={`snake-phone ${theme}`}>
       <div className="snake-brand" aria-hidden>{label}</div>
       <div className="snake-lcd" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <canvas ref={ref} width={LCD_W * K} height={LCD_H * K} aria-label={`Màn hình rắn của ${label}`} role="img" />
+        <canvas key={theme} ref={ref} width={SIZE[theme].w} height={SIZE[theme].h} aria-label={`Màn hình rắn của ${label}`} role="img" />
         {children}
         {overlay}
       </div>
@@ -292,7 +198,9 @@ function wallsOf(maze) {
 }
 
 /** Người chơi tự chạy rắn của mình; định kỳ gửi lượt rẽ lên server để server phát lại và chấm điểm. */
-function LocalPlay({ s, me, room, beep }) {
+function LocalPlay({ s, me, room, beep, theme }) {
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
   const cv = useRef(null);
   const opts = { seed: s.seed, maze: s.options.maze, level: s.options.level };
   const R = useRef(null);
@@ -306,6 +214,7 @@ function LocalPlay({ s, me, room, beep }) {
       pausedAt: 0,
       lastSync: 0,
       over: false,
+      fx: [], // hiệu ứng nổ hạt (kiểu hiện đại)
     };
   }
   const [, force] = useState(0);
@@ -355,8 +264,8 @@ function LocalPlay({ s, me, room, beep }) {
         if (due - g.tick > 4) { r.base = now - g.tick * s.tickMs; due = g.tick; }
         while (g.alive && g.tick < due) {
           const ev = g.step();
-          if (ev === 'eat') beep([[1760, 40]]);
-          else if (ev === 'bonus') beep([[1320, 40], [1760, 40], [2093, 60]]);
+          if (ev === 'eat') { beep([[1760, 40]]); r.fx.push({ i: g.head, t0: now, c: '#ff6fa5' }); }
+          else if (ev === 'bonus') { beep([[1320, 40], [1760, 40], [2093, 60]]); r.fx.push({ i: g.head, t0: now, c: '#fbbf24' }); }
           else if (ev === 'die') {
             beep([[440, 120], [330, 120], [220, 260]]);
             r.over = true;
@@ -366,7 +275,12 @@ function LocalPlay({ s, me, room, beep }) {
         }
         if (now - r.lastSync > SYNC_MS && !r.over) sync();
       }
-      draw(cv.current, { ...g.snapshot(), score: g.score, walls, dead: r.over && Math.floor(now / 250) % 2 === 0 });
+      if (r.fx.length > 8) r.fx.splice(0, r.fx.length - 8);
+      const f = r.over || r.paused || now < r.base ? 0 : Math.min(1, Math.max(0, (now - r.base) / s.tickMs - g.tick));
+      paint(themeRef.current, cv.current, {
+        ...g.snapshot(), nextDir: g.queue[0], score: g.score, length: g.length, walls, fx: r.fx,
+        dead: r.over, blink: Math.floor(now / 250) % 2 === 0,
+      }, f, now);
     };
     raf = requestAnimationFrame(loop);
     return () => { alive = false; cancelAnimationFrame(raf); };
@@ -422,7 +336,7 @@ function LocalPlay({ s, me, room, beep }) {
     </div>
   );
 
-  return <Phone canvasRef={cv} maze={s.options.maze} label={me.name} overlay={overlay} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} pad={pad} />;
+  return <Phone theme={theme} canvasRef={cv} maze={s.options.maze} label={me.name} overlay={overlay} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} pad={pad} />;
 }
 
 function Racers({ s, ownerId, shownId, onPick }) {

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Palette, MessagesSquare, PawPrint, Worm, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, Lightbulb, SpellCheck } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Palette, MessagesSquare, PawPrint, Worm, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, ChevronLeft, ChevronRight, Lightbulb, SpellCheck } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -21,10 +21,98 @@ export const GAME_META = {
   wordguess: { name: 'Đoán chữ', Icon: SpellCheck, desc: 'Đoán từ 2 chữ trong 6 lượt, đua hoặc cùng đoán' },
 };
 
+// Nhóm trò để lọc nhanh khi danh sách game dài
+export const GAME_GROUPS = [
+  ['all', 'Tất cả'],
+  ['cards', 'Bài lá', ['tala', 'samloc', 'poker']],
+  ['board', 'Cờ', ['chess', 'xiangqi', 'caro']],
+  ['words', 'Chữ & đố', ['wordchain', 'quiz', 'wordguess']],
+  ['party', 'Vẽ & nhóm', ['scribble', 'telephone']],
+  ['arcade', 'Giải trí', ['onet', 'snake']],
+];
+const GROUP_KEY = 'gl_lobby_group';
+const fold = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+
 /** Icon SVG của trò chơi (bộ Lucide), màu theo từng trò. */
 export function GameIcon({ game, size = 24 }) {
   const I = GAME_META[game]?.Icon || Layers;
   return <I size={size} strokeWidth={2} aria-hidden />;
+}
+
+/**
+ * Chọn trò chơi: lọc theo nhóm + tìm tên, các thẻ xếp thành một hàng trượt ngang (vuốt trên điện thoại,
+ * nút ‹ › trên máy tính). Bấm cả thẻ để tạo bàn.
+ */
+function GamePicker({ count, onCreate }) {
+  const [group, setGroup] = useState(() => { try { return localStorage.getItem(GROUP_KEY) || 'all'; } catch { return 'all'; } });
+  const [q, setQ] = useState('');
+  const track = useRef(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
+  const pick = (g) => {
+    setGroup(g);
+    try { localStorage.setItem(GROUP_KEY, g); } catch { /* bỏ qua */ }
+    track.current?.scrollTo({ left: 0 });
+  };
+  const inGroup = GAME_GROUPS.find(([k]) => k === group)?.[2];
+  const games = Object.entries(GAME_META).filter(([k, g]) => (!inGroup || inGroup.includes(k))
+    && (!q || fold(`${g.name} ${g.desc}`).includes(fold(q))));
+
+  const measure = () => {
+    const el = track.current;
+    if (!el) return;
+    setEdge({ start: el.scrollLeft < 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+  };
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [games.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const slide = (dir) => {
+    const el = track.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: 'smooth' });
+  };
+
+  return (
+    <>
+      <div className="section-head">
+        <div>
+          <h2>Chọn trò chơi</h2>
+          <p className="muted">{Object.keys(GAME_META).length} trò · bấm vào thẻ để tạo bàn, hoặc vào một phòng đang mở bên dưới.</p>
+        </div>
+        <label className="search gp-search">
+          <Search size={16} aria-hidden />
+          <input type="search" placeholder="Tìm trò chơi…" aria-label="Tìm trò chơi" value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
+      </div>
+      <div className="gp-groups" role="tablist" aria-label="Nhóm trò chơi">
+        {GAME_GROUPS.map(([k, label, list]) => (
+          <button key={k} role="tab" aria-selected={group === k} className={`gp-chip ${group === k ? 'active' : ''}`} onClick={() => pick(k)}>
+            {label} <span className="tab-count">{list ? list.length : Object.keys(GAME_META).length}</span>
+          </button>
+        ))}
+      </div>
+      <div className="gp-slider">
+        {!edge.start && <button className="gp-arrow prev" onClick={() => slide(-1)} aria-label="Xem các trò trước"><ChevronLeft size={22} /></button>}
+        <div className="gp-track" ref={track} onScroll={measure}>
+          {games.map(([k, g]) => (
+            <button key={k} type="button" className={`game-card g-${k}`} onClick={() => onCreate(k)} aria-label={`Tạo bàn ${g.name}`}>
+              <div className="gc-top">
+                <div className="gc-icon"><GameIcon game={k} size={24} /></div>
+                <div className="gc-head">
+                  <h3>{g.name}</h3>
+                  <div className="gc-count">{count(k) ? <><b>{count(k)}</b> phòng đang mở</> : 'Chưa có phòng'}</div>
+                </div>
+              </div>
+              <p className="gc-desc">{g.desc}</p>
+              <span className="gc-cta"><Plus size={16} aria-hidden /> Tạo bàn</span>
+            </button>
+          ))}
+          {games.length === 0 && <div className="gp-empty muted">Không có trò nào khớp “{q}”</div>}
+        </div>
+        {!edge.end && <button className="gp-arrow next" onClick={() => slide(1)} aria-label="Xem các trò tiếp"><ChevronRight size={22} /></button>}
+      </div>
+    </>
+  );
 }
 
 export default function Lobby() {
@@ -39,27 +127,7 @@ export default function Lobby() {
   return (
     <div className="lobby">
       <section className="lobby-games">
-        <div className="section-head">
-          <div>
-            <h2>Chọn trò chơi</h2>
-            <p className="muted">Tạo bàn mới hoặc vào một phòng đang mở bên dưới.</p>
-          </div>
-        </div>
-        <div className="game-cards">
-          {Object.entries(GAME_META).map(([k, g]) => (
-            <div key={k} className={`game-card g-${k}`}>
-              <div className="gc-top">
-                <div className="gc-icon"><GameIcon game={k} size={26} /></div>
-                <div>
-                  <h3>{g.name}</h3>
-                  <div className="gc-count"><b>{count(k)}</b> phòng đang mở</div>
-                </div>
-              </div>
-              <p className="gc-desc">{g.desc}</p>
-              <button className="btn primary block" onClick={() => setCreating(k)}><Plus size={18} aria-hidden /> Tạo bàn</button>
-            </div>
-          ))}
-        </div>
+        <GamePicker count={count} onCreate={setCreating} />
       </section>
 
       <section className="room-list">
@@ -71,7 +139,7 @@ export default function Lobby() {
         </div>
         <div className="room-list-head">
           <div className="tabs" role="tablist">
-            {[['all', 'Tất cả', rooms.length], ...Object.entries(GAME_META).map(([k, g]) => [k, g.name, count(k)])].map(([k, label, n]) => (
+            {[['all', 'Tất cả', rooms.length], ...Object.entries(GAME_META).filter(([k]) => count(k) > 0 || filter === k).map(([k, g]) => [k, g.name, count(k)])].map(([k, label, n]) => (
               <button key={k} role="tab" aria-selected={filter === k} className={`tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>
                 {label} <span className="tab-count">{n}</span>
               </button>
