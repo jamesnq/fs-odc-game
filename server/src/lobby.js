@@ -234,9 +234,14 @@ export class Lobby {
 
   /** Vào phòng để chơi ('play') hoặc xem ('watch'). Trả về cảnh báo nếu không ngồi được. */
   join(user, room, mode) {
-    // Check before leaving the current room; rejoining an existing seat is always allowed.
-    if (!room.members.has(user.id) && room.members.size >= room.handler.maxPlayers + LIMITS.spectatorsPerRoom) {
-      throw new Error('Phòng đã đủ người xem');
+    const players = new Set(room.handler.playerIds());
+    const spectators = [...room.members].filter((id) => !players.has(id)).length;
+    // Reserve actual player admission even when all spectator places are occupied.
+    // Attempt the seat before leaving the previous room, so a rejected join is harmless.
+    if (!room.members.has(user.id) && !players.has(user.id) && spectators >= LIMITS.spectatorsPerRoom) {
+      if (mode !== 'play') throw new Error('Phòng đã đủ người xem');
+      try { room.handler.sit(user); }
+      catch { throw new Error('Phòng đã đủ người xem'); }
     }
     if (user.roomId && user.roomId !== room.id) this.leave(user);
     const isNew = !room.members.has(user.id);

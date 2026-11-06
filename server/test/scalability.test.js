@@ -63,3 +63,21 @@ test('bot pool computes legal moves and rejects overflow and shutdown work', asy
   await pool.close();
   await assert.rejects(pool.run(game, 'easy'), /đã đóng/);
 });
+
+test('spectator capacity reserves empty seats and rejected play preserves the old room', (t) => {
+  const { lobby, room } = setup(t);
+  for (let i = 0; i < LIMITS.spectatorsPerRoom; i++) {
+    const user = lobby.createUser(`Watcher ${i}`, 'default');
+    lobby.join(user, room, 'watch');
+  }
+  const player = lobby.createUser('Player', 'default');
+  lobby.join(player, room, 'play');
+  assert.ok(room.handler.playerIds().includes(player.id));
+  const other = lobby.createRoom(player, { name: 'Other', game: 'caro', options: {} });
+  t.after(() => other.handler.dispose());
+  const extra = lobby.createUser('Extra', 'default');
+  lobby.join(extra, other, 'play');
+  assert.throws(() => lobby.join(extra, room, 'play'), /đủ người xem/);
+  assert.equal(extra.roomId, other.id);
+  assert.ok(other.handler.playerIds().includes(extra.id));
+});
