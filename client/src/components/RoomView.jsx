@@ -13,12 +13,17 @@ import TalaGame from '../games/TalaGame.jsx';
 import CaroGame from '../games/CaroGame.jsx';
 import SamLocGame from '../games/SamLocGame.jsx';
 import WordChainGame from '../games/WordChainGame.jsx';
+import ScribbleGame from '../games/ScribbleGame.jsx';
+import TelephoneGame from '../games/TelephoneGame.jsx';
 import QuizGame from '../games/QuizGame.jsx';
 import WordGuessGame from '../games/WordGuessGame.jsx';
 import FairnessBadge from './FairnessBadge.jsx';
 import { useHotkeys } from '../hooks.js';
 
-const GAME_COMPONENT = { xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame, quiz: QuizGame, wordguess: WordGuessGame };
+const GAME_COMPONENT = {
+  xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame,
+  scribble: ScribbleGame, telephone: TelephoneGame, quiz: QuizGame, wordguess: WordGuessGame,
+};
 
 export const SHORTCUTS = {
   poker: [
@@ -31,15 +36,22 @@ export const SHORTCUTS = {
     ['D / Space', 'Bốc bài (khi tới lượt bốc)'], ['E', 'Ăn bài'], ['← / →', 'Di chuyển giữa các lá'],
     ['↑ / Space', 'Chọn / bỏ chọn lá đang trỏ'], ['Enter', 'Đánh lá đang chọn'], ['H', 'Hạ phỏm với các lá đã chọn'],
     ['X', 'Hạ tự động'], ['G', 'Gửi lá đang chọn'], ['U', 'Ù'], ['S', 'Xếp bài (theo hạng / theo chất)'],
-    ['Esc', 'Bỏ chọn tất cả'], ['N', 'Bắt đầu ván mới'],
+    ['Esc', 'Bỏ chọn tất cả'], ['N', 'Sẵn sàng / Bắt đầu ván mới (chủ phòng)'],
   ],
   xiangqi: [['Click', 'Chọn quân → chọn ô đích'], ['Esc', 'Bỏ chọn quân'], ['F', 'Lật bàn cờ']],
   samloc: [
     ['← / →', 'Di chuyển giữa các lá'], ['Space / ↑', 'Chọn lá đang trỏ'], ['↓', 'Bỏ chọn lá đang trỏ'],
     ['Enter', 'Đánh các lá đã chọn'], ['P', 'Bỏ lượt'], ['Esc', 'Bỏ chọn tất cả'],
-    ['Y / K', 'Báo Sâm / Không báo (đầu ván)'], ['N', 'Chia ván mới'],
+    ['Y / K', 'Báo Sâm / Không báo (đầu ván)'], ['N', 'Sẵn sàng / Chia ván mới (chủ phòng)'],
   ],
   wordchain: [['Enter', 'Gửi từ'], ['Gõ', 'Khi tới lượt, ô nhập tự focus — chỉ cần gõ chữ thứ hai']],
+  scribble: [
+    ['Enter', 'Gửi câu đoán'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi đang vẽ)'], ['Z', 'Hoàn tác nét vừa vẽ'], ['1 – 5', 'Cỡ nét'],
+  ],
+  telephone: [
+    ['Enter', 'Nộp câu chữ'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi vẽ)'], ['Z', 'Hoàn tác'], ['1 – 5', 'Cỡ nét'],
+    ['→ / Space', 'Lật phần tiếp theo khi xem lại (chủ phòng)'],
+  ],
   quiz: [['1 / 2 / 3 / 4', 'Chọn đáp án ▲ ◆ ● ■'], ['Enter / →', 'Câu tiếp (khi đang xem đáp án)']],
   wordguess: [['Enter', 'Gửi từ đoán']],
   caro: [['Click', 'Đánh vào ô'], ['← ↑ → ↓', 'Di chuyển con trỏ trên bàn'], ['Enter / Space', 'Đánh vào ô có con trỏ'], ['Esc', 'Ẩn con trỏ']],

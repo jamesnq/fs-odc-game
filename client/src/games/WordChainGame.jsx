@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Flag, RotateCcw, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle, X } from 'lucide-react';
+import { Flag, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle, X } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import StartBar, { ReadyMark } from '../components/StartBar.jsx';
 import { useCountdown } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import BotPicker, { canManageBots } from '../components/BotPicker.jsx';
@@ -29,14 +30,14 @@ export default function WordChainGame({ room, state: s }) {
   return (
     <div className="wc">
       <div className="wc-main">
-        <PlayerRow s={s} timeLeft={timeLeft} onRemoveBot={manageBots ? (id) => act({ type: 'removeBot', id }) : null} />
+        <PlayerRow s={s} timeLeft={timeLeft} ownerId={room.ownerId} onRemoveBot={manageBots ? (id) => act({ type: 'removeBot', id }) : null} />
 
         <div className={`panel wc-stage ${myTurn ? 'my-turn' : ''}`}>
           {!g || s.status === 'waiting' ? (
             <div className="wc-wait">
               <div className="wc-big">🔤 Nối từ</div>
               <div className="muted">
-                {s.seats.length < 2 ? 'Cần ít nhất 2 người chơi… hoặc bấm “Chơi với máy” bên dưới' : 'Chờ tất cả bấm Sẵn sàng để bắt đầu'}
+                {s.seats.length < 2 ? 'Cần ít nhất 2 người chơi… hoặc bấm “Chơi với máy” bên dưới' : 'Chờ mọi người sẵn sàng, chủ phòng bấm Bắt đầu'}
               </div>
             </div>
           ) : (
@@ -56,6 +57,9 @@ export default function WordChainGame({ room, state: s }) {
               {s.status === 'over' && g.result ? (
                 <div className="wc-result">
                   <div className="wc-big">🏆 {g.result.winner ? `${nameOf(g.result.winner)} thắng!` : 'Hòa'}</div>
+                  {g.result.reason === 'deadEnd' && (
+                    <div className="wc-deadend">🎯 Nối “{g.result.word}” — từ điển không còn từ nào bắt đầu bằng “{g.result.word.split(' ')[1]}”, thắng luôn!</div>
+                  )}
                   <div className="muted small">
                     Xếp hạng: {g.result.ranking.map((id, i) => `${i + 1}. ${nameOf(id)}`).join(' · ')} — {g.total} từ
                   </div>
@@ -63,7 +67,7 @@ export default function WordChainGame({ room, state: s }) {
               ) : (
                 <div className="wc-turn">
                   {/* Ai tới lượt đã hiện ở thanh báo lượt phía trên → ở đây chỉ nói cần nối gì */}
-                  {g.required ? <>Bắt đầu bằng <b className="wc-req">{g.required}</b></> : <>{myTurn ? 'Bạn' : nameOf(g.currentId)} ra từ đầu tiên</>}
+                  {g.required ? <>Bắt đầu bằng <b className="wc-req">{g.required}</b></> : <>{myTurn ? 'Bạn' : nameOf(g.currentId)} ra từ đầu tiên{s.firstMinNext > 0 && <span className="muted small wc-first-hint">Chọn từ dễ nối: chữ cuối phải có ≥ {s.firstMinNext} từ nối tiếp</span>}</>}
                   <span className={`wc-time ${timeLeft < 5000 ? 'low' : ''}`}><Timer size={14} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span>
                   <div className="timebar"><div style={{ width: `${(timeLeft / s.turnTotal) * 100}%` }} /></div>
                 </div>
@@ -94,10 +98,8 @@ export default function WordChainGame({ room, state: s }) {
           {me ? (
             <>
               {!playing && (
-                <button className={`btn ${s.ready.includes(me) ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })}
-                  disabled={s.seats.length < 2}>
-                  {s.ready.includes(me) ? 'Hủy sẵn sàng' : s.status === 'over' ? <><RotateCcw size={16} aria-hidden /> Chơi ván mới</> : <><Check size={16} aria-hidden /> Sẵn sàng</>}
-                </button>
+                <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated
+                  startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />
               )}
               {playing && meInGame && !meInGame.out && (
                 <button className="btn danger" onClick={() => setGiveup(true)}><Flag size={16} aria-hidden /> Chịu thua</button>
@@ -106,15 +108,18 @@ export default function WordChainGame({ room, state: s }) {
               {!playing && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>}
             </>
           ) : (
-            <span className="muted small ba-note">
-              Bạn đang xem.{' '}
-              {!playing && s.seats.length < s.options.maxSeats && (
-                <button className="btn primary sm" onClick={() => call('room:sit', {})}>Vào chơi</button>
-              )}
-            </span>
+            <>
+              <span className="muted small ba-note">
+                Bạn đang xem.{' '}
+                {!playing && s.seats.length < s.options.maxSeats && (
+                  <button className="btn primary sm" onClick={() => call('room:sit', {})}>Vào chơi</button>
+                )}
+              </span>
+              {!playing && <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={false}
+                startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />}
+            </>
           )}
           {!me && canAddBot && <BotPicker label="Thêm máy" onPick={(level) => act({ type: 'addBot', level })} />}
-          {!playing && s.seats.length >= 2 && <span className="muted small ba-note">Sẵn sàng: {s.ready.length}/{s.seats.length}</span>}
         </div>
         {giveup && (
           <ConfirmDialog title="Chịu thua ván này?" danger okLabel="Chịu thua" icon={<Flag size={22} />}
@@ -136,6 +141,8 @@ export default function WordChainGame({ room, state: s }) {
               : ' Mỗi chữ phải là tiếng Việt; từ không có trong từ điển bị gắn cờ ⚠ để mọi người cân nhắc phản đối.')}</li>
             <li>Mỗi lượt {s.options.turnSeconds} giây. Hết giờ mất 1 mạng (có {s.options.lives} mạng), hết mạng bị loại.</li>
             <li>Từ vô nghĩa? Bấm <b>vô nghĩa</b>: quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại.</li>
+            {s.options.dictionary && <li>Từ mở đầu phải <b>dễ nối</b>: chữ cuối có ít nhất {s.firstMinNext} từ nối tiếp trong từ điển.</li>}
+            {s.options.dictionary && <li>Nối một từ mà từ điển <b>không còn từ nào nối tiếp</b> (vd: <i>ao chuôm</i>) → <b>thắng luôn</b>.</li>}
             <li>Người cuối cùng còn lại thắng.</li>
             <li>Chơi với máy (tối đa {MAX_BOTS}): máy <b>Dễ</b> hay bí, máy <b>Vừa</b> nối ngẫu nhiên, máy <b>Khó</b> chọn từ hiểm khó nối tiếp. Máy không bỏ phiếu phản đối.</li>
           </ul>
@@ -164,7 +171,7 @@ function WordInput({ required, act }) {
   return (
     <form className="wc-input" onSubmit={submit}>
       {required && <span className="wc-prefix">{required}</span>}
-      <input ref={ref} autoFocus value={text} maxLength={required ? 12 : 24} disabled={busy}
+      <input ref={ref} autoFocus value={text} maxLength={required ? 12 : 24} disabled={busy} aria-label={required ? `Chữ thứ hai sau "${required}"` : 'Từ đầu tiên'}
         onChange={(e) => setText(required ? e.target.value.replace(/\s/g, '') : e.target.value)}
         placeholder={required ? 'chữ thứ hai…' : 'từ đầu tiên, vd: học tập'} autoComplete="off" autoCapitalize="off" spellCheck={false} />
       <button className="btn primary" disabled={!text.trim() || busy}>Nối ↵</button>
@@ -172,7 +179,7 @@ function WordInput({ required, act }) {
   );
 }
 
-function PlayerRow({ s, timeLeft, onRemoveBot }) {
+function PlayerRow({ s, timeLeft, ownerId, onRemoveBot }) {
   const g = s.game;
   const list = g && s.status !== 'waiting' ? g.players : s.seats.map((x) => ({ ...x, lives: s.options.lives, out: false, words: 0 }));
   return (
@@ -190,7 +197,7 @@ function PlayerRow({ s, timeLeft, onRemoveBot }) {
             <div className="small">
               {p.out ? <span className="muted">Bị loại</span> : <span className="wc-lives">{'♥'.repeat(p.lives)}</span>}
               {g && s.status !== 'waiting' && <span className="muted"> · {p.words} từ</span>}
-              {s.status !== 'playing' && s.ready.includes(p.id) && <span className="ready"> ✔</span>}
+              {s.status !== 'playing' && <ReadyMark id={p.id} ready={s.ready} ownerId={ownerId} />}
             </div>
             {turn && <div className="timebar"><div style={{ width: `${(timeLeft / s.turnTotal) * 100}%` }} /></div>}
           </div>

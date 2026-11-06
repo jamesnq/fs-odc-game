@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseQuizText, scoreAnswer, streakBonus, shuffle, shuffleChoices, QUIZ_CATEGORIES } from '@game/shared/quiz';
 import { clampInt } from './options.js';
+import { ReadyGate } from './ready.js';
 
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/quiz-vi.json');
 /** Bộ câu hỏi có sẵn: [{ c: chủ đề, q, a: đáp án đúng, w: [đáp án sai] }] */
@@ -28,7 +29,7 @@ export class QuizHandler {
       category: CATEGORIES.includes(options.category) ? options.category : 'all',
     };
     this.seats = []; // [{ id, name }]
-    this.ready = new Set();
+    this.ready = new ReadyGate(room); // sẵn sàng → chủ phòng bấm Bắt đầu
     this.status = 'waiting'; // waiting | playing | over
     this.custom = null; // { title, questions, by } — bộ câu hỏi tự soạn đang dùng
     this.seen = new Set(); // câu có sẵn đã hỏi trong phòng này, tránh lặp lại giữa các ván
@@ -79,6 +80,10 @@ export class QuizHandler {
       case 'loadQuiz': return this._loadQuiz(id, a);
       case 'useBuiltin': return this._useBuiltin(id, a);
       case 'next': return this._next(id);
+      case 'start':
+        if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+        this.ready.check(id, this.seats, 1); // chơi một mình cũng được
+        return this._start();
       case 'setSeconds': {
         this._canEdit(id);
         this.options.seconds = clampInt(a.seconds, 5, 60, this.options.seconds);
@@ -92,9 +97,7 @@ export class QuizHandler {
     switch (a.type) {
       case 'ready': {
         if (this.status === 'playing') throw new Error('Ván đang diễn ra');
-        if (this.ready.has(id)) this.ready.delete(id);
-        else this.ready.add(id);
-        if (this.seats.length && this.seats.every((s) => this.ready.has(s.id))) this._start();
+        this.ready.toggle(id);
         return;
       }
       case 'answer': return this._answer(id, a.choice);
@@ -312,7 +315,7 @@ export class QuizHandler {
       categories: CATEGORIES,
       bankSize: BANK.length,
       seats: this.seats,
-      ready: [...this.ready],
+      ...this.ready.view(this.seats.map((x) => x.id)),
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,

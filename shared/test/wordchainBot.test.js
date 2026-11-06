@@ -45,3 +45,16 @@ test('Máy không bỏ phiếu và không tính vào số phiếu cần để g�
   assert.equal(g.objectionsNeeded(), Math.floor(voters / 2) + 1);
   assert.throws(() => g.object('bot:1'), author === 'bot:1' ? /chính mình/ : /Máy không/);
 });
+
+test('Từ cụt (thắng luôn): máy Vừa / Dễ tránh, máy Khó thỉnh thoảng dùng', () => {
+  // "hoà bình" → còn "bình minh"; "hoà cụt" → không còn từ nào bắt đầu bằng "cụt"
+  const idx = buildWordIndex(['xanh hoà', 'hoà bình', 'bình minh', 'hoà cụt']);
+  const g = new WordChainGame(P, { lives: 1 });
+  g.submit('a', 'xanh hoà');
+  for (const r of [0.1, 0.5, 0.9]) {
+    assert.equal(chooseWord(g, 'medium', idx, { rng: () => r, miss: 0 }), 'hoà bình');
+    assert.equal(chooseWord(g, 'easy', idx, { rng: () => r, miss: 0 }), 'hoà bình');
+  }
+  assert.equal(chooseWord(g, 'hard', idx, { rng: () => 0.1, miss: 0 }), 'hoà cụt', 'rng < 35% → dùng từ cụt');
+  assert.equal(chooseWord(g, 'hard', idx, { rng: () => 0.9, miss: 0 }), 'hoà bình');
+});

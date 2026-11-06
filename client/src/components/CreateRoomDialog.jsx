@@ -13,6 +13,8 @@ const DEFAULTS = {
   quiz: { category: 'all', questions: 10, seconds: 20, maxSeats: 20 },
   wordguess: { mode: 'race', minutes: 5, maxSeats: 6, daily: false, strict: true },
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
+  scribble: { maxSeats: 8, rounds: 3, drawSeconds: 80, hints: true, customWords: '', onlyCustom: false },
+  telephone: { maxSeats: 8, writeSeconds: 40, drawSeconds: 90, suggest: true },
 };
 
 // Tạo bàn kèm máy (Cờ caro / Nối từ)
@@ -61,6 +63,20 @@ const FIELDS = {
     ['unit', 'Mức cược / đơn vị', 1, 1000000],
     ['turnSeconds', 'Thời gian mỗi lượt (giây)', 10, 120],
   ],
+  scribble: [
+    ['maxSeats', 'Số người chơi tối đa', 2, 12],
+    ['rounds', 'Số vòng (mỗi vòng ai cũng vẽ một lần)', 1, 6],
+    ['drawSeconds', 'Thời gian vẽ mỗi lượt (giây)', 30, 180],
+    ['hints', 'Gợi ý dần vài chữ cái khi hết gần nửa thời gian', 'bool'],
+    ['customWords', 'Từ tự thêm (cách nhau dấu phẩy, không bắt buộc)', 'text'],
+    ['onlyCustom', 'Chỉ dùng từ tự thêm (cần ít nhất 10 từ)', 'bool'],
+  ],
+  telephone: [
+    ['maxSeats', 'Số người chơi tối đa', 3, 12],
+    ['writeSeconds', 'Thời gian viết / đoán mỗi bước (giây)', 15, 120],
+    ['drawSeconds', 'Thời gian vẽ mỗi bước (giây)', 30, 240],
+    ['suggest', 'Cho lấy gợi ý ở bước viết câu đầu tiên', 'bool'],
+  ],
   tala: [
     ['maxSeats', 'Số người chơi tối đa', 2, 4],
     ['unit', 'Mức cược / đơn vị', 1, 1000000],
@@ -104,6 +120,12 @@ export default function CreateRoomDialog({ game: initialGame, onClose }) {
               onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.value } })}>
               {max.map(([v, name]) => <option key={v} value={v}>{name}</option>)}
             </select>
+          </div>
+        ) : min === 'text' ? (
+          <div key={key}>
+            <label htmlFor={`opt-${key}`}>{label}</label>
+            <textarea id={`opt-${key}`} rows={3} maxLength={4000} value={opts[game][key]} placeholder="vd: bánh bao, cái nón lá, con trâu"
+              onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.value } })} />
           </div>
         ) : min === 'bool' ? (
           <label key={key} className="check">

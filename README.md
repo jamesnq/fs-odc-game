@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Đố vui · Đoán chữ
+# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Đố vui · Đoán chữ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -12,6 +12,8 @@
 - Đặt tên người chơi (lưu trên trình duyệt, tự kết nối lại khi F5 / rớt mạng, giữ ghế 60 giây)
 - Tạo / vào / rời / xóa phòng, đặt và đổi tên phòng, lọc và tìm phòng theo trò chơi
 - Vào chơi hoặc chỉ **xem**, ngồi / đứng dậy, chủ phòng mời người ra, chat trong phòng, chia sẻ link phòng
+- **Không tự bắt đầu ván:** người ngồi bàn bấm **Sẵn sàng**, khi mọi người đã sẵn sàng thì **chủ phòng bấm Bắt đầu** (chủ phòng không cần bấm sẵn sàng; áp dụng cho mọi trò, kể cả chơi lại). Poker: chủ phòng bắt đầu một lần rồi các ván nối tiếp nhau, có nút **Tạm dừng**
+- **Bàn bài (Tá lả, Sâm lốc, Poker):** người xem được **ngồi chờ ngay cả khi ván đang diễn ra**, vào chơi từ ván sau
 - Chủ phòng rời thì quyền chủ phòng tự chuyển cho người khác đang kết nối; người cuối cùng rời phòng thì phòng tự xóa ngay (người mất kết nối được giữ chỗ 60 giây để vào lại)
 - **Báo bản deploy mới:** khi server được deploy bản mới, người đang mở app thấy thông báo "Đã có phiên bản mới" kèm nút **Tải lại** (tải lại vẫn giữ chỗ trong phòng). Phiên bản hiện tại xem ở `/health`
 
@@ -33,6 +35,8 @@
 **Nối từ** (2–8 người)
 - Mỗi từ gồm **2 chữ**, chữ đầu phải trùng chữ cuối của từ trước: *con mèo → mèo con → con đường*; không lặp từ trong ván
 - Kiểm tra mỗi chữ có trong **từ điển âm tiết tiếng Việt** (6.609 âm tiết, tắt được khi tạo bàn); bỏ dấu kiểu cũ hay mới đều được (*hòa* = *hoà*)
+- **Từ mở đầu không được quá khó:** chữ cuối phải có ít nhất 10 từ nối tiếp trong từ điển (vd. không mở bằng *ao chuôm*)
+- **Nối từ cụt là thắng luôn:** nối một từ (có trong từ điển) mà từ điển không còn từ nào chưa dùng bắt đầu bằng chữ cuối → thắng ngay
 - Từ vô nghĩa? Bạn bè bấm **❌ phản đối** — quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại
 - Mỗi lượt 10–60 giây, hết giờ mất 1 mạng (1–3 mạng), hết mạng bị loại; người cuối cùng còn lại thắng. Có bảng thắng qua các ván
 - Khi tới lượt, ô nhập tự điền sẵn chữ đầu — chỉ cần gõ chữ thứ hai rồi `Enter`
@@ -49,6 +53,20 @@
 - Đoán từ **2 chữ** trong 6 lượt. Mỗi chữ chấm theo **âm đầu · vần · thanh**: 🟩 đúng chỗ, 🟨 có ở chữ kia, ⬛ không có. Có bảng tổng hợp các âm đầu / vần / thanh đã thử
 - **Đua:** cùng một từ, ai đoán ra ít lượt nhất (rồi nhanh nhất) thắng; trong lúc chơi chỉ thấy màu ô của người khác. **Cùng đoán:** cả phòng chung 6 lượt. **Từ của ngày:** mọi người cùng một từ mỗi ngày
 - Đáp án lấy từ `server/src/data/vi-words-doanchu.txt` (639 từ thông dụng), từ đoán kiểm tra bằng từ điển của Nối từ
+
+**Vẽ đoán** (2–12 người)
+- Mỗi vòng ai cũng được vẽ một lần (1–6 vòng). Người vẽ chọn 1 trong 3 từ (~400 từ tiếng Việt dễ vẽ, chủ phòng có thể thêm từ riêng hoặc chỉ dùng từ riêng), vẽ trong 30–180 giây
+- Người khác gõ đoán — **không cần gõ dấu**; sai 1 chữ cái được báo "gần đúng" (chỉ mình thấy). Đoán càng sớm càng nhiều điểm, người vẽ được 60 điểm cho mỗi người đoán đúng; ai cũng đoán đúng thì sang lượt sớm
+- Gợi ý: ô chữ hiện số chữ cái, quá nửa thời gian thì lộ dần vài chữ (tắt được khi tạo bàn)
+- Bút 16 màu, 5 cỡ nét, tẩy, đổ màu, hoàn tác, xóa. Nét vẽ truyền trực tiếp tới mọi người; vào xem / tải lại giữa lượt vẫn thấy cả bức vẽ
+- Chat của phòng chặn tin nhắn lộ đáp án; người vào giữa ván được đoán ngay và tới lượt thì vẽ; chủ phòng có thể dừng ván. Có bảng thắng qua các ván
+- **Phím tắt (khi vẽ):** `B` bút · `E` tẩy · `F` đổ màu · `Z` hoàn tác · `1–5` cỡ nét
+
+**Tam sao thất bản (vẽ)** (3–12 người)
+- Mọi người làm **cùng lúc**: mỗi người viết một câu → người sau **vẽ** lại câu đó → người sau nữa nhìn tranh **đoán bằng lời** → lại vẽ… Mỗi câu chuyện đi qua đủ mọi người đúng một lần (thứ tự ngẫu nhiên, đề bài không lộ tên người trước)
+- Thời gian viết 15–120 giây, vẽ 30–240 giây; bấm **Xong** để nộp sớm (bấm lại để sửa), hết giờ thì phần đang làm dở vẫn được tính. Bước đầu có nút lấy gợi ý nếu bí ý tưởng
+- Cuối ván chủ phòng bấm **Tiếp** (`→` / `Space`) để lật từng phần của từng câu chuyện cho cả bàn cùng xem; xong ván ai cũng xem lại được mọi câu chuyện
+- Tranh chỉ lộ đúng lúc: khi đang chơi mỗi người chỉ xem được tranh mình được giao. Người rời giữa ván thì phần của họ để trống, câu chuyện vẫn đi tiếp; người xem có thể ngồi chờ ván sau
 
 **Bảng điểm (Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người

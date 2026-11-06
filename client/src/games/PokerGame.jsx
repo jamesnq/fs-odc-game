@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, BookOpen, Eye } from 'lucide-react';
+import { Pencil, BookOpen, Eye, Pause } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import Card from '../components/Card.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
 import PokerHandLog from './PokerHandLog.jsx';
 import Modal from '../components/Modal.jsx';
 import GameInfo from '../components/GameInfo.jsx';
+import StartBar, { ReadyMark } from '../components/StartBar.jsx';
 import { fmtNum } from '../format.js';
 import { PokerRules, BestHandPanel, myHole } from './PokerPanels.jsx';
 import { describeHand } from '@game/shared/poker';
@@ -71,12 +72,14 @@ export default function PokerGame({ room, state: s }) {
             )}
             {!h?.street || h.street === 'done' ? (
               <div className="muted small pk-next">
-                {nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
+                {!s.started ? 'Chờ mọi người sẵn sàng, chủ phòng bấm Bắt đầu'
+                  : nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
               </div>
             ) : null}
             <div className="muted small">
               Blind {fmtNum(s.smallBlind)}/{fmtNum(s.bigBlind)}
               {isOwner && <button className="link pk-blind-edit" title="Đổi blind" aria-label="Đổi blind" onClick={() => setEditBlinds(true)}><Pencil size={14} aria-hidden /></button>}
+              {isOwner && s.started && <button className="link pk-pause" title="Không chia ván mới (ván đang chơi vẫn chơi nốt)" onClick={() => act({ type: 'pause' })}><Pause size={13} aria-hidden /> Tạm dừng</button>}
             </div>
             {mySeat >= 0 && s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
               <button className="btn cta sm" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmtNum(s.config.buyIn)} chip</button>
@@ -110,6 +113,7 @@ export default function PokerGame({ room, state: s }) {
                 <div className="pk-info">
                   <div className="pk-name">
                     {seat.name}{seat.left && ' (rời)'}{seat.sitOut && ' (nghỉ)'}
+                    {!s.started && !seat.left && <ReadyMark id={seat.id} ready={s.ready} ownerId={room.ownerId} />}
                   </div>
                   <div className="pk-chips">💰 {fmtNum(seat.chips)}</div>
                   {seat.lastAction && <div className="pk-act">{seat.lastAction}</div>}
@@ -126,6 +130,12 @@ export default function PokerGame({ room, state: s }) {
         </div>
       </div>
 
+      {!s.started && (
+        <div className="board-actions pk-start">
+          <StartBar players={s.seats.filter((x) => x && !x.left)} ready={s.ready} waitingFor={s.waitingFor} seated={mySeat >= 0}
+            startLabel="Bắt đầu chia bài" />
+        </div>
+      )}
       {mySeat >= 0 && (
         <ActionBar s={s} o={o} act={act} myTurn={!!o} timeLeft={timeLeft} />
       )}

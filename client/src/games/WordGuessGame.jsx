@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, RotateCcw, Timer, Flag, Trophy, Users, Swords, CalendarDays } from 'lucide-react';
+import { Check, Timer, Flag, Trophy, Users, Swords, CalendarDays } from 'lucide-react';
 import { splitWord, partLabel, scoreGuess, PARTS, TONE_NAMES } from '@game/shared/wordguess';
 import { useApp } from '../store.jsx';
 import { useCountdown } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import GameInfo from '../components/GameInfo.jsx';
+import StartBar from '../components/StartBar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 
 const PART_NAMES = { onset: 'Âm đầu', rhyme: 'Vần', tone: 'Thanh' };
@@ -54,9 +55,8 @@ export default function WordGuessGame({ room, state: s }) {
               canGuess && <button className="btn danger" onClick={() => setGiveup(true)}><Flag size={16} aria-hidden /> Chịu thua</button>
             ) : (
               <>
-                <button className={`btn ${s.ready.includes(me) ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })}>
-                  {s.ready.includes(me) ? 'Hủy sẵn sàng' : s.status === 'over' ? <><RotateCcw size={16} aria-hidden /> Ván mới</> : <><Check size={16} aria-hidden /> Sẵn sàng</>}
-                </button>
+                <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
+                  startLabel={s.status === 'over' ? 'Ván mới' : 'Bắt đầu'} />
                 <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
               </>
             )
@@ -66,7 +66,8 @@ export default function WordGuessGame({ room, state: s }) {
               {!playing && s.seats.length < s.options.maxSeats && <button className="btn primary sm" onClick={() => call('room:sit', {})}>Vào chơi</button>}
             </span>
           )}
-          {!playing && s.seats.length > 0 && <span className="muted small ba-note">Sẵn sàng: {s.ready.length}/{s.seats.length}</span>}
+          {!me && !playing && <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={false} min={1}
+            startLabel={s.status === 'over' ? 'Ván mới' : 'Bắt đầu'} />}
         </div>
         {giveup && (
           <ConfirmDialog title="Chịu thua?" danger okLabel="Chịu thua" icon={<Flag size={22} />}

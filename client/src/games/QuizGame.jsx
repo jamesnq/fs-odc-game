@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Check, X, RotateCcw, Timer, Trophy, Flame, ChevronRight, BookOpen, PencilLine, Clock } from 'lucide-react';
+import { Check, X, Timer, Trophy, Flame, ChevronRight, BookOpen, PencilLine, Clock } from 'lucide-react';
 import { QUIZ_CATEGORIES } from '@game/shared/quiz';
 import { useApp } from '../store.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import GameInfo from '../components/GameInfo.jsx';
+import StartBar from '../components/StartBar.jsx';
 import QuizEditor from '../components/QuizEditor.jsx';
 
 // 4 màu + hình cho 4 đáp án (người mù màu vẫn phân biệt được bằng hình)
@@ -62,9 +63,8 @@ export default function QuizGame({ room, state: s }) {
           {me ? (
             !playing && (
               <>
-                <button className={`btn ${s.ready.includes(me) ? '' : 'cta'}`} onClick={() => act({ type: 'ready' })}>
-                  {s.ready.includes(me) ? 'Hủy sẵn sàng' : s.status === 'over' ? <><RotateCcw size={16} aria-hidden /> Chơi ván mới</> : <><Check size={16} aria-hidden /> Sẵn sàng</>}
-                </button>
+                <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
+                  startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />
                 <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
               </>
             )
@@ -74,7 +74,8 @@ export default function QuizGame({ room, state: s }) {
               {!playing && s.seats.length < s.options.maxSeats && <button className="btn primary sm" onClick={() => call('room:sit', {})}>Vào chơi</button>}
             </span>
           )}
-          {!playing && s.seats.length > 0 && <span className="muted small ba-note">Sẵn sàng: {s.ready.length}/{s.seats.length}</span>}
+          {!me && !playing && <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={false} min={1}
+            startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />}
         </div>
       </div>
 
@@ -161,7 +162,7 @@ function Lobby({ s, room, canEdit, onEdit }) {
           <span key={p.id} className={`qz-chip ${s.ready.includes(p.id) ? 'ready' : ''}`}>{s.ready.includes(p.id) && <Check size={12} aria-hidden />}{p.name}</span>
         ))}
       </div>
-      <div className="muted small">Chơi một mình hoặc cả phòng cùng thi. Tất cả bấm Sẵn sàng là bắt đầu.</div>
+      <div className="muted small">Chơi một mình hoặc cả phòng cùng thi: mọi người bấm Sẵn sàng, chủ phòng bấm Bắt đầu.</div>
     </div>
   );
 }

@@ -51,6 +51,7 @@ export const LIMITS = {
   events: [40, 15],
   chat: [5, 1],
   signal: [120, 40], // tín hiệu WebRTC (ICE candidate đến dồn dập lúc mới kết nối)
+  draw: [80, 40], // nét vẽ của trò Vẽ đoán (gửi theo từng đoạn ~25 lần/giây)
   create: [10, 0.5],
   abuseDisconnect: 300, // bị chặn quá chừng này lần → ngắt kết nối
 };

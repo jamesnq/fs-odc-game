@@ -10,6 +10,7 @@ import { parseWord } from '@game/shared/wordchain';
 import { scoreGuess, isSolved, dailyIndex, MAX_GUESSES } from '@game/shared/wordguess';
 import { isKnownWord, isValidSyllable } from './wordchain.js';
 import { bool, clampInt } from './options.js';
+import { ReadyGate } from './ready.js';
 
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/vi-words-doanchu.txt');
 export const ANSWERS = fs.readFileSync(DATA, 'utf8').split('\n').map((s) => s.trim()).filter(Boolean);
@@ -26,7 +27,7 @@ export class WordGuessHandler {
       strict: bool(options.strict, true), // từ đoán phải có trong từ điển
     };
     this.seats = [];
-    this.ready = new Set();
+    this.ready = new ReadyGate(room); // sẵn sàng → chủ phòng bấm Bắt đầu
     this.status = 'waiting';
     this.game = null;
     this.timer = null;
@@ -70,13 +71,16 @@ export class WordGuessHandler {
 
   action(id, a) {
     if (a.type === 'setMode') return this._setMode(id, a);
+    if (a.type === 'start') {
+      if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+      this.ready.check(id, this.seats, 1); // chơi một mình cũng được
+      return this._start();
+    }
     if (!this.seated(id)) throw new Error('Bạn đang ở chế độ xem');
     switch (a.type) {
       case 'ready': {
         if (this.status === 'playing') throw new Error('Ván đang diễn ra');
-        if (this.ready.has(id)) this.ready.delete(id);
-        else this.ready.add(id);
-        if (this.seats.length && this.seats.every((s) => this.ready.has(s.id))) this._start();
+        this.ready.toggle(id);
         return;
       }
       case 'guess': return this._guess(id, String(a.text || '').slice(0, 30));
@@ -266,7 +270,7 @@ export class WordGuessHandler {
     return {
       options: this.options,
       seats: this.seats,
-      ready: [...this.ready],
+      ...this.ready.view(this.seats.map((x) => x.id)),
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,

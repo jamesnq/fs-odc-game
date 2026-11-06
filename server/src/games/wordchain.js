@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { WordChainGame, makeSyllableChecker, makeWordChecker } from '@game/shared/wordchain';
+import { WordChainGame, makeSyllableChecker, makeDictionary, FIRST_MIN_NEXT } from '@game/shared/wordchain';
 import { buildWordIndex, chooseWord } from '@game/shared/wordchainBot';
 import { bool, clampInt } from './options.js';
+import { ReadyGate } from './ready.js';
 import { BOT_LEVEL_NAMES, botLevel, isBot, newBotId, requireBotManager, thinkMs } from './bots.js';
 
 // Từ điển (xem server/src/data/README.md): âm tiết tiếng Việt và từ ghép 2 chữ (~62.000 từ, gộp từ 3 nguồn)
@@ -11,9 +12,11 @@ const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../dat
 const readLines = (file) => fs.readFileSync(path.join(DATA_DIR, file), 'utf8').split('\n').filter(Boolean);
 export const isValidSyllable = makeSyllableChecker(readLines('vi-syllables.txt'));
 const WORD_LISTS = ['vi-words.txt', 'vi-words-noitu.txt', 'vi-words-common.txt'].flatMap(readLines);
-export const isKnownWord = makeWordChecker(WORD_LISTS);
+// Chỉ giữ các mục có cả 2 chữ là âm tiết tiếng Việt (bỏ "acid amin", "ad hoc"… không bao giờ nối được)
+export const dictionary = makeDictionary(WORD_LISTS, isValidSyllable);
+export const isKnownWord = dictionary.has;
 // Máy chỉ dùng từ có trong từ điển và mọi chữ đều là âm tiết hợp lệ → luôn qua được kiểm tra
-const botIndex = buildWordIndex(WORD_LISTS.filter((t) => t.split(' ').every(isValidSyllable)));
+const botIndex = buildWordIndex(WORD_LISTS.filter((t) => t.trim().split(/\s+/).every(isValidSyllable)));
 const MAX_BOTS = 3;
 
 const HISTORY_MAX = 10;
@@ -29,7 +32,7 @@ export class WordChainHandler {
       strict: bool(options.strict, true), // từ phải có trong từ điển từ ghép
     };
     this.seats = []; // [{ id, name }] theo thứ tự lượt
-    this.ready = new Set();
+    this.ready = new ReadyGate(room);
     this.status = 'waiting'; // waiting | playing | over
     this.game = null;
     this.timer = null;
@@ -97,25 +100,28 @@ export class WordChainHandler {
     }
   }
 
-  _allReady() {
-    return this.seats.length >= 2 && this.humans.length >= 1 && this.seats.every((s) => s.bot || this.ready.has(s.id));
-  }
-
   _action(id, a) {
     if (a.type === 'addBot') return this._addBot(id, a);
     if (a.type === 'removeBot') return this._removeBot(id, a.id);
+    if (a.type === 'start') {
+      if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+      if (!this.humans.length) throw new Error('Cần ít nhất một người chơi thật');
+      this.ready.check(id, this.seats); // máy luôn được coi là đã sẵn sàng
+      return this._start();
+    }
     if (!this.seated(id)) throw new Error('Bạn đang ở chế độ xem');
     switch (a.type) {
       case 'ready': {
         if (this.status === 'playing') throw new Error('Ván đang diễn ra');
-        if (this.ready.has(id)) this.ready.delete(id);
-        else this.ready.add(id);
-        if (this._allReady()) this._start();
+        this.ready.toggle(id);
         return;
       }
       case 'word': {
         this._requirePlaying();
-        this.game.submit(id, String(a.text || '').slice(0, 40));
+        const w = this.game.submit(id, String(a.text || '').slice(0, 40));
+        if (this.game.result?.reason === 'deadEnd') {
+          this.room.system(`🎯 Không còn từ nào bắt đầu bằng "${w.syllables[1]}" — ${this.game.players.find((p) => p.id === id).name} thắng luôn!`);
+        }
         this._afterTurn(true);
         return;
       }
@@ -170,7 +176,6 @@ export class WordChainHandler {
     this.seats = this.seats.filter((s) => s !== seat);
     this.wins.delete(seat.id);
     this.room.system(`Đã bỏ ${seat.name} khỏi bàn`);
-    if (this._allReady()) this._start();
   }
 
   /** Tới lượt máy thì hẹn giờ cho máy nối từ (hoặc "bí" để hết giờ). */
@@ -192,7 +197,10 @@ export class WordChainHandler {
       const word = chooseWord(this.game, p.bot, botIndex, onlyBots ? { miss: 0.25 } : undefined);
       if (!word) return; // bí: để đồng hồ chạy hết giờ
       try {
-        this.game.submit(p.id, word);
+        const w = this.game.submit(p.id, word);
+        if (this.game.result?.reason === 'deadEnd') {
+          this.room.system(`🎯 Không còn từ nào bắt đầu bằng "${w.syllables[1]}" — ${p.name} thắng luôn!`);
+        }
         this._afterTurn(true);
       } catch (e) {
         console.error('[bot]', e.message);
@@ -215,6 +223,8 @@ export class WordChainHandler {
       isValidSyllable: this.options.dictionary ? isValidSyllable : null,
       isKnownWord,
       strict: this.options.dictionary && this.options.strict,
+      // Có từ điển: từ mở đầu không được quá khó, nối từ cụt (không còn từ nối tiếp) thì thắng luôn
+      countNext: this.options.dictionary ? dictionary.countNext : null,
     });
     this.status = 'playing';
     this.ready.clear();
@@ -277,7 +287,8 @@ export class WordChainHandler {
     return {
       options: this.options,
       seats: this.seats,
-      ready: [...this.ready, ...this.seats.filter((x) => x.bot).map((x) => x.id)],
+      ...this.ready.view(this.seats.map((x) => x.id)),
+      firstMinNext: this.options.dictionary ? FIRST_MIN_NEXT : 0,
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,

@@ -14,7 +14,9 @@
     "./poker": "./src/poker.js",
     "./quiz": "./src/quiz.js",
     "./wordguess": "./src/wordguess.js",
-    "./tala": "./src/tala.js"
+    "./tala": "./src/tala.js",
+    "./scribble": "./src/scribble.js",
+    "./telephone": "./src/telephone.js"
   },
   "scripts": {
     "test": "node --test"

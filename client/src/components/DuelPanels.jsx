@@ -27,8 +27,9 @@ export function PlayerBar({ side, s, room, chip, sitLabel, bots = false }) {
             <span className="score-chip" title="Điểm trong phòng: thắng 1, hòa ½, thua 0">{fmtPts(pointsOf(s.score, seat.id) ?? 0)} điểm</span>
           )}
           {member && !member.online && <span className="muted"> (mất kết nối)</span>}
+          {s.status !== 'playing' && seat.id === room.ownerId && <span className="ready owner" title="Chủ phòng — bấm Bắt đầu"> 👑</span>}
           {s.status === 'waiting' && s.ready[side] && <span className="ready"> ✔ sẵn sàng</span>}
-          {s.status === 'over' && s.rematch[side] && !seat.bot && <span className="ready"> ↻ muốn chơi lại</span>}
+          {s.status === 'over' && s.ready[side] && !seat.bot && <span className="ready"> ↻ muốn chơi lại</span>}
           {seat.bot && manage && (
             <button className="btn ghost sm" onClick={() => act({ type: 'removeBot' })} title="Bỏ máy khỏi ghế này">Bỏ máy</button>
           )}

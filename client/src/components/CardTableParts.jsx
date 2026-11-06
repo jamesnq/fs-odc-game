@@ -2,14 +2,24 @@
 import { useApp } from '../store.jsx';
 import { useHotkeys } from '../hooks.js';
 import { fmtSigned } from '../format.js';
+import StartBar, { ReadyMark } from './StartBar.jsx';
 
-const seatedCount = (s) => s.seats.filter(Boolean).length;
+const seatedList = (s) => s.seats.filter(Boolean);
 
-/** Màn chờ trước ván: chọn ghế, bắt đầu ván. */
+/** Sẵn sàng (người ngồi bàn) / Bắt đầu (chủ phòng). Phím N: chủ phòng bắt đầu, người khác bật/tắt sẵn sàng. */
+function StartRow({ s, startLabel }) {
+  const { act, room, user } = useApp();
+  const isOwner = room.ownerId === user.id;
+  useHotkeys({ n: () => (isOwner ? act({ type: 'start' }) : s.mySeat >= 0 && act({ type: 'ready' })) });
+  return (
+    <StartBar players={seatedList(s)} ready={s.ready} waitingFor={s.waitingFor} seated={s.mySeat >= 0}
+      startLabel={<><kbd>N</kbd> {startLabel}</>} />
+  );
+}
+
+/** Màn chờ trước ván: chọn ghế, sẵn sàng, chủ phòng bắt đầu. */
 export function WaitingRoom({ s, title, startLabel, rules }) {
-  const { act, call } = useApp();
-  const seated = seatedCount(s);
-  useHotkeys({ n: () => s.mySeat >= 0 && seated >= 2 && act({ type: 'start' }) });
+  const { call, room } = useApp();
   return (
     <div className="tl-wait panel">
       <h3>{title} — cược {s.config.unit}/đơn vị</h3>
@@ -18,7 +28,7 @@ export function WaitingRoom({ s, title, startLabel, rules }) {
           <div key={i} className={`tl-seat-box ${seat ? '' : 'empty'}`}>
             {seat ? (
               <>
-                <b>{seat.name}</b>
+                <b>{seat.name}<ReadyMark id={seat.id} ready={s.ready} ownerId={room.ownerId} /></b>
                 <div className={seat.total >= 0 ? 'pos' : 'neg'}>{fmtSigned(seat.total)}</div>
               </>
             ) : s.mySeat < 0 ? (
@@ -27,32 +37,54 @@ export function WaitingRoom({ s, title, startLabel, rules }) {
           </div>
         ))}
       </div>
-      <div className="row">
-        {s.mySeat >= 0 ? (
-          <>
-            <button className="btn cta" disabled={seated < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> {startLabel}</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
-          </>
-        ) : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
+      <div className="row wrap">
+        <StartRow s={s} startLabel={startLabel} />
+        {s.mySeat >= 0 ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+          : <span className="muted">Bạn đang xem. Chọn ghế trống để chơi.</span>}
       </div>
-      {seated < 2 && <div className="muted small">Cần ít nhất 2 người để bắt đầu.</div>}
       {rules}
     </div>
   );
 }
 
-/** Cuối bảng kết quả: ván mới / đứng dậy / ngồi ghế trống, và tổng điểm tích lũy. */
+/**
+ * Trong lúc đang chơi: người ngồi chờ ván sau, và cho người xem ngồi vào ghế trống để chờ.
+ * Trả về null nếu không có gì để hiện.
+ */
+export function WaitingSeats({ s }) {
+  const { call, act } = useApp();
+  const inGame = new Set(s.gameSeats);
+  const waiting = s.seats.map((x, i) => x && !inGame.has(i) && x).filter(Boolean);
+  const empty = s.seats.map((x, i) => (x ? -1 : i)).filter((i) => i >= 0);
+  const meWaiting = s.mySeat >= 0 && !inGame.has(s.mySeat);
+  if (!waiting.length && (s.mySeat >= 0 || !empty.length)) return null;
+  return (
+    <div className="ct-waiting small" role="status">
+      {waiting.length > 0 && <span>Chờ ván sau: <b>{waiting.map((x) => x.name).join(', ')}</b></span>}
+      {meWaiting && (
+        <>
+          <button className={`btn sm ${s.ready.includes(s.seats[s.mySeat].id) ? '' : 'primary'}`} onClick={() => act({ type: 'ready' })}>
+            {s.ready.includes(s.seats[s.mySeat].id) ? 'Hủy sẵn sàng' : 'Sẵn sàng ván sau'}
+          </button>
+          <button className="btn ghost sm" onClick={() => call('room:stand')}>Đứng dậy</button>
+        </>
+      )}
+      {s.mySeat < 0 && empty.length > 0 && (
+        <button className="btn sm primary" onClick={() => call('room:sit', { seat: empty[0] })}>Ngồi chờ ván sau</button>
+      )}
+    </div>
+  );
+}
+
+/** Cuối bảng kết quả: sẵn sàng / ván mới (chủ phòng) / đứng dậy / ngồi ghế trống, và tổng điểm tích lũy. */
 export function NextGameActions({ s }) {
-  const { act, call } = useApp();
-  useHotkeys({ n: () => s.mySeat >= 0 && act({ type: 'start' }) });
+  const { call } = useApp();
   return (
     <>
-      <div className="row">
+      <div className="row wrap">
+        <StartRow s={s} startLabel="Ván mới" />
         {s.mySeat >= 0 ? (
-          <>
-            <button className="btn cta" disabled={seatedCount(s) < 2} onClick={() => act({ type: 'start' })}><kbd>N</kbd> Ván mới</button>
-            <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
-          </>
+          <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
         ) : (
           <>
             {s.seats.some((x) => !x) && <span className="muted">Có ghế trống — </span>}
@@ -62,7 +94,7 @@ export function NextGameActions({ s }) {
           </>
         )}
       </div>
-      <div className="small muted">Tổng điểm: {s.seats.filter(Boolean).map((x) => `${x.name}: ${fmtSigned(x.total)}`).join(' · ')}</div>
+      <div className="small muted">Tổng điểm: {seatedList(s).map((x) => `${x.name}: ${fmtSigned(x.total)}`).join(' · ')}</div>
     </>
   );
 }

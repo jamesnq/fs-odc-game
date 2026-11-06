@@ -6,7 +6,7 @@ import Card from '../components/Card.jsx';
 import CardTable from '../components/CardTable.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import { ResultOverlay } from '../components/BoardRequests.jsx';
-import { WaitingRoom, NextGameActions } from '../components/CardTableParts.jsx';
+import { WaitingRoom, NextGameActions, WaitingSeats } from '../components/CardTableParts.jsx';
 import { fmtSigned } from '../format.js';
 import { Timer, ArrowDownUp } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
@@ -28,6 +28,7 @@ export default function TalaGame({ room, state: s }) {
   return (
     <div className="tl">
       <Table s={s} g={g} act={act} timeLeft={timeLeft} inGame={inGame} />
+      {!g.result && <WaitingSeats s={s} />}
       {g.result && <Result s={s} g={g} />}
       <GameInfo><div className="panel"><Rules open /></div></GameInfo>
     </div>

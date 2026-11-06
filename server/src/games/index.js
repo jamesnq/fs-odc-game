@@ -6,12 +6,15 @@ import { SamLocHandler } from './samloc.js';
 import { WordChainHandler } from './wordchain.js';
 import { QuizHandler } from './quiz.js';
 import { WordGuessHandler } from './wordguess.js';
+import { ScribbleHandler } from './scribble.js';
+import { TelephoneHandler } from './telephone.js';
 
 /**
  * Các trò chơi. Mỗi Handler điều khiển một bàn trong một phòng và cần có:
  *   options, maxPlayers, playerIds(), isPlaying(), sit(user, seat?), stand(id), onLeave(id),
  *   rename(id, name), action(id, payload), view(viewerId), dispose()
- * và tùy chọn query(viewerId, q) cho dữ liệu lớn lấy theo yêu cầu.
+ * và tùy chọn query(viewerId, q) cho dữ liệu lớn lấy theo yêu cầu, stream(id, payload) cho dữ liệu
+ * gửi liên tục (nét vẽ) chuyển thẳng cho người khác, censorChat(id, text) để chặn tin nhắn lộ đáp án.
  */
 export const GAMES = {
   xiangqi: { name: 'Cờ tướng', Handler: XiangqiHandler },
@@ -22,6 +25,8 @@ export const GAMES = {
   wordchain: { name: 'Nối từ', Handler: WordChainHandler },
   quiz: { name: 'Đố vui', Handler: QuizHandler },
   wordguess: { name: 'Đoán chữ', Handler: WordGuessHandler },
+  scribble: { name: 'Vẽ đoán', Handler: ScribbleHandler },
+  telephone: { name: 'Tam sao thất bản', Handler: TelephoneHandler },
 };
 
 export const isGame = (game) => typeof game === 'string' && Object.hasOwn(GAMES, game);
