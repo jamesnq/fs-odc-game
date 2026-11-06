@@ -504,6 +504,40 @@ if (OTHER_PASSWORD) {
   console.log('✔ Nối thú OK');
 }
 
+// ---------- Nối thú: chế độ cổ điển ----------
+{
+  const { findMove, SHIFTS } = await import('@game/shared/onet');
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Nối thú cổ điển', game: 'onet', options: { mode: 'classic', rows: 4, cols: 4, minutes: 2, hints: 0, shuffles: 0, gravity: true } });
+  await until(() => a.state?.state.options);
+  assert.equal(a.state.state.options.mode, 'classic');
+  assert.equal(a.state.state.options.gravity, false, 'cổ điển bỏ qua tuỳ chọn trọng lực');
+  await a.act({ type: 'start' });
+  await until(() => a.state.state.status === 'playing');
+  const mine = () => a.state.state.players[0];
+  assert.equal(mine().level, 1);
+  assert.ok(mine().timeLeft > 0, 'mỗi người có đồng hồ riêng');
+  const levels = a.state.state.levels;
+  assert.equal(levels, SHIFTS.length);
+  for (let i = 0; i < 200 && !mine().done; i++) {
+    const { seq, level } = mine();
+    const mv = findMove(mine().grid);
+    await a.act({ type: 'match', a: mv[0], b: mv[1] });
+    await until(() => mine().seq > seq);
+    if (mine().level > level) {
+      assert.equal(mine().shift, SHIFTS[mine().level - 1], 'màn mới đổi kiểu dồn');
+      assert.equal(mine().left, 16, 'màn mới có bàn đầy');
+    }
+    await wait(70);
+  }
+  await until(() => a.state.state.status === 'over');
+  assert.equal(mine().level, levels);
+  assert.ok(mine().finishedAt != null, 'phá đảo');
+  await wait(1500);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Nối thú cổ điển OK');
+}
+
 // ---------- Vẽ đoán ----------
 {
   a.state = b.state = c.state = null;

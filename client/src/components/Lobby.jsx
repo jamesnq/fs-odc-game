@@ -244,6 +244,6 @@ function describeOptions(r) {
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
   if (r.game === 'samloc') return `Cược ${o.unit}/đơn vị · ${o.turnSeconds} giây/lượt`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;
-  if (r.game === 'onet') return `${o.rows}×${o.cols} ô · ${o.minutes} phút${o.gravity ? ' · trọng lực' : ''}`;
+  if (r.game === 'onet') return o.mode === 'classic' ? `Cổ điển · ${o.rows}×${o.cols} ô · ${o.minutes} phút/màn` : `${o.rows}×${o.cols} ô · ${o.minutes} phút${o.gravity ? ' · trọng lực' : ''}`;
   return '';
 }

@@ -46,7 +46,7 @@ export function turnInfo(room, userId) {
     case 'onet': {
       if (s.status !== 'playing') return null;
       const p = s.players.find((x) => x.id === userId);
-      if (p && !p.done) return { mine: true, text: `Nối nhanh! Còn ${p.left} ô` };
+      if (p && !p.done) return { mine: true, text: s.options.mode === 'classic' ? `Màn ${p.level}/${s.levels} · còn ${p.left} ô` : `Nối nhanh! Còn ${p.left} ô` };
       return { mine: false, text: `Đang đua (${s.players.filter((x) => x.done).length}/${s.players.length} xong)` };
     }
     case 'wordchain': {

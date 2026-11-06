@@ -6,6 +6,7 @@ import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import GameInfo from '../components/GameInfo.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
+import GameOverDialog, { GoRanking } from '../components/GameOverDialog.jsx';
 
 // 36 hình thú (emoji) — chỉ số 1..36 khớp với giá trị ô trên server
 const ANIMALS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
@@ -16,6 +17,11 @@ const hue = (v) => (v * 137) % 360;
 const CW = 40; // bề rộng ô (đơn vị SVG)
 const CH = 46; // chiều cao ô
 const FLASH_MS = 380;
+// Chế độ cổ điển: kiểu dồn hình của từng màn (khớp SHIFTS trong shared/src/onet.js)
+export const SHIFT_LABEL = {
+  none: 'Không dồn', down: 'Dồn xuống ↓', left: 'Dồn sang trái ←', up: 'Dồn lên ↑', right: 'Dồn sang phải →',
+  vin: 'Dồn vào giữa ↕', hin: 'Dồn vào giữa ↔', vout: 'Tách lên – xuống', hout: 'Tách trái – phải',
+};
 const PORTRAIT = '(max-width: 640px) and (orientation: portrait)';
 
 /** Màn dọc hẹp (điện thoại): vẽ bàn xoay ngang→dọc cho ô to hơn (chỉ đổi cách hiển thị). */
@@ -37,7 +43,10 @@ export default function OnetGame({ room, state: s }) {
   const me = s.players.find((p) => p.id === s.myId) || null;
   const [watchId, setWatchId] = useState(null);
   const shown = me || s.players.find((p) => p.id === watchId) || s.players[0] || null;
-  const timeLeft = useCountdown(s.timeLeft, room.receivedAt, playing);
+  const classic = s.options.mode === 'classic';
+  // Cổ điển: mỗi người một đồng hồ theo màn; kiểu đua: một đồng hồ chung
+  const clockRunning = playing && (!classic || (shown && !shown.done));
+  const timeLeft = useCountdown(classic ? (shown?.timeLeft ?? 0) : s.timeLeft, room.receivedAt, clockRunning);
   const [giveup, setGiveup] = useState(false);
   const canPlay = playing && me && !me.done;
 
@@ -52,7 +61,13 @@ export default function OnetGame({ room, state: s }) {
         <Racers s={s} ownerId={room.ownerId} shownId={shown?.id} onPick={me ? null : setWatchId} />
 
         <div className="onet-bar">
-          <span className={`onet-time ${playing && timeLeft < 30000 ? 'low' : ''}`}>
+          {classic && (
+            <span className="onet-level" title={SHIFT_LABEL[shown?.shift || 'none']}>
+              <span><span className="onet-tl">Màn </span><b>{shown && s.status !== 'waiting' ? shown.level : 1}</b>/{s.levels}</span>
+              <span className="onet-shift">{SHIFT_LABEL[shown && s.status !== 'waiting' ? shown.shift : 'none']}</span>
+            </span>
+          )}
+          <span className={`onet-time ${clockRunning && timeLeft < 30000 ? 'low' : ''}`}>
             <Timer size={15} aria-hidden /> {playing ? fmtClock(timeLeft) : fmtClock(s.timeTotal)}
           </span>
           <div className="onet-timebar" aria-hidden>
@@ -76,7 +91,7 @@ export default function OnetGame({ room, state: s }) {
 
         <div className="panel onet-stage">
           {shown && s.status !== 'waiting' ? (
-            <Board key={`${s.gameNo}-${shown.id}`} p={shown} rows={s.options.rows} cols={s.options.cols}
+            <Board key={`${s.gameNo}-${shown.id}-${shown.level}`} p={shown} rows={s.options.rows} cols={s.options.cols}
               interactive={!!canPlay} act={act} />
           ) : (
             <div className="onet-wait">
@@ -85,13 +100,20 @@ export default function OnetGame({ room, state: s }) {
               <div className="muted small">Chờ mọi người sẵn sàng, chủ phòng bấm Bắt đầu</div>
             </div>
           )}
-          {s.status === 'over' && s.result && <Result s={s} me={user.id} />}
+          {classic && playing && !shown?.done && shown?.level > 1 && (
+            <div key={`lv-${shown.id}-${shown.level}`} className="onet-levelup" aria-live="polite">
+              Màn {shown.level} · {SHIFT_LABEL[shown.shift]}
+            </div>
+          )}
           {playing && me?.done && (
-            <div className="onet-done">{me.gaveUp ? 'Bạn đã bỏ cuộc' : `🎉 Dọn sạch sau ${fmtClock(me.finishedAt)} — chờ mọi người…`}</div>
+            <div className="onet-done">{me.gaveUp ? 'Bạn đã bỏ cuộc' : me.timedOut ? `⏰ Hết giờ ở màn ${me.level} — chờ mọi người…`
+              : `🎉 ${classic ? 'Phá đảo' : 'Dọn sạch'} sau ${fmtClock(me.finishedAt)} — chờ mọi người…`}</div>
           )}
         </div>
 
-        {(!playing || !s.myId) && <div className="board-actions">
+        {s.status === 'over' && s.result && <Result s={s} me={user.id} call={call} />}
+
+        {s.status !== 'over' && (!playing || !s.myId) && <div className="board-actions">
           {!playing && (s.myId ? (
             <>
               <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
@@ -125,9 +147,15 @@ export default function OnetGame({ room, state: s }) {
           <b>Luật chơi</b>
           <ul>
             <li>Chọn hai ô <b>cùng hình</b>. Chúng biến mất nếu nối được bằng đường gấp khúc tối đa <b>3 đoạn thẳng</b> (≤ 2 lần rẽ), chỉ đi qua ô trống — được vòng ra <b>ngoài viền</b> bàn.</li>
-            <li>Mọi người chơi <b>cùng một bàn</b> (mỗi người một bản). Ai dọn sạch trước thắng; hết {s.options.minutes} phút thì xếp theo điểm.</li>
+            {classic ? <>
+              <li><b>Cổ điển:</b> vượt lần lượt {s.levels} màn, mỗi màn {s.options.minutes} phút. Hết giờ ở màn nào thì dừng ở màn đó.</li>
+              <li>Từ màn 2, sau mỗi lần nối các hình <b>dồn</b> theo một hướng: xuống, trái, lên, phải, vào giữa, tách ra hai bên…</li>
+              <li>Mọi người gặp <b>cùng một bàn</b> ở mỗi màn. Xếp hạng theo màn đạt được, rồi tới điểm.</li>
+            </> : (
+              <li>Mọi người chơi <b>cùng một bàn</b> (mỗi người một bản). Ai dọn sạch trước thắng; hết {s.options.minutes} phút thì xếp theo điểm.</li>
+            )}
             <li>Mỗi cặp 10 điểm, nối liên tiếp trong 3 giây được <b>combo</b> +2/bậc. Dọn sạch bàn được thưởng 1 điểm cho mỗi giây còn lại.</li>
-            <li>{s.options.hints} lượt gợi ý, {s.options.shuffles} lượt đổi hình. Hết nước đi thì bàn <b>tự xáo</b> miễn phí.</li>
+            <li>{s.options.hints} lượt gợi ý, {s.options.shuffles} lượt đổi hình{classic ? ' (qua mỗi màn được thêm 1 lượt đổi hình)' : ''}. Hết nước đi thì bàn <b>tự xáo</b> miễn phí.</li>
             {s.options.gravity && <li><b>Trọng lực:</b> nối xong, các hình phía trên rơi xuống lấp chỗ trống.</li>}
           </ul>
         </div>
@@ -249,7 +277,8 @@ function Racers({ s, ownerId, shownId, onPick }) {
               {s.status !== 'playing' && <ReadyMark id={p.id} ready={s.ready} ownerId={ownerId} />}
             </div>
             <div className="small muted">
-              {p.done && !p.gaveUp ? '✅ Xong' : p.gaveUp ? 'Bỏ cuộc' : `Còn ${p.left} ô`} · <b className="onet-pts">{p.score}</b> điểm
+              {s.options.mode === 'classic' && p.level && s.status !== 'waiting' ? `Màn ${p.level} · ` : ''}
+              {p.gaveUp ? 'Bỏ cuộc' : p.timedOut ? 'Hết giờ' : p.done ? '✅ Xong' : `Còn ${p.left} ô`} · <b className="onet-pts">{p.score}</b> điểm
             </div>
             <div className="onet-progress"><div style={{ width: `${pct}%` }} /></div>
           </Tag>
@@ -260,30 +289,27 @@ function Racers({ s, ownerId, shownId, onPick }) {
   );
 }
 
-function Result({ s, me }) {
+function Result({ s, me, call }) {
   const byId = (id) => s.players.find((p) => p.id === id);
   const winner = byId(s.result.winner);
   const solo = s.players.length === 1;
+  const classic = s.options.mode === 'classic';
+  const title = solo
+    ? (s.players[0].finishedAt != null ? (classic ? `🎉 Phá đảo ${s.levels} màn!` : '🎉 Dọn sạch bàn!')
+      : s.players[0].gaveUp ? (classic ? `🏳️ Bỏ cuộc ở màn ${s.players[0].level}` : '🏳️ Đã bỏ cuộc') : classic ? `⏰ Dừng ở màn ${s.players[0].level}` : '⏰ Hết giờ!')
+    : winner ? <>🏆 {winner.id === me ? 'Bạn' : winner.name} thắng!</> : 'Không ai thắng';
+  const rows = s.result.ranking.map((id) => {
+    const p = byId(id);
+    const note = `${classic && p.finishedAt == null ? `màn ${p.level} · ` : ''}${p.finishedAt != null ? `xong ${fmtClock(p.finishedAt)} (+${p.bonus})` : p.gaveUp ? 'bỏ cuộc' : `còn ${p.left} ô`}`;
+    return { id, name: p.name, value: p.score, note };
+  });
   return (
-    <div className="onet-result" role="status">
-      <div className="onet-big">
-        {solo ? (s.players[0].finishedAt != null ? '🎉 Dọn sạch bàn!' : '⏰ Kết thúc') : winner ? <>🏆 {winner.id === me ? 'Bạn' : winner.name} thắng!</> : 'Không ai thắng'}
-      </div>
-      <ol className="onet-rank">
-        {s.result.ranking.map((id) => {
-          const p = byId(id);
-          return (
-            <li key={id} className={id === me ? 'me' : ''}>
-              <span className="onet-rname">{p.name}</span>
-              <span className="muted small">
-                {p.finishedAt != null ? `xong ${fmtClock(p.finishedAt)} (+${p.bonus})` : p.gaveUp ? 'bỏ cuộc' : `còn ${p.left} ô`}
-              </span>
-              <b>{p.score}</b>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+    <GameOverDialog over icon={<Trophy size={26} />} title={title} min={1}
+      seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!s.myId} reviewLabel="Xem lại bàn"
+      seatBtn={s.myId ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+        : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
+      <GoRanking me={me} rows={rows} />
+    </GameOverDialog>
   );
 }
 

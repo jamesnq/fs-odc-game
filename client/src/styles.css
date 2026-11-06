@@ -272,8 +272,7 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
   .online-panel { position: sticky; top: calc(var(--topbar-h) + 16px); max-height: calc(100vh - var(--topbar-h) - 40px); }
   .online-panel.open .op-head { padding-bottom: 6px; }
   .op-scroll { max-height: none; }
-  /* Màn rộng, đã ẩn danh sách: cột phải chỉ còn tiêu đề gọn, khu phòng chơi rộng ra */
-  .lobby:has(.online-panel:not(.open)) { grid-template-columns: minmax(0, 1fr) auto; }
+  /* Màn rộng, đã ẩn danh sách: giữ nguyên bề rộng cột phải (chỉ còn tiêu đề) để thẻ game và danh sách phòng không bị dàn lại khi ẩn / hiện */
   .online-panel:not(.open) .op-head { padding: 10px 12px; }
 }
 .ri-icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--panel-2); color: var(--gc-fg, #fff); }
@@ -1074,6 +1073,19 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .board-strip > span { overflow: hidden; text-overflow: ellipsis; }
 .board-strip.check { background: var(--danger); border-color: #fca5a5; color: #fff; font-weight: 700; top: auto; bottom: 8px; animation: pulse 1s infinite; }
 .board-strip.result { cursor: pointer; color: var(--gold); }
+/* Popup hết ván dùng chung (components/GameOverDialog.jsx) */
+.go { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 6px 4px 2px; }
+.go-start { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin-top: 6px; }
+.go-start .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 16px; }
+.go .bo-actions { flex-wrap: wrap; }
+.go .bo-actions .btn { flex: 1 1 200px; }
+.go-strip { position: sticky; top: 0; left: auto; transform: none; align-self: center; z-index: 7; max-width: 100%; flex: none; }
+.go-rank { list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto; }
+.go-rank li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); text-align: left; }
+.go-rank li.me { border-color: var(--gold); }
+.go-pos { width: 22px; text-align: center; color: var(--muted); font-weight: 700; flex: none; }
+.go-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
 .board-strip .btn.sm { min-height: 30px; padding: 0 10px; }
 .spin { animation: spin 1s linear infinite; }
 
@@ -1554,13 +1566,49 @@ textarea:focus { border-color: var(--primary-hi); box-shadow: 0 0 0 3px var(--pr
 @keyframes tp-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .tp-entry { animation: none; } }
 /* Bước đoán: tranh vừa màn hình để ô nhập luôn thấy được */
+/* Bước vẽ: cả khu chơi, khung vẽ 4:3 co vừa phần còn lại (đo bằng container query) */
+.tp.tp-fill { max-width: 1180px; height: max(100cqh, 480px); padding: 8px 0 0; }
+.tp-fill .board-actions { flex: none; padding: 0; }
+.tp-what { color: var(--gold); }
+.tp-done-btn { flex: none; }
+.tp-draw { flex: 1; min-height: 0; display: flex; gap: 10px; justify-content: center; align-items: center; container-type: size; }
+/* Màn rộng: cột công cụ (148px + 10px khe) nằm sát khung vẽ, cả cụm ở giữa */
+.tp-canvas-box { flex: none; width: min(100cqw - 158px, 100cqh * 4 / 3); }
+.tp-draw:not(:has(.tp-tools)) .tp-canvas-box { width: min(100cqw, 100cqh * 4 / 3); }
+.tp-canvas-box .sc-stage { width: 100%; }
+.tp-canvas-box .sc-canvas { max-height: none; }
+/* Cột công cụ dọc */
+.tp-tools { flex: none; width: 148px; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; padding: 10px; overflow-y: auto; align-self: center; max-height: 100%; }
+.tp-tools .sc-palette { grid-template-columns: repeat(4, 1fr); }
+.tp-tools .sc-color { width: 100%; height: auto; aspect-ratio: 1; }
+.tp-tools .sc-sizes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.tp-tools .sc-size { width: 100%; height: auto; aspect-ratio: 1; }
+.tp-tools .sc-size span { max-width: 18px; max-height: 18px; }
+.tp-tools .sc-toolbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.tp-tools .sc-toolbtns .btn { padding: 0; justify-content: center; min-height: 34px; }
+.tp-tools .hide-sm { display: none; }
+@media (max-width: 760px), (orientation: portrait) and (max-width: 900px) {
+  /* Điện thoại: khung vẽ trên, công cụ ngay dưới cho dễ với tay */
+  .tp-draw { flex-direction: column; gap: 8px; container-type: normal; align-items: stretch; }
+  .tp-canvas-box, .tp-draw:not(:has(.tp-tools)) .tp-canvas-box { flex: 1; width: auto; min-height: 0; container-type: size; display: grid; place-items: end center; }
+  .tp-canvas-box .sc-stage { width: min(100cqw, 100cqh * 4 / 3); }
+  .tp-tools { order: 2; width: auto; align-self: stretch; flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 8px; max-height: none; overflow: visible; }
+  .tp-tools .sc-palette { grid-template-columns: repeat(8, 1fr); width: 100%; }
+  .tp-tools .sc-sizes { flex: 1; grid-template-columns: repeat(5, 34px); }
+  .tp-tools .sc-size { width: 34px; height: 34px; }
+  .tp-tools .sc-toolbtns { grid-template-columns: repeat(5, 34px); }
+  .tp-top { flex-wrap: wrap; gap: 4px 10px; padding: 8px 10px; }
+  .tp-fill .tp-title { order: 5; flex-basis: 100%; text-align: left; font-size: 16px; }
+  .tp-fill .tp-step { margin-right: auto; }
+  .tp.tp-fill { padding-top: 4px; }
+}
 .tp-task > .tp-drawing { width: min(100%, calc((100vh - 330px) * 4 / 3)); width: min(100%, calc((100dvh - 330px) * 4 / 3)); min-width: 240px; align-self: center; }
 
 /* ---------- Nối thú ---------- */
 .g-onet { --gc-fg: #fdba74; }
 .game-card.g-onet { --gc: linear-gradient(135deg, rgba(249,115,22,.3), rgba(21,28,50,0) 70%); }
-.onet { display: flex; justify-content: center; padding: 10px; }
-.onet-main { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.onet { display: flex; justify-content: center; padding: 10px; height: max(100cqh, 420px); }
+.onet-main { width: 100%; max-width: 1000px; height: 100%; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
 .onet-racers { display: flex; flex-wrap: wrap; gap: 6px; }
 .onet-racer { flex: 1 1 130px; min-width: 0; padding: 6px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 3px; text-align: left; color: inherit; font: inherit; }
@@ -1573,6 +1621,13 @@ button.onet-racer { cursor: pointer; }
 .onet-progress { height: 5px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
 .onet-progress div { height: 100%; background: linear-gradient(90deg, #22c55e, #a3e635); transition: width .3s var(--ease-out); }
 .onet-bar { display: flex; align-items: center; gap: 10px; }
+.onet-level { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; flex: none; }
+.onet-level b { color: var(--gold); }
+.onet-shift { font-size: 12px; color: var(--muted); }
+.onet-levelup { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; padding: 10px 18px; border-radius: 12px;
+  background: rgba(15,23,42,.9); border: 1px solid var(--gold); color: var(--gold); font-weight: 700; font-size: 18px; white-space: nowrap;
+  animation: onet-levelup 1.8s forwards; }
+@keyframes onet-levelup { 0% { opacity: 0; } 12%, 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
 .onet-time { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 64px; }
 .onet-time.low { color: #f87171; }
 .onet-timebar { flex: 1; min-width: 40px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; }
@@ -1580,8 +1635,9 @@ button.onet-racer { cursor: pointer; }
 .onet-tools { display: inline-flex; gap: 4px; flex: none; }
 .onet-score { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .onet-combo { color: var(--gold); font-weight: 600; }
-.onet-stage { position: relative; padding: 6px; background: radial-gradient(ellipse at top, #1e2a5a, #0f1733 70%); display: flex; justify-content: center; }
-.onet-board { display: block; width: 100%; height: auto; max-height: calc(100dvh - 230px); min-height: 200px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.onet-stage { flex: 1; min-height: 0; position: relative; padding: 6px; background: radial-gradient(ellipse at top, #1e2a5a, #0f1733 70%); display: flex; justify-content: center; }
+/* Bàn co theo khung còn lại (SVG giữ tỉ lệ), không tràn khỏi khu chơi */
+.onet-board { display: block; width: 100%; height: 100%; min-height: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
 .onet-tile { cursor: pointer; }
 .onet-tile-face { stroke: #c8a07a; stroke-width: 1.2; transition: fill .1s; }
 .onet-tile-edge { fill: rgba(140, 90, 50, .25); pointer-events: none; }
@@ -1601,12 +1657,5 @@ button.onet-racer { cursor: pointer; }
 .onet-big { font-size: 26px; font-weight: 800; }
 .onet-done { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: rgba(15,23,42,.9); border: 1px solid var(--line-strong);
   padding: 6px 14px; border-radius: 999px; font-weight: 600; }
-.onet-result { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  background: rgba(10,15,30,.78); backdrop-filter: blur(2px); border-radius: inherit; padding: 16px; }
-.onet-rank { list-style: none; margin: 0; padding: 0; width: min(100%, 360px); display: flex; flex-direction: column; gap: 4px; counter-reset: r; }
-.onet-rank li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; counter-increment: r; }
-.onet-rank li::before { content: counter(r); width: 18px; color: var(--muted); font-weight: 700; }
-.onet-rank li.me { border-color: var(--gold); }
-.onet-rank .onet-rname { flex: 1; }
-@media (max-width: 640px) { .onet { padding: 6px; } .onet-tl, .onet-score-unit { display: none; } .onet-bar { gap: 6px; } .onet-tools .btn { padding: 0 8px; } .onet-stage { padding: 2px; } .onet-racer { flex-basis: 100px; padding: 4px 8px; } }
-@media (prefers-reduced-motion: reduce) { .onet-tile.hint .onet-tile-face, .onet-tile.bad .onet-in, .onet-gone { animation: none; } }
+@media (max-width: 640px) { .onet { padding: 6px; } .onet-tl, .onet-score-unit, .onet-shift { display: none; } .onet-bar { gap: 6px; } .onet-tools .btn { padding: 0 8px; } .onet-stage { padding: 2px; } .onet-racer { flex-basis: 100px; padding: 4px 8px; } }
+@media (prefers-reduced-motion: reduce) { .onet-tile.hint .onet-tile-face, .onet-tile.bad .onet-in, .onet-gone { animation: none; } .onet-levelup { animation-duration: .01s; animation-delay: 1.5s; } }

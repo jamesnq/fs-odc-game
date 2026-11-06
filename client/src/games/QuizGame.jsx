@@ -6,6 +6,7 @@ import { useCountdown, useHotkeys } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import GameInfo from '../components/GameInfo.jsx';
 import StartBar from '../components/StartBar.jsx';
+import GameOverDialog, { GoRanking } from '../components/GameOverDialog.jsx';
 import QuizEditor from '../components/QuizEditor.jsx';
 
 // 4 màu + hình cho 4 đáp án (người mù màu vẫn phân biệt được bằng hình)
@@ -27,9 +28,21 @@ export default function QuizGame({ room, state: s }) {
   const next = () => { if (playing && g?.phase === 'reveal' && canNext) act({ type: 'next' }); };
   useHotkeys({ 1: pick(0), 2: pick(1), 3: pick(2), 4: pick(3), Enter: next, ArrowRight: next });
 
+  const over = s.status === 'over' && !!g;
+  const lb = g?.leaderboard || [];
+  const solo = lb.length === 1;
+
   return (
     <div className="qz">
       <div className="qz-main">
+        <GameOverDialog over={over} icon={<Trophy size={26} />}
+          title={solo ? `${lb[0].score.toLocaleString('vi-VN')} điểm` : lb[0] ? <>{lb[0].id === me ? 'Bạn' : lb[0].name} thắng!</> : 'Hết ván!'}
+          detail={solo ? `Đúng ${lb[0].correct}/${g.total} câu` : g ? `${g.total} câu · ${g.title}` : null}
+          seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} min={1} reviewLabel="Xem kết quả"
+          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+            : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
+          {!solo && <GoRanking me={me} rows={lb.map((p) => ({ id: p.id, name: p.name, value: p.score.toLocaleString('vi-VN'), note: `đúng ${p.correct}/${g.total}` }))} />}
+        </GameOverDialog>
         {g && s.status !== 'waiting' && (
           <div className="qz-top">
             <span className="qz-progress">{g.phase === 'intro' ? 'Chuẩn bị' : `Câu ${Math.min(g.index + 1, g.total)}/${g.total}`}</span>
@@ -59,7 +72,7 @@ export default function QuizGame({ room, state: s }) {
           )}
         </div>
 
-        <div className="board-actions">
+        {!over && <div className="board-actions">
           {me ? (
             !playing && (
               <>
@@ -76,7 +89,7 @@ export default function QuizGame({ room, state: s }) {
           )}
           {!me && !playing && <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={false} min={1}
             startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />}
-        </div>
+        </div>}
       </div>
 
       <GameInfo>

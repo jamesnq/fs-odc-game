@@ -3,6 +3,7 @@ import { Pencil, Timer, Check, Trophy, CircleStop } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
+import GameOverDialog, { GoRanking } from '../components/GameOverDialog.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useCountdown } from '../hooks.js';
 import ScribbleCanvas from './ScribbleCanvas.jsx';
@@ -20,10 +21,25 @@ export default function ScribbleGame({ room, state: s }) {
   const [stop, setStop] = useState(false);
   const canvas = useRef(null);
   const t = useDrawTools(canvas, canDraw);
+  const over = s.status === 'over';
+  const seatBtn = me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+    : s.seats.length < s.options.maxSeats && (
+      <button className="btn primary" onClick={() => call('room:sit', {})}>{playing ? 'Vào đoán cùng' : 'Vào chơi'}</button>
+    );
+  const winIds = s.last?.winners || [];
+  const winTitle = winIds.length === 0 ? 'Hết ván!'
+    : winIds.length > 1 ? `Đồng hạng nhất: ${winIds.map((id) => (id === user.id ? 'Bạn' : nameOf(id))).join(', ')}`
+      : <>{winIds[0] === user.id ? 'Bạn' : nameOf(winIds[0])} thắng!</>;
 
   return (
     <div className="sc">
       <div className="sc-main">
+        <GameOverDialog over={over} icon={<Trophy size={26} />}
+          title={winTitle}
+          detail={s.last ? `Ván ${s.last.no} kết thúc` : null}
+          seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} seatBtn={seatBtn}>
+          <GoRanking me={user.id} rows={s.last?.ranking.map((r) => ({ id: r.id, name: r.name, value: r.score }))} />
+        </GameOverDialog>
         <div className="panel sc-top">
           <span className="sc-round">{playing ? <>Vòng <b>{s.round}</b>/{s.options.rounds}</> : `Vẽ đoán · ${s.options.rounds} vòng`}</span>
           <WordLine s={s} isDrawer={isDrawer} />
@@ -40,17 +56,13 @@ export default function ScribbleGame({ room, state: s }) {
           {canDraw && <DrawTools t={t} canvas={canvas} />}
         </div>
 
-        <div className="board-actions">
-          {!playing && (
-            <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me}
-              startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />
-          )}
-          {me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
-            : s.seats.length < s.options.maxSeats && (
-              <button className="btn primary" onClick={() => call('room:sit', {})}>{playing ? 'Vào đoán cùng' : 'Vào chơi'}</button>
-            )}
-          {playing && isOwner && <button className="btn ghost" onClick={() => setStop(true)}><CircleStop size={14} aria-hidden /> Dừng ván</button>}
-        </div>
+        {!over && (
+          <div className="board-actions">
+            {!playing && <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} />}
+            {seatBtn}
+            {playing && isOwner && <button className="btn ghost" onClick={() => setStop(true)}><CircleStop size={14} aria-hidden /> Dừng ván</button>}
+          </div>
+        )}
       </div>
 
       <div className="sc-side">
