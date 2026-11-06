@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Đố vui · Đoán chữ
+# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Đố vui · Đoán chữ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -67,6 +67,14 @@
 - Thời gian viết 15–120 giây, vẽ 30–240 giây; bấm **Xong** để nộp sớm (bấm lại để sửa), hết giờ thì phần đang làm dở vẫn được tính. Bước đầu có nút lấy gợi ý nếu bí ý tưởng
 - Cuối ván chủ phòng bấm **Tiếp** (`→` / `Space`) để lật từng phần của từng câu chuyện cho cả bàn cùng xem; xong ván ai cũng xem lại được mọi câu chuyện
 - Tranh chỉ lộ đúng lúc: khi đang chơi mỗi người chỉ xem được tranh mình được giao. Người rời giữa ván thì phần của họ để trống, câu chuyện vẫn đi tiếp; người xem có thể ngồi chờ ván sau
+
+**Nối thú** (1–8 người, kiểu trò "Pikachu" / Onet)
+- Bàn 9×16 ô (đổi được 4–10 hàng × 4–18 cột) gồm 36 hình thú. Chọn hai ô **cùng hình** nối được bằng đường gấp khúc **tối đa 3 đoạn** (≤ 2 lần rẽ), chỉ đi qua ô trống, được vòng ra **ngoài viền** bàn — nối được thì hai ô biến mất, đường nối hiện lên chốc lát
+- **Đua cùng một bàn:** mọi người nhận cùng một bàn (cùng hạt giống), mỗi người tự nối trên bản của mình; thanh tiến độ của từng người hiện trên đầu. Ai dọn sạch trước thắng, hết giờ (mặc định 8 phút) thì xếp theo điểm. Một người cũng chơi được
+- Mỗi cặp 10 điểm, nối liên tiếp trong 3 giây được **combo** +2/bậc; dọn sạch được thưởng 1 điểm cho mỗi giây còn lại
+- **Gợi ý** và **đổi hình** (xáo bàn) có giới hạn lượt; hết nước đi thì bàn **tự xáo** miễn phí. Tùy chọn **trọng lực**: nối xong các hình phía trên rơi xuống
+- Server kiểm tra mọi nước nối; người xem bấm tên người chơi để xem bàn của họ. Điện thoại dọc: bàn tự xoay dọc cho ô to hơn
+- **Phím tắt:** `H` gợi ý · `S` đổi hình · `Esc` bỏ chọn
 
 **Bảng điểm (Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người

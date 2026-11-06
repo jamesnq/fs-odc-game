@@ -8,6 +8,7 @@ import { QuizHandler } from './quiz.js';
 import { WordGuessHandler } from './wordguess.js';
 import { ScribbleHandler } from './scribble.js';
 import { TelephoneHandler } from './telephone.js';
+import { OnetHandler } from './onet.js';
 
 /**
  * Các trò chơi. Mỗi Handler điều khiển một bàn trong một phòng và cần có:
@@ -27,6 +28,7 @@ export const GAMES = {
   wordguess: { name: 'Đoán chữ', Handler: WordGuessHandler },
   scribble: { name: 'Vẽ đoán', Handler: ScribbleHandler },
   telephone: { name: 'Tam sao thất bản', Handler: TelephoneHandler },
+  onet: { name: 'Nối thú', Handler: OnetHandler },
 };
 
 export const isGame = (game) => typeof game === 'string' && Object.hasOwn(GAMES, game);
