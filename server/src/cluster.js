@@ -109,11 +109,11 @@ export class Cluster {
   async transfer(user, nodeId) {
     if (!this.ready || !this.directory.some((node) => node.id === nodeId && !node.draining)) throw new Error('Máy chủ chưa sẵn sàng');
     if (user.sockets.size > 1) throw new Error('Hãy đóng các tab game khác trước khi chuyển phòng');
-    if (user.roomId) this.lobby.leave(user);
     await this.saveIdentity(user);
     const ok = await this.client.eval(TRANSFER, { keys: [this.routeKey(user.token)], arguments: [this.nodeId, nodeId] });
     if (!ok) throw new Error('Danh tính đã chuyển sang máy chủ khác');
     user.transferred = true;
+    if (user.roomId) this.lobby.leave(user);
     return { redirect: { nodeId } };
   }
 

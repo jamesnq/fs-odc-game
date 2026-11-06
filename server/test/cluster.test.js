@@ -2,6 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Cluster } from '../src/cluster.js';
 
+test('failed transfer preserves existing membership; successful transfer leaves only after CAS', async () => {
+  for (const failure of ['identity', 'cas-error', 'cas-rejected', null]) {
+    const cluster = new Cluster({ url: 'redis://localhost', nodeId: 'a', nodes: ['a', 'b'] });
+    cluster.ready = true;
+    cluster.directory = [{ id: 'b' }];
+    let committed = false;
+    cluster.saveIdentity = async () => { if (failure === 'identity') throw new Error('identity failure'); };
+    cluster.client = { eval: async () => {
+      if (failure === 'cas-error') throw new Error('network failure');
+      if (failure === 'cas-rejected') return 0;
+      committed = true;
+      return 1;
+    } };
+    cluster.lobby = { leave(user) { assert.ok(committed); user.roomId = null; } };
+    const user = { token: 'secret', sockets: new Set(['s']), roomId: 'old-room' };
+    if (failure) {
+      await assert.rejects(cluster.transfer(user, 'b'));
+      assert.equal(user.roomId, 'old-room');
+    } else {
+      await cluster.transfer(user, 'b');
+      assert.equal(user.roomId, null);
+      assert.equal(user.transferred, true);
+    }
+  }
+});
+
 test('directory filters logical servers and places new rooms only on available shards', () => {
   const cluster = new Cluster({ url: 'redis://localhost', nodeId: 'a', nodes: ['a', 'b'] });
   cluster.lobby = { rooms: new Map() };
