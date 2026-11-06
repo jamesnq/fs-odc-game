@@ -9,14 +9,26 @@
     "client"
   ],
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w client",
+    "dev": "npm run build -w shared && concurrently -n shared,server,client -c yellow,blue,green \"tsc -p shared --watch\" \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
     "start": "npm run start -w server",
-    "test": "npm test -w shared && npm test -w server",
-    "test:e2e": "node server/test/e2e.mjs"
+    "test": "npm run build -w shared && npm test -w shared && npm test -w server",
+    "test:e2e": "tsx server/test/e2e.ts",
+    "typecheck": "npm run build -w shared && npm run typecheck --workspaces && tsc -p tsconfig.tests.json",
+    "test:integration": "npm run build -w shared && npm run build -w server && tsx scripts/test-integration.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
-    "concurrently": "^10.0.6"
+    "@types/express": "^4.17.25",
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "concurrently": "^10.0.6",
+    "esbuild": "^0.25.12",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

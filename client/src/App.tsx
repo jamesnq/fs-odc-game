@@ -1,0 +1,64 @@
+import { useEffect, useState } from 'react';
+import { Dices, ArrowLeftRight } from 'lucide-react';
+import { useApp, useBusy } from './store.js';
+import Lobby from './components/Lobby.js';
+import RoomView from './components/RoomView.js';
+import NameDialog from './components/NameDialog.js';
+import Toasts from './components/Toasts.js';
+import Onboarding from './components/Onboarding.js';
+import UpdateBanner from './components/UpdateBanner.js';
+
+export default function App() {
+  const { connected, user, room, phase, server, switchServer } = useApp();
+  const [renaming, setRenaming] = useState(false);
+  const ready = phase === 'ready' && user;
+
+  return (
+    <div className={`app ${ready && room ? 'in-room' : ''}`}>
+      <header className="topbar">
+        <a className="brand" href="#" onClick={(e: any) => { e.preventDefault(); if (room) location.hash = ''; }}>
+          <span className="brand-logo" aria-hidden><Dices size={20} /></span>
+          <span className="brand-name">Sảnh Trò Chơi</span>
+        </a>
+        {ready && server?.name && <span className="server-badge" title="Server đang vào">{server.name}</span>}
+        <div className="topbar-right">
+          {ready && (
+            <>
+              <span className={`conn ${connected ? 'on' : 'off'}`} title={connected ? 'Đã kết nối' : 'Mất kết nối'} />
+              {server?.gated && (
+                <button className="btn ghost sm" aria-label="Đổi server" title="Vào server khác bằng mật khẩu khác"
+                  onClick={() => (!room || confirm('Rời phòng và đổi sang server khác?')) && switchServer()}>
+                  <ArrowLeftRight size={16} aria-hidden /><span className="hide-sm">Đổi server</span>
+                </button>
+              )}
+              <button className="user-chip" onClick={() => setRenaming(true)} title="Đổi tên" aria-label={`Tên của bạn: ${user.name}. Bấm để đổi tên`}>
+                <span className="avatar" aria-hidden>{user.name.trim()[0]?.toUpperCase()}</span>
+                <span className="user-name">{user.name}</span>
+              </button>
+            </>
+          )}
+        </div>
+        <BusyBar />
+      </header>
+      <main className="main">
+        {!ready ? <Onboarding /> : room ? <RoomView /> : <Lobby />}
+      </main>
+      {renaming && ready && <NameDialog onClose={() => setRenaming(false)} />}
+      <Toasts />
+      <UpdateBanner />
+      {ready && !connected && <div className="reconnect" role="status"><span className="spinner" /> Mất kết nối, đang thử lại…</div>}
+    </div>
+  );
+}
+
+/** Thanh tiến trình mảnh dưới header khi có yêu cầu chờ server lâu hơn 250ms. */
+function BusyBar() {
+  const busy = useBusy();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!busy) return setShow(false);
+    const t = setTimeout(() => setShow(true), 250);
+    return () => clearTimeout(t);
+  }, [busy]);
+  return <div className={`busy-bar ${show ? 'on' : ''}`} aria-hidden />;
+}

@@ -18,14 +18,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - name: Kiểm tra lỗ hổng thư viện (npm audit)
         run: npm audit --omit=dev --audit-level=high
       - name: Unit test (luật chơi)
         run: npm test
-      - name: Build client
+      - name: Build shared, server và client
         run: npm run build
       - name: Kiểm thử tích hợp (server + socket)
-        run: |
-          PORT=3001 TRUST_PROXY=1 VOICE_SERVERS='Bên A' APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
-          npx --yes wait-on -t 20000 http://localhost:3001/health
-          TRUST_PROXY=1 APP_PASSWORD=ci-secret OTHER_PASSWORD=ci-secret-b npm run test:e2e -- http://localhost:3001
+        run: npm run test:integration
+      - name: Build Docker runtime
+        run: docker build --tag game-lobby:ci .

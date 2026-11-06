@@ -4,3 +4,6 @@ dist
 *.log
 __pycache__/
 *.pyc
+*.tsbuildinfo
+.worktrees/
+captures/

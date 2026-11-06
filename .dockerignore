@@ -1,6 +1,11 @@
 node_modules
 **/node_modules
 client/dist
+shared/dist
+server/dist
+.agents
+.worktrees
+captures
 .git
 .github
 *.log
