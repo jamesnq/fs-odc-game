@@ -124,7 +124,7 @@ export default function WordChainGame({ room, state: s }) {
           <ul>
             <li>Mỗi từ gồm <b>2 chữ</b>, chữ đầu phải trùng chữ cuối của từ trước: <i>đắng cay → cay nghiệt → nghiệt ngã</i>.</li>
             <li>Không lặp lại từ đã dùng trong ván.{s.options.dictionary && (s.options.strict
-              ? ' Từ phải có trong từ điển tiếng Việt (~48.000 từ 2 chữ).'
+              ? ' Từ phải có trong từ điển tiếng Việt (~62.000 từ 2 chữ).'
               : ' Mỗi chữ phải là tiếng Việt; từ không có trong từ điển bị gắn cờ ⚠ để mọi người cân nhắc phản đối.')}</li>
             <li>Mỗi lượt {s.options.turnSeconds} giây. Hết giờ mất 1 mạng (có {s.options.lives} mạng), hết mạng bị loại.</li>
             <li>Từ vô nghĩa? Bấm <b>vô nghĩa</b>: quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại.</li>
