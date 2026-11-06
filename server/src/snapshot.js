@@ -10,12 +10,13 @@ import { TalaGame } from '@game/shared/tala';
 import { SamLocGame } from '@game/shared/samloc';
 import { WordChainGame } from '@game/shared/wordchain';
 import { OnetBoard, rng } from '@game/shared/onet';
+import { SnakeGame } from '@game/shared/snake';
 import { dictionary, isKnownWord, isValidSyllable } from './games/wordchain.js';
 
 const classes = new Map([Room, ReadyGate, Scoreboard, DeckCommitments, PokerGame, TalaGame, SamLocGame,
-  WordChainGame, OnetBoard, ...Object.values(GAMES).map((g) => g.Handler)].map((Class) => [Class.name, Class]));
+  WordChainGame, OnetBoard, SnakeGame, ...Object.values(GAMES).map((g) => g.Handler)].map((Class) => [Class.name, Class]));
 const functions = new Map([['isKnownWord', isKnownWord], ['isValidSyllable', isValidSyllable], ['countNext', dictionary.countNext], ['Math.random', Math.random]]);
-const timers = new Set(['timer', 'botTimer', 'turnTimer', 'nextHandTimer', 'graceTimer']);
+const timers = new Set(['timer', 'botTimer', 'turnTimer', 'nextHandTimer', 'graceTimer', 'watchTimer']);
 
 // Encode explicit registered prototypes and preserve aliases (e.g. fairness.ref === initialDeck).
 // Runtime handles, sockets and back-references are rebuilt, never persisted.

@@ -44,6 +44,12 @@ export function turnInfo(room, userId) {
       if (s.task && !s.task.done) return { mine: true, text: s.kind === 'draw' ? 'Vẽ đi!' : s.step === 0 ? 'Viết một câu!' : 'Đoán tranh!' };
       return { mine: false, text: `Chờ mọi người (${s.players.filter((p) => p.done).length}/${s.players.filter((p) => !p.gone).length})` };
     }
+    case 'snake': {
+      if (s.status !== 'playing') return null;
+      const p = s.players.find((x) => x.id === userId);
+      if (p && !p.done) return { mine: true, text: `Rắn dài ${p.length} · ${p.score} điểm` };
+      return { mine: false, text: `Đang bò (${s.players.filter((x) => !x.done).length}/${s.players.length} còn sống)` };
+    }
     case 'onet': {
       if (s.status !== 'playing') return null;
       const p = s.players.find((x) => x.id === userId);

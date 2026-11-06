@@ -44,6 +44,12 @@ for (const game of Object.keys(GAMES)) test(`${game}: snapshot restores active g
   if (room.handler.game) assert.equal(restored.handler.game.constructor, room.handler.game.constructor);
   if (game === 'wordchain') assert.equal(typeof restored.handler.game.isKnownWord, 'function');
   if (game === 'onet') assert.equal(restored.handler.players[0].board.rand(), room.handler.players[0].board.rand());
+  if (game === 'snake') {
+    const [a, b] = [room.handler.players[0].game, restored.handler.players[0].game];
+    assert.equal(b.rand(), a.rand(), 'mồi tiếp theo giống hệt sau khi khôi phục');
+    assert.deepEqual(b.snake, a.snake);
+    assert.ok(b.walls instanceof Set && b.walls.size === a.walls.size);
+  }
   if (['tala', 'samloc'].includes(game)) {
     assert.deepEqual(restored.handler.game.players, room.handler.game.players);
     assert.equal(restored.handler.fair.ref, restored.handler.game.initialDeck);

@@ -44,6 +44,12 @@ export function resumeRoom(room) {
       });
       if (h.phase === 'draw') h._scheduleHints();
     }
+  } else if (room.game === 'snake' && h.status === 'playing') {
+    if (h.deadline) arm(h.deadline, () => {
+      for (const p of h.players) if (!p.done) h._out(p, 'timedOut');
+      h._finish();
+    });
+    h._arm();
   } else if (room.game === 'onet' && h.status === 'playing') {
     if (!h.classic) arm(h.deadline, () => h._finish());
     else for (const player of h.players) {

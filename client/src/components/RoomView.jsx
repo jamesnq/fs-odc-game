@@ -17,6 +17,7 @@ import WordChainGame from '../games/WordChainGame.jsx';
 import ScribbleGame from '../games/ScribbleGame.jsx';
 import TelephoneGame from '../games/TelephoneGame.jsx';
 import OnetGame from '../games/OnetGame.jsx';
+import SnakeGame from '../games/SnakeGame.jsx';
 import QuizGame from '../games/QuizGame.jsx';
 import WordGuessGame from '../games/WordGuessGame.jsx';
 import FairnessBadge from './FairnessBadge.jsx';
@@ -24,7 +25,7 @@ import { useHotkeys } from '../hooks.js';
 
 const GAME_COMPONENT = {
   chess: ChessGame, xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame,
-  scribble: ScribbleGame, telephone: TelephoneGame, onet: OnetGame, quiz: QuizGame, wordguess: WordGuessGame,
+  scribble: ScribbleGame, telephone: TelephoneGame, onet: OnetGame, snake: SnakeGame, quiz: QuizGame, wordguess: WordGuessGame,
 };
 
 export const SHORTCUTS = {
@@ -51,6 +52,7 @@ export const SHORTCUTS = {
   scribble: [
     ['Enter', 'Gửi câu đoán'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi đang vẽ)'], ['Z', 'Hoàn tác nét vừa vẽ'], ['1 – 5', 'Cỡ nét'],
   ],
+  snake: [['← ↑ → ↓ / W A S D', 'Đổi hướng'], ['2 4 6 8', 'Đổi hướng kiểu bàn phím điện thoại'], ['P / Space', 'Tạm dừng (chỉ khi chơi một mình)'], ['Vuốt', 'Đổi hướng trên điện thoại']],
   onet: [['Click', 'Chọn ô, rồi chọn ô cùng hình để nối'], ['H', 'Gợi ý'], ['S', 'Đổi hình (xáo bàn)'], ['Esc', 'Bỏ chọn']],
   telephone: [
     ['Enter', 'Nộp câu chữ'], ['B / E / F', 'Bút / Tẩy / Đổ màu (khi vẽ)'], ['Z', 'Hoàn tác'], ['1 – 5', 'Cỡ nét'],
