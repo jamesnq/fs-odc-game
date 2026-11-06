@@ -19,18 +19,10 @@ export const MAZES = ['none', 'box', 'tunnel', 'rooms', 'rails'];
 export const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
 
-/** PRNG mulberry32 — đủ cho trò chơi, có thể lưu/khôi phục trạng thái. */
-export function rng(seed) {
-  let a = seed >>> 0;
-  const f = () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  return f;
-}
+// PRNG dùng chung với Nối thú (mulberry32, có state()) để bản lưu phục hồi của server khôi phục được
+import { rng } from './onet.js';
+
+export { rng };
 
 /** Các ô tường của từng mê cung (chỉ số = y*W + x). */
 export function mazeWalls(maze) {

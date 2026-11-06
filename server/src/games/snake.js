@@ -32,7 +32,7 @@ export class SnakeHandler {
     this.gameNo = 0;
     this.result = null;
     this.timer = null;
-    this.watch = null;
+    this.watchTimer = null;
     this.wins = new Map();
   }
 
@@ -166,7 +166,7 @@ export class SnakeHandler {
     this.startAt = Date.now() + COUNTDOWN_MS;
     this.deadline = this.options.minutes ? this.startAt + this.options.minutes * 60_000 : 0;
     clearTimeout(this.timer);
-    clearInterval(this.watch);
+    clearInterval(this.watchTimer);
     if (this.deadline) {
       this.timer = setTimeout(() => {
         if (this.status !== 'playing') return;
@@ -177,12 +177,16 @@ export class SnakeHandler {
       }, this.deadline - Date.now());
     }
     // Nhiều người: không ai được "dừng hình" — rắn của người im lặng quá lâu vẫn tự bò tiếp
-    if (this.players.length > 1) {
-      this.watch = setInterval(() => this._nudge(), 1000);
-    }
+    this._arm();
     const { level, maze } = this.options;
     const who = this.players.length > 1 ? `${this.players.length} người cùng đua điểm` : 'chơi một mình';
     this.room.system(`Ván ${this.gameNo}: cấp ${level}, ${MAZE_LABEL[maze]}${this.deadline ? `, ${this.options.minutes} phút` : ''} — ${who}. Chuẩn bị…`);
+  }
+
+  /** Hẹn giờ của ván (gọi lại được khi server khôi phục từ bản lưu): hết giờ + đẩy rắn người im lặng. */
+  _arm() {
+    clearInterval(this.watchTimer);
+    this.watchTimer = this.players.length > 1 ? setInterval(() => this._nudge(), 1000) : null;
   }
 
   _nudge() {
@@ -211,7 +215,7 @@ export class SnakeHandler {
 
   _finish() {
     clearTimeout(this.timer);
-    clearInterval(this.watch);
+    clearInterval(this.watchTimer);
     this.status = 'over';
     const ranking = this._ranking();
     const top = ranking[0];
@@ -270,6 +274,6 @@ export class SnakeHandler {
 
   dispose() {
     clearTimeout(this.timer);
-    clearInterval(this.watch);
+    clearInterval(this.watchTimer);
   }
 }

@@ -1,6 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isMeld, enumerateMelds, bestArrangement, TalaGame } from '../src/tala.js';
+import { isMeld, enumerateMelds, bestArrangement, sortByMeld, TalaGame } from '../src/tala.js';
+
+test('xếp theo phỏm: giải quyết phỏm chồng nhau, bài rác ở cuối, không sửa bài gốc', () => {
+  const hand = ['5H', 'KC', '7S', '2C', '5D', 'KH', '6S', 'KD', '5S'];
+  const original = hand.slice();
+  const sorted = sortByMeld(hand);
+  assert.ok(isMeld(sorted.slice(0, 3)));
+  assert.ok(isMeld(sorted.slice(3, 6)));
+  assert.ok([sorted.slice(0, 3), sorted.slice(3, 6)].some((m) => m.join(',') === '5S,6S,7S'));
+  assert.deepEqual(sorted.slice(6), ['2C', '5D', '5H']);
+  assert.deepEqual(hand, original);
+  assert.deepEqual([...sorted].sort(), [...hand].sort());
+  assert.deepEqual(sortByMeld(hand.slice().reverse()), sorted);
+});
+
+test('xếp theo phỏm: giữ lá ăn trong phỏm và xử lý tay bài không có phỏm', () => {
+  const hand = ['5S', '5D', '5H', '6S', '7S', '2C'];
+  const sorted = sortByMeld(hand, ['5D']);
+  assert.ok(isMeld(sorted.slice(0, 3)));
+  assert.ok(sorted.slice(0, 3).includes('5D'));
+  assert.deepEqual(sortByMeld(['KH', '2C', 'AS']), ['AS', '2C', 'KH']);
+  assert.deepEqual(sortByMeld([]), []);
+});
 
 test('phỏm hợp lệ', () => {
   assert.ok(isMeld(['5S', '5D', '5H']));

@@ -39,7 +39,7 @@ export const SHORTCUTS = {
     ['D / Space', 'Bốc bài (khi tới lượt bốc)'], ['E', 'Ăn bài'], ['← / →', 'Di chuyển giữa các lá'],
     ['↑ / Space', 'Chọn / bỏ chọn lá đang trỏ'], ['Enter', 'Đánh lá đang chọn'], ['H', 'Hạ phỏm với các lá đã chọn'],
     ['X', 'Hạ tự động'], ['G', 'Gửi lá đang chọn'], ['U', 'Ù'], ['S', 'Xếp bài (theo hạng / theo chất)'],
-    ['Esc', 'Bỏ chọn tất cả'], ['N', 'Sẵn sàng / Bắt đầu ván mới (chủ phòng)'],
+    ['P', 'Xếp bài theo phỏm'], ['Esc', 'Bỏ chọn tất cả'], ['N', 'Sẵn sàng / Bắt đầu ván mới (chủ phòng)'],
   ],
   xiangqi: [['Click', 'Chọn quân → chọn ô đích'], ['Esc', 'Bỏ chọn quân'], ['F', 'Lật bàn cờ']],
   chess: [['Click', 'Chọn quân → chọn ô đích'], ['Esc', 'Bỏ chọn quân / đóng phong cấp'], ['F', 'Lật bàn cờ']],
