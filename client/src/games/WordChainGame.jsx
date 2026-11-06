@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Flag, RotateCcw, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle } from 'lucide-react';
+import { Check, Flag, RotateCcw, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle, X } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useCountdown } from '../hooks.js';
 import { fmtTime } from '../format.js';
+import BotPicker, { canManageBots } from '../components/BotPicker.jsx';
+
+const MAX_BOTS = 3;
 
 export default function WordChainGame({ room, state: s }) {
   const { act, call, user } = useApp();
@@ -19,18 +22,21 @@ export default function WordChainGame({ room, state: s }) {
   const canObject = playing && last && meInGame && !meInGame.out && last.by !== me;
   const objected = g?.objections.includes(me);
   const nameOf = (id) => g?.players.find((p) => p.id === id)?.name || s.seats.find((x) => x.id === id)?.name || '?';
+  const manageBots = !playing && canManageBots(room, user, !!me);
+  const botCount = s.seats.filter((x) => x.bot).length;
+  const canAddBot = manageBots && s.seats.length < s.options.maxSeats && botCount < MAX_BOTS;
 
   return (
     <div className="wc">
       <div className="wc-main">
-        <PlayerRow s={s} timeLeft={timeLeft} />
+        <PlayerRow s={s} timeLeft={timeLeft} onRemoveBot={manageBots ? (id) => act({ type: 'removeBot', id }) : null} />
 
         <div className={`panel wc-stage ${myTurn ? 'my-turn' : ''}`}>
           {!g || s.status === 'waiting' ? (
             <div className="wc-wait">
               <div className="wc-big">🔤 Nối từ</div>
               <div className="muted">
-                {s.seats.length < 2 ? 'Cần ít nhất 2 người chơi…' : 'Chờ tất cả bấm Sẵn sàng để bắt đầu'}
+                {s.seats.length < 2 ? 'Cần ít nhất 2 người chơi… hoặc bấm “Chơi với máy” bên dưới' : 'Chờ tất cả bấm Sẵn sàng để bắt đầu'}
               </div>
             </div>
           ) : (
@@ -96,6 +102,7 @@ export default function WordChainGame({ room, state: s }) {
               {playing && meInGame && !meInGame.out && (
                 <button className="btn danger" onClick={() => setGiveup(true)}><Flag size={16} aria-hidden /> Chịu thua</button>
               )}
+              {canAddBot && <BotPicker label={botCount ? 'Thêm máy' : 'Chơi với máy'} onPick={(level) => act({ type: 'addBot', level })} />}
               {!playing && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>}
             </>
           ) : (
@@ -106,6 +113,7 @@ export default function WordChainGame({ room, state: s }) {
               )}
             </span>
           )}
+          {!me && canAddBot && <BotPicker label="Thêm máy" onPick={(level) => act({ type: 'addBot', level })} />}
           {!playing && s.seats.length >= 2 && <span className="muted small ba-note">Sẵn sàng: {s.ready.length}/{s.seats.length}</span>}
         </div>
         {giveup && (
@@ -129,6 +137,7 @@ export default function WordChainGame({ room, state: s }) {
             <li>Mỗi lượt {s.options.turnSeconds} giây. Hết giờ mất 1 mạng (có {s.options.lives} mạng), hết mạng bị loại.</li>
             <li>Từ vô nghĩa? Bấm <b>vô nghĩa</b>: quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại.</li>
             <li>Người cuối cùng còn lại thắng.</li>
+            <li>Chơi với máy (tối đa {MAX_BOTS}): máy <b>Dễ</b> hay bí, máy <b>Vừa</b> nối ngẫu nhiên, máy <b>Khó</b> chọn từ hiểm khó nối tiếp. Máy không bỏ phiếu phản đối.</li>
           </ul>
         </div>
       </GameInfo>
@@ -163,7 +172,7 @@ function WordInput({ required, act }) {
   );
 }
 
-function PlayerRow({ s, timeLeft }) {
+function PlayerRow({ s, timeLeft, onRemoveBot }) {
   const g = s.game;
   const list = g && s.status !== 'waiting' ? g.players : s.seats.map((x) => ({ ...x, lives: s.options.lives, out: false, words: 0 }));
   return (
@@ -172,7 +181,12 @@ function PlayerRow({ s, timeLeft }) {
         const turn = s.status === 'playing' && g?.currentId === p.id;
         return (
           <div key={p.id} className={`wc-player ${turn ? 'turn' : ''} ${p.out ? 'out' : ''} ${p.id === s.myId ? 'me' : ''}`}>
-            <div className="wc-pname">{p.name}{p.id === s.myId && <span className="muted"> (bạn)</span>}</div>
+            <div className="wc-pname">
+              {p.name}{p.id === s.myId && <span className="muted"> (bạn)</span>}
+              {p.bot && onRemoveBot && (
+                <button className="icon-btn wc-bot-x" onClick={() => onRemoveBot(p.id)} title="Bỏ máy khỏi bàn" aria-label={`Bỏ ${p.name}`}><X size={14} aria-hidden /></button>
+              )}
+            </div>
             <div className="small">
               {p.out ? <span className="muted">Bị loại</span> : <span className="wc-lives">{'♥'.repeat(p.lives)}</span>}
               {g && s.status !== 'waiting' && <span className="muted"> · {p.words} từ</span>}

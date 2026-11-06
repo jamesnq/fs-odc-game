@@ -1,6 +1,7 @@
 // Khung chung cho game cờ đối kháng 2 người có đồng hồ (Cờ tướng, Cờ caro):
 // ngồi / sẵn sàng / chơi lại, đồng hồ mỗi bên, cầu hòa, xin đi lại, xin thua, bảng điểm.
 import { Scoreboard } from './scoreboard.js';
+import { BOT_LEVEL_NAMES, botLevel, isBot, requireBotManager, thinkMs } from './bots.js';
 
 const BASE_REASONS = {
   timeout: 'Hết giờ',
@@ -19,6 +20,10 @@ const BASE_REASONS = {
  *   _undo(game, n)      lùi n nước
  *   _boardView()        phần trạng thái bàn cờ gửi cho client
  *   _resultDetails(r)   (tùy chọn) thông tin thêm khi ván tự kết thúc
+ *   _botMove(game, lv)  (tùy chọn) nước đi của máy — có hàm này thì bàn cho phép chơi với máy
+ *
+ * Máy (bot) ngồi một ghế như người chơi, luôn sẵn sàng / đồng ý chơi lại, đồng ý cho đi lại,
+ * từ chối cầu hòa (trừ khi bàn gần kín). Mỗi bàn tối đa một máy.
  */
 export class DuelHandler {
   constructor(room, options) {
@@ -38,7 +43,12 @@ export class DuelHandler {
     this.timer = null;
     this.gameNo = 0;
     this.score = new Scoreboard();
+    this.botTimer = null;
   }
+
+  get supportsBots() { return typeof this._botMove === 'function'; }
+  botSide() { return this.sides.find((c) => isBot(this.seats[c]?.id)) || null; }
+  botName(id) { return isBot(id) ? Object.values(this.seats).find((s) => s?.id === id)?.name : undefined; }
 
   get maxPlayers() { return 2; }
   playerIds() { return Object.values(this.seats).filter(Boolean).map((s) => s.id); }
@@ -46,7 +56,8 @@ export class DuelHandler {
   sideOf(id) { return this.sides.find((c) => this.seats[c]?.id === id) || null; }
   other(side) { return side === this.sides[0] ? this.sides[1] : this.sides[0]; }
 
-  _noOne() { return Object.fromEntries(this.sides.map((c) => [c, false])); }
+  /** Cờ sẵn sàng / chơi lại ban đầu: máy luôn đã bật. */
+  _noOne() { return Object.fromEntries(this.sides.map((c) => [c, isBot(this.seats?.[c]?.id)])); }
   _fullClocks() { return Object.fromEntries(this.sides.map((c) => [c, this.options.minutes * 60000])); }
   _label(side) { return this.seats[side]?.name || this.constructor.LABELS[side]; }
   _resultDetails() { return {}; }
@@ -128,7 +139,7 @@ export class DuelHandler {
     this.status = 'over';
     this.pending = null;
     const text = this.constructor.REASONS[reason] || BASE_REASONS[reason] || reason;
-    this.result = { winner, reason, text, ...details };
+    this.result = { winner, winnerName: winner ? this._label(winner) : null, reason, text, ...details };
     this.room.system(`Kết thúc: ${winner ? `${this._label(winner)} thắng` : 'Hòa'} — ${text}`);
     const [a, b] = this.sides.map((c) => this.seats[c] && { ...this.seats[c], side: c });
     if (started && a && b) {
@@ -142,7 +153,17 @@ export class DuelHandler {
   }
 
   action(id, a) {
+    try {
+      return this._action(id, a);
+    } finally {
+      this._botTick();
+    }
+  }
+
+  _action(id, a) {
     if (a.type === 'resetScore') return this._resetScore(id);
+    if (a.type === 'addBot') return this._addBot(id, a);
+    if (a.type === 'removeBot') return this._removeBot(id);
     const c = this.sideOf(id);
     if (!c) throw new Error('Bạn đang ở chế độ xem');
     const opp = this.other(c);
@@ -200,6 +221,72 @@ export class DuelHandler {
     }
   }
 
+  // ---------- Máy ----------
+
+  _addBot(id, a) {
+    if (!this.supportsBots) throw new Error('Trò chơi này chưa có chế độ chơi với máy');
+    requireBotManager(this, id);
+    if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+    if (this.botSide()) throw new Error('Bàn đã có máy');
+    const level = botLevel(a.level, 'medium');
+    const side = this.sides.includes(a.seat) ? a.seat : this.sides.find((c) => !this.seats[c]);
+    if (!side || this.seats[side]) throw new Error('Không còn ghế trống');
+    this.seats[side] = { id: `bot:${level}`, name: `🤖 Máy (${BOT_LEVEL_NAMES[level]})`, bot: level };
+    this.ready = this._noOne();
+    this.rematch = this._noOne();
+    this.room.system(`Đã thêm ${this.seats[side].name} vào bàn`);
+  }
+
+  _removeBot(id) {
+    requireBotManager(this, id);
+    const side = this.botSide();
+    if (!side) throw new Error('Bàn không có máy');
+    if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+    this.room.system(`Đã bỏ ${this.seats[side].name} khỏi bàn`);
+    this.seats[side] = null;
+    this.ready = this._noOne();
+    this.rematch = this._noOne();
+    if (this.status === 'over' && !this.playerIds().length) this.status = 'waiting';
+  }
+
+  /** Sau mỗi thay đổi: nếu tới lượt máy (hoặc máy cần trả lời yêu cầu) thì hẹn giờ cho máy hành động. */
+  _botTick() {
+    clearTimeout(this.botTimer);
+    this.botTimer = null;
+    const side = this.botSide();
+    if (!side || this.status !== 'playing') return;
+    const id = this.seats[side].id;
+    const p = this.pending;
+    let run = null, delay = 0;
+    if (p && p.from !== side) {
+      delay = thinkMs(600, 1200);
+      run = () => {
+        // Đồng ý cho đi lại; cầu hòa chỉ đồng ý khi bàn gần kín
+        const accept = p.type === 'undo' || this.game.history.length >= this.game.board.length * 0.8;
+        this._action(id, { type: 'respond', accept });
+      };
+    } else if (!p && this.game.turn === side) {
+      const level = this.seats[side].bot;
+      delay = level === 'easy' ? thinkMs(500, 1100) : thinkMs(350, 800);
+      run = () => {
+        const move = this._botMove(this.game, level);
+        this._action(id, { type: 'move', ...move });
+      };
+    }
+    if (!run) return;
+    this.botTimer = setTimeout(() => {
+      this.botTimer = null;
+      if (this.status !== 'playing' || this.seats[side]?.id !== id) return;
+      try {
+        run();
+      } catch (e) {
+        console.error('[bot]', e);
+      }
+      this._botTick();
+      this.room.changed();
+    }, delay);
+  }
+
   _resetScore(id) {
     if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đặt lại bảng điểm');
     if (this.status === 'playing') throw new Error('Không thể đặt lại khi ván đang diễn ra');
@@ -254,5 +341,5 @@ export class DuelHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer); clearTimeout(this.botTimer); }
 }

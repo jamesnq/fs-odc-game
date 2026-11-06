@@ -82,11 +82,11 @@ export default function CaroGame({ room, state: s }) {
           })()}
         </svg>
         {s.status === 'waiting' && (
-          <div className="board-strip" role="status">{s.seats.x && s.seats.o ? 'Chờ hai bên bấm Sẵn sàng…' : 'Đang chờ người chơi ngồi vào ghế…'}</div>
+          <div className="board-strip" role="status">{s.seats.x && s.seats.o ? 'Chờ hai bên bấm Sẵn sàng…' : 'Đang chờ người chơi ngồi vào ghế… hoặc bấm “Chơi với máy” ở ghế trống'}</div>
         )}
         <RequestOverlay s={s} my={my} opp={opp} />
         <ResultOverlay over={s.status === 'over' && !!s.result} resetKey={s.score?.gameNo}
-          title={s.result?.winner ? `${s.seats[s.result.winner]?.name || NAME[s.result.winner]} (${NAME[s.result.winner]}) thắng${my && s.result.winner === my ? ' — bạn thắng!' : ''}` : 'Hòa'}
+          title={s.result?.winner ? `${s.result.winnerName || s.seats[s.result.winner]?.name || NAME[s.result.winner]} (${NAME[s.result.winner]}) thắng${my && s.result.winner === my ? ' — bạn thắng!' : ''}` : 'Hòa'}
           detail={s.result?.text}>
           <ScoreLine score={s.score} a={s.seats.x} b={s.seats.o} />
         </ResultOverlay>
@@ -100,7 +100,7 @@ export default function CaroGame({ room, state: s }) {
           sides={{ x: { label: 'X', cls: 'c-x' }, o: { label: 'O', cls: 'c-o' } }} />
         <MoveList moves={s.moves} sides={["x", "o"]} />
         <div className="muted small">
-          Bàn {n}×{n} · 5 quân liên tiếp là thắng{s.options.blockTwoEnds ? ' · bị chặn hai đầu không tính' : ''} · {s.options.minutes} phút mỗi bên, hết giờ là thua. X đi trước. Xin đi lại / cầu hòa cần đối thủ đồng ý.
+          Bàn {n}×{n} · 5 quân liên tiếp là thắng{s.options.blockTwoEnds ? ' · bị chặn hai đầu không tính' : ''} · {s.options.minutes} phút mỗi bên, hết giờ là thua. X đi trước. Xin đi lại / cầu hòa cần đối thủ đồng ý. Chơi với máy: máy luôn cho đi lại, chỉ đồng ý hòa khi bàn gần kín.
         </div>
       </GameInfo>
     </div>
@@ -124,5 +124,5 @@ function Mark({ p, x, y, ghost }) {
 }
 
 function CaroPlayer({ side, s, room }) {
-  return <PlayerBar side={side} s={s} room={room} chip={<span className={`caro-chip ${side}`}>{NAME[side]}</span>} sitLabel={`Ngồi ${NAME[side]}`} />;
+  return <PlayerBar side={side} s={s} room={room} chip={<span className={`caro-chip ${side}`}>{NAME[side]}</span>} sitLabel={`Ngồi ${NAME[side]}`} bots />;
 }

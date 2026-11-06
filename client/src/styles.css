@@ -1278,3 +1278,13 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .rp-tab:not(.active) { flex: 0 0 44px; padding: 0; position: relative; }
 .rp-tab:not(.active) .rp-label { display: none; }
 .rp-tab:not(.active) .unread { position: absolute; top: 2px; right: 2px; }
+
+/* ---------- Chơi với máy ---------- */
+/* Nút trông như .btn nhưng là <select> trong suốt phủ lên trên: bấm là mở danh sách mức độ (dùng tốt cả trên điện thoại) */
+.bot-pick { position: relative; display: inline-flex; align-items: center; gap: 6px; overflow: hidden; }
+.bot-pick select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; font-size: 16px; }
+.bot-pick:focus-within { box-shadow: 0 0 0 3px var(--primary-soft); }
+.xq-player .bot-pick { margin-left: 6px; }
+.wc-pname { display: flex; align-items: center; gap: 4px; }
+.wc-bot-x { margin-left: auto; padding: 0 4px; }
+.form select { width: 100%; min-height: 38px; padding: 0 10px; border-radius: 10px; background: #0c1124; border: 1px solid var(--line); }

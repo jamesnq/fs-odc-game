@@ -518,6 +518,72 @@ if (OTHER_PASSWORD) {
   await a.req('room:delete', { roomId });
 }
 
+// ---------- Chơi với máy: Cờ caro ----------
+{
+  a.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Caro máy', game: 'caro', options: { minutes: 5, bot: 'hard' } });
+  await until(() => a.state?.state.seats.o?.bot === 'hard');
+  assert.equal(a.state.state.myColor, 'x', 'người tạo bàn ngồi X, máy ngồi O');
+  assert.equal(a.state.state.ready.o, true, 'máy luôn sẵn sàng');
+  const list = await a.req('lobby:list');
+  assert.ok(list.rooms.find((r) => r.id === roomId).playerNames.some((n) => n.includes('Máy')), 'sảnh hiện tên máy');
+  await assert.rejects(a.act({ type: 'addBot', level: 'easy' }), /đã có máy/);
+  await a.act({ type: 'ready' });
+  await until(() => a.state.state.status === 'playing');
+  await a.act({ type: 'move', cell: 7 * 15 + 7 });
+  await until(() => a.state.state.moves.length === 2, 4000);
+  assert.equal(a.state.state.turn, 'x', 'máy đã đi, tới lượt người');
+  await a.act({ type: 'requestUndo' }); // máy đồng ý cho đi lại
+  await until(() => a.state.state.moves.length === 0, 4000);
+  await a.act({ type: 'move', cell: 7 * 15 + 7 });
+  await until(() => a.state.state.moves.length === 2, 4000);
+  await a.act({ type: 'offerDraw' }); // máy từ chối cầu hòa
+  await until(() => !a.state.state.pending, 4000);
+  assert.equal(a.state.state.status, 'playing');
+  await a.act({ type: 'resign' });
+  await until(() => a.state.state.status === 'over');
+  assert.equal(a.state.state.result.winner, 'o');
+  await a.act({ type: 'rematch' }); // máy luôn đồng ý chơi lại, đổi lượt: máy đi trước
+  await until(() => a.state.state.status === 'playing' && a.state.state.moves.length === 1, 4000);
+  assert.equal(a.state.state.myColor, 'o');
+  await a.act({ type: 'resign' });
+  await until(() => a.state.state.status === 'over');
+  await a.act({ type: 'removeBot' });
+  await until(() => !a.state.state.seats.x);
+  await a.act({ type: 'addBot', level: 'easy' });
+  await until(() => a.state.state.seats.x?.bot === 'easy');
+  await a.req('room:delete', { roomId });
+  console.log('✔ Cờ caro chơi với máy OK');
+}
+
+// ---------- Chơi với máy: Nối từ ----------
+{
+  a.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Nối từ máy', game: 'wordchain', options: { turnSeconds: 10, bot: 'medium', bots: 2 } });
+  await until(() => a.state?.state.seats.length === 3);
+  assert.equal(a.state.state.seats.filter((x) => x.bot).length, 2);
+  await a.act({ type: 'ready' });
+  await until(() => a.state.state.status === 'playing');
+  const g = () => a.state.state.game;
+  // Tới lượt mình thì nối, chờ đủ 2 từ của máy
+  const start = Date.now();
+  while (g().chain.filter((w) => w.by.startsWith('bot:')).length < 2 && Date.now() - start < 20000) {
+    if (g().currentId === a.user.id && !a.busy) {
+      a.busy = true;
+      const req = g().required;
+      await a.act({ type: 'word', text: req ? `${req} ${req}` : 'học tập' }).catch(() => a.act({ type: 'giveup' }));
+      a.busy = false;
+    }
+    if (a.state.state.status !== 'playing') break;
+    await wait(50);
+  }
+  const botWords = g().chain.filter((w) => w.by.startsWith('bot:'));
+  assert.ok(botWords.length >= 1, 'máy đã nối từ');
+  await assert.rejects(a.act({ type: 'removeBot', id: botWords[0].by }), /đang diễn ra/);
+  await a.req('room:delete', { roomId });
+  console.log('✔ Nối từ chơi với máy OK —', botWords.map((w) => w.text).join(', '));
+}
+
 // ---------- Dọn phòng trống ----------
 {
   const p = await client('Chủ').ready;

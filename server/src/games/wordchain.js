@@ -2,15 +2,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WordChainGame, makeSyllableChecker, makeWordChecker } from '@game/shared/wordchain';
+import { buildWordIndex, chooseWord } from '@game/shared/wordchainBot';
 import { bool, clampInt } from './options.js';
+import { BOT_LEVEL_NAMES, botLevel, isBot, newBotId, requireBotManager, thinkMs } from './bots.js';
 
 // Từ điển (xem server/src/data/README.md): âm tiết tiếng Việt và từ ghép 2 chữ (~62.000 từ, gộp từ 3 nguồn)
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data');
 const readLines = (file) => fs.readFileSync(path.join(DATA_DIR, file), 'utf8').split('\n').filter(Boolean);
 const isValidSyllable = makeSyllableChecker(readLines('vi-syllables.txt'));
-export const isKnownWord = makeWordChecker(
-  ['vi-words.txt', 'vi-words-noitu.txt', 'vi-words-common.txt'].flatMap(readLines),
-);
+const WORD_LISTS = ['vi-words.txt', 'vi-words-noitu.txt', 'vi-words-common.txt'].flatMap(readLines);
+export const isKnownWord = makeWordChecker(WORD_LISTS);
+// Máy chỉ dùng từ có trong từ điển và mọi chữ đều là âm tiết hợp lệ → luôn qua được kiểm tra
+const botIndex = buildWordIndex(WORD_LISTS.filter((t) => t.split(' ').every(isValidSyllable)));
+const MAX_BOTS = 3;
 
 const HISTORY_MAX = 10;
 
@@ -33,7 +37,15 @@ export class WordChainHandler {
     this.gameNo = 0;
     this.wins = new Map(); // id -> { id, name, games, wins }
     this.history = []; // các ván đã xong (mới nhất trước), tối đa HISTORY_MAX
+    this.botTimer = null;
+    // Tạo bàn kèm máy
+    const level = botLevel(options.bot);
+    const n = level ? clampInt(options.bots, 1, Math.min(MAX_BOTS, this.options.maxSeats - 1), 1) : 0;
+    for (let k = 0; k < n; k++) this._addBot(room.ownerId, { level }, true);
   }
+
+  botName(id) { return isBot(id) ? this.seats.find((s) => s.id === id)?.name : undefined; }
+  get humans() { return this.seats.filter((s) => !s.bot); }
 
   get maxPlayers() { return this.options.maxSeats; }
   playerIds() { return this.seats.map((s) => s.id); }
@@ -50,6 +62,12 @@ export class WordChainHandler {
 
   sit(user) {
     if (this.seated(user.id)) throw new Error('Bạn đã ngồi rồi');
+    if (this.status !== 'playing' && this.seats.length >= this.options.maxSeats && this.seats.some((s) => s.bot)) {
+      // Bàn đầy vì có máy: nhường ghế của một máy cho người thật
+      const bot = this.seats.findLast((s) => s.bot);
+      this.seats = this.seats.filter((s) => s !== bot);
+      this.room.system(`${bot.name} nhường ghế cho ${user.name}`);
+    }
     if (this.status === 'playing') throw new Error('Ván đang diễn ra, đợi ván sau nhé');
     if (this.seats.length >= this.options.maxSeats) throw new Error('Bàn đã đủ người');
     this.seats.push({ id: user.id, name: user.name });
@@ -63,6 +81,7 @@ export class WordChainHandler {
       this.game.eliminate(id);
       this.room.system(`${name} rời bàn — bị loại`);
       this._afterTurn(wasTurn);
+      this._botTick();
     }
     this.seats = this.seats.filter((s) => s.id !== id);
     this.ready.delete(id);
@@ -71,13 +90,27 @@ export class WordChainHandler {
   onLeave(id) { this.stand(id); }
 
   action(id, a) {
+    try {
+      return this._action(id, a);
+    } finally {
+      this._botTick();
+    }
+  }
+
+  _allReady() {
+    return this.seats.length >= 2 && this.humans.length >= 1 && this.seats.every((s) => s.bot || this.ready.has(s.id));
+  }
+
+  _action(id, a) {
+    if (a.type === 'addBot') return this._addBot(id, a);
+    if (a.type === 'removeBot') return this._removeBot(id, a.id);
     if (!this.seated(id)) throw new Error('Bạn đang ở chế độ xem');
     switch (a.type) {
       case 'ready': {
         if (this.status === 'playing') throw new Error('Ván đang diễn ra');
         if (this.ready.has(id)) this.ready.delete(id);
         else this.ready.add(id);
-        if (this.seats.length >= 2 && this.seats.every((s) => this.ready.has(s.id))) this._start();
+        if (this._allReady()) this._start();
         return;
       }
       case 'word': {
@@ -112,6 +145,62 @@ export class WordChainHandler {
       default:
         throw new Error('Hành động không hợp lệ');
     }
+  }
+
+  // ---------- Máy ----------
+
+  _addBot(id, a, silent = false) {
+    requireBotManager(this, id);
+    if (this.status === 'playing') throw new Error('Ván đang diễn ra, đợi ván sau nhé');
+    if (this.seats.length >= this.options.maxSeats) throw new Error('Bàn đã đủ người');
+    if (this.seats.filter((s) => s.bot).length >= MAX_BOTS) throw new Error(`Tối đa ${MAX_BOTS} máy mỗi bàn`);
+    const level = botLevel(a.level, 'medium');
+    let k = 1;
+    while (this.seats.some((s) => s.name.startsWith(`🤖 Máy ${k} `))) k++;
+    const seat = { id: newBotId(), name: `🤖 Máy ${k} (${BOT_LEVEL_NAMES[level]})`, bot: level };
+    this.seats.push(seat);
+    if (!silent) this.room.system(`Đã thêm ${seat.name} vào bàn`);
+  }
+
+  _removeBot(id, botId) {
+    requireBotManager(this, id);
+    if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+    const seat = this.seats.find((s) => s.bot && s.id === botId);
+    if (!seat) throw new Error('Không tìm thấy máy');
+    this.seats = this.seats.filter((s) => s !== seat);
+    this.wins.delete(seat.id);
+    this.room.system(`Đã bỏ ${seat.name} khỏi bàn`);
+    if (this._allReady()) this._start();
+  }
+
+  /** Tới lượt máy thì hẹn giờ cho máy nối từ (hoặc "bí" để hết giờ). */
+  _botTick() {
+    clearTimeout(this.botTimer);
+    this.botTimer = null;
+    if (this.status !== 'playing') return;
+    const p = this.game.current;
+    if (!p.bot) return;
+    const turnMs = this.options.turnSeconds * 1000;
+    // Máy nghĩ 1,5–5 giây, luôn trả lời trước khi hết giờ
+    const delay = Math.min(turnMs - 1500, thinkMs(1500, p.bot === 'hard' ? 3500 : 5000));
+    const chain = this.game.chain.length;
+    this.botTimer = setTimeout(() => {
+      this.botTimer = null;
+      if (this.status !== 'playing' || this.game.current.id !== p.id || this.game.chain.length !== chain) return;
+      // Chỉ còn máy với nhau thì dễ bí hơn để ván sớm kết thúc
+      const onlyBots = this.game.active.every((x) => x.bot);
+      const word = chooseWord(this.game, p.bot, botIndex, onlyBots ? { miss: 0.25 } : undefined);
+      if (!word) return; // bí: để đồng hồ chạy hết giờ
+      try {
+        this.game.submit(p.id, word);
+        this._afterTurn(true);
+      } catch (e) {
+        console.error('[bot]', e.message);
+        return;
+      }
+      this._botTick();
+      this.room.changed();
+    }, Math.max(500, delay));
   }
 
   _requirePlaying() {
@@ -153,6 +242,7 @@ export class WordChainHandler {
     this.game.timeout();
     this.room.system(`⏰ ${p.name} hết giờ${p.out ? ' — bị loại' : ` — còn ${p.lives} mạng`}`);
     this._afterTurn(true);
+    this._botTick();
     this.room.changed();
   }
 
@@ -187,14 +277,14 @@ export class WordChainHandler {
     return {
       options: this.options,
       seats: this.seats,
-      ready: [...this.ready],
+      ready: [...this.ready, ...this.seats.filter((x) => x.bot).map((x) => x.id)],
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,
       turnLeft: this.status === 'playing' ? Math.max(0, this.deadline - Date.now()) : 0,
       turnTotal: this.options.turnSeconds * 1000,
       game: g && {
-        players: g.players.map(({ id, name, lives, out, words }) => ({ id, name, lives, out, words })),
+        players: g.players.map(({ id, name, bot, lives, out, words }) => ({ id, name, bot, lives, out, words })),
         currentId: this.status === 'playing' ? g.current.id : null,
         required: g.required,
         chain: g.chain.slice(-80).map(({ text, syllables, by, name, ts, known }) => ({ text, syllables, by, name, ts, known })),
@@ -208,5 +298,5 @@ export class WordChainHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer); clearTimeout(this.botTimer); }
 }

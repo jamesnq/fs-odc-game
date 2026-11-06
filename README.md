@@ -28,6 +28,7 @@
 - Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
 - **Bảng điểm** cộng dồn qua các ván (xem bên dưới)
 - **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
+- **Chơi với máy** (Dễ / Vừa / Khó): chọn khi tạo bàn (bạn cầm X đi trước) hoặc bấm **Chơi với máy** ở ghế trống. Máy luôn sẵn sàng, đồng ý chơi lại và cho đi lại, chỉ đồng ý hòa khi bàn gần kín. Máy Khó tìm trước vài nước (alpha-beta), chỉ nghĩ dưới 0,5 giây mỗi nước (`shared/src/caroBot.js`)
 
 **Nối từ** (2–8 người)
 - Mỗi từ gồm **2 chữ**, chữ đầu phải trùng chữ cuối của từ trước: *con mèo → mèo con → con đường*; không lặp từ trong ván
@@ -35,6 +36,7 @@
 - Từ vô nghĩa? Bạn bè bấm **❌ phản đối** — quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại
 - Mỗi lượt 10–60 giây, hết giờ mất 1 mạng (1–3 mạng), hết mạng bị loại; người cuối cùng còn lại thắng. Có bảng thắng qua các ván
 - Khi tới lượt, ô nhập tự điền sẵn chữ đầu — chỉ cần gõ chữ thứ hai rồi `Enter`
+- **Chơi với máy** (tối đa 3 máy mỗi bàn): chọn khi tạo bàn hoặc bấm **Chơi với máy / Thêm máy**. Máy chỉ dùng từ có trong từ điển. Máy Dễ hay bí, máy Vừa nối ngẫu nhiên, máy Khó chọn từ có chữ cuối khó nối tiếp nhất. Máy không bỏ phiếu phản đối và không được tính vào số phiếu cần để gỡ từ. Bàn đầy thì người mới vào được nhường ghế của một máy (`shared/src/wordchainBot.js`)
 
 **Bảng điểm (Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người

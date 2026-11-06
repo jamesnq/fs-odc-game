@@ -5,13 +5,17 @@ import { GAME_META, GameIcon } from './Lobby.jsx';
 
 const DEFAULTS = {
   xiangqi: { minutes: 8 },
-  caro: { size: 15, minutes: 10, blockTwoEnds: true },
-  wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true, strict: true },
+  caro: { size: 15, minutes: 10, blockTwoEnds: true, bot: '' },
+  wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true, strict: true, bot: '', bots: 1 },
   poker: { smallBlind: 10, bigBlind: 20, buyIn: 2000, maxSeats: 6, turnSeconds: 30, rabbitHunt: true },
   tala: { maxSeats: 4, unit: 10, turnSeconds: 30 },
   samloc: { maxSeats: 4, unit: 10, turnSeconds: 25 },
 };
 
+// Tạo bàn kèm máy (Cờ caro / Nối từ)
+const BOT_OPTIONS = [['', 'Không — chơi với người'], ['easy', 'Máy Dễ'], ['medium', 'Máy Vừa'], ['hard', 'Máy Khó']];
+
+// [khóa, nhãn, min, max] · [khóa, nhãn, 'bool'] · [khóa, nhãn, 'select', các lựa chọn]
 const FIELDS = {
   xiangqi: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
   wordchain: [
@@ -20,11 +24,14 @@ const FIELDS = {
     ['lives', 'Số mạng mỗi người', 1, 3],
     ['dictionary', 'Kiểm tra từ điển (mỗi chữ phải là tiếng Việt)', 'bool'],
     ['strict', 'Chặt: cả từ phải có trong từ điển (~62.000 từ). Tắt = thoáng, từ lạ chỉ bị gắn cờ', 'bool'],
+    ['bot', 'Chơi với máy', 'select', BOT_OPTIONS],
+    ['bots', 'Số máy', 1, 3],
   ],
   caro: [
     ['size', 'Kích thước bàn (ô mỗi cạnh)', 10, 20],
     ['minutes', 'Thời gian mỗi bên (phút)', 1, 60],
     ['blockTwoEnds', 'Chặn hai đầu thì không tính thắng', 'bool'],
+    ['bot', 'Chơi với máy (bạn cầm X, đi trước)', 'select', BOT_OPTIONS],
   ],
   poker: [
     ['smallBlind', 'Small blind', 1, 100000],
@@ -75,7 +82,15 @@ export default function CreateRoomDialog({ game: initialGame, onClose }) {
         <label>Tên phòng</label>
         <input autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)}
           placeholder={`Bàn ${GAME_META[game].name} của ${user.name}`} />
-        {FIELDS[game].map(([key, label, min, max]) => min === 'bool' ? (
+        {FIELDS[game].filter(([key]) => key !== 'bots' || opts[game].bot).map(([key, label, min, max]) => min === 'select' ? (
+          <div key={key}>
+            <label htmlFor={`opt-${key}`}>{label}</label>
+            <select id={`opt-${key}`} value={opts[game][key]}
+              onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.value } })}>
+              {max.map(([v, name]) => <option key={v} value={v}>{name}</option>)}
+            </select>
+          </div>
+        ) : min === 'bool' ? (
           <label key={key} className="check">
             <input type="checkbox" checked={!!opts[game][key]}
               onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.checked } })} />

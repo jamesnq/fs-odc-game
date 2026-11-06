@@ -35,6 +35,8 @@ export class Room {
   }
 
   isOnline(id) { return this.lobby.isOnline(id); }
+  /** Tên người chơi; máy (bot) không phải người dùng nên hỏi bàn chơi. */
+  nameOf(id) { return this.handler.botName?.(id) ?? this.lobby.nameOf(id); }
   hasOnlineMember() { return [...this.members].some((id) => this.lobby.isOnline(id)); }
 
   system(text) { this.addChat({ system: true, text }); }
@@ -88,7 +90,7 @@ export class Room {
       ownerId: this.ownerId,
       ownerName: lobby.nameOf(this.ownerId),
       players: players.length,
-      playerNames: players.map((id) => lobby.nameOf(id)),
+      playerNames: players.map((id) => this.nameOf(id)),
       maxPlayers: this.handler.maxPlayers,
       spectators: this.members.size - players.length,
       playing: this.handler.isPlaying(),
