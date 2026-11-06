@@ -624,6 +624,7 @@ button, a, [role=tab], input, label { touch-action: manipulation; -webkit-tap-hi
 /* Ô mật khẩu có nút hiện/ẩn */
 .pw-field { position: relative; margin-top: 6px; }
 .pw-field input { margin-top: 0; padding-right: 48px; padding-left: 48px; }
+.pw-field input::-ms-reveal, .pw-field input::-ms-clear { display: none; }
 .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); border-radius: 8px; cursor: pointer; }
 .pw-toggle:hover { color: var(--text); background: rgba(255,255,255,.06); }
 
