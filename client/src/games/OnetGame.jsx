@@ -74,7 +74,7 @@ export default function OnetGame({ room, state: s }) {
           )}
         </div>
 
-        <div className={`panel onet-stage ${canPlay ? 'my-turn' : ''}`}>
+        <div className="panel onet-stage">
           {shown && s.status !== 'waiting' ? (
             <Board key={`${s.gameNo}-${shown.id}`} p={shown} rows={s.options.rows} cols={s.options.cols}
               interactive={!!canPlay} act={act} />
