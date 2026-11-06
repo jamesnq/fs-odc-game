@@ -17,14 +17,23 @@ export default function TelephoneGame({ room, state: s }) {
   const [stop, setStop] = useState(false);
   const timeLeft = useCountdown(s.phaseLeft, room.receivedAt, playing && !!s.phaseLeft);
   const inGame = s.players.some((p) => p.id === user.id);
+  // Bước vẽ: đề bài + nút Xong nằm luôn trên thanh đầu, khung vẽ chiếm phần còn lại của màn hình
+  const drawTask = playing && s.task?.kind === 'draw' ? s.task : null;
 
   return (
-    <div className="tp">
+    <div className={`tp ${drawTask ? 'tp-fill' : ''}`}>
       {playing && (
         <div className="panel tp-top">
           <span className="tp-step">Bước <b>{s.step + 1}</b>/{s.steps}</span>
-          <span className="tp-title">{stepTitle(s)}</span>
+          <span className="tp-title">
+            {drawTask ? <>Vẽ: <b className="tp-what">{drawTask.prev?.text || '(người trước bỏ trống — vẽ gì tùy bạn!)'}</b></> : stepTitle(s)}
+          </span>
           <span className={`sc-time ${timeLeft < 10000 ? 'low' : ''}`}><Timer size={14} aria-hidden /> {Math.ceil(timeLeft / 1000)}s</span>
+          {drawTask && (
+            <button className={`btn sm ${drawTask.done ? '' : 'cta'} tp-done-btn`} onClick={() => act({ type: 'done', done: !drawTask.done })}>
+              {drawTask.done ? <><Pencil size={15} aria-hidden /> Vẽ tiếp</> : <><Check size={16} aria-hidden /> Xong</>}
+            </button>
+          )}
         </div>
       )}
       {playing && <Progress s={s} />}
@@ -101,7 +110,7 @@ function Progress({ s }) {
 
 /** Việc của mình ở bước hiện tại: viết câu / vẽ / đoán tranh. Bản nháp tự lưu lên server. */
 function Task({ s, task, act, timeLeft }) {
-  if (task.kind === 'draw') return <DrawTask s={s} task={task} act={act} />;
+  if (task.kind === 'draw') return <DrawTask s={s} task={task} />;
   return <TextTask task={task} act={act} timeLeft={timeLeft} />;
 }
 
@@ -144,24 +153,19 @@ function TextTask({ task, act }) {
   );
 }
 
-function DrawTask({ s, task, act }) {
+/** Bước vẽ: màn rộng thì công cụ là cột dọc bên trái khung vẽ; điện thoại thì nằm ngay dưới khung. */
+function DrawTask({ s, task }) {
   const canvas = useRef(null);
   const canDraw = !task.done;
   const t = useDrawTools(canvas, canDraw);
   return (
-    <div className="tp-task">
-      <div className="panel tp-prompt">Vẽ: <b>{task.prev?.text || '(người trước bỏ trống — vẽ gì tùy bạn!)'}</b></div>
-      <div className="sc-board">
+    <div className="tp-draw">
+      {canDraw && <DrawTools t={t} canvas={canvas} className="tp-tools" />}
+      <div className="tp-canvas-box">
         <div className={`sc-stage ${canDraw ? 'my-turn' : ''}`}>
           <ScribbleCanvas ref={canvas} turn={s.turnNo} canDraw={canDraw} tool={t.tool} color={t.color} size={t.brush} />
           {task.done && <div className="sc-overlay tp-done-ov"><Check size={22} aria-hidden /> Đã nộp — đang chờ mọi người…</div>}
         </div>
-        {canDraw && <DrawTools t={t} canvas={canvas} />}
-      </div>
-      <div className="board-actions">
-        <button className={`btn ${task.done ? '' : 'cta'}`} onClick={() => act({ type: 'done', done: !task.done })}>
-          {task.done ? <><Pencil size={15} aria-hidden /> Vẽ tiếp</> : <><Check size={16} aria-hidden /> Xong</>}
-        </button>
       </div>
     </div>
   );

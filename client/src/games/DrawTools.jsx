@@ -18,10 +18,10 @@ export function useDrawTools(canvas, enabled) {
   return { tool, setTool, color, setColor, size, setSize, brush: BRUSH_SIZES[size] };
 }
 
-export default function DrawTools({ t, canvas }) {
+export default function DrawTools({ t, canvas, className = '' }) {
   const { tool, setTool, color, setColor, size, setSize } = t;
   return (
-    <div className="sc-tools" role="toolbar" aria-label="Công cụ vẽ">
+    <div className={`sc-tools ${className}`} role="toolbar" aria-label="Công cụ vẽ">
       <div className="sc-palette">
         {PALETTE.map((c, i) => (
           <button key={c} className={`sc-color ${color === i && tool !== 'eraser' ? 'on' : ''}`} style={{ background: c }}
