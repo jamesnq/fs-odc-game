@@ -241,6 +241,8 @@ export class DuelHandler {
 
   /** Sau mỗi thay đổi: nếu tới lượt máy (hoặc máy cần trả lời yêu cầu) thì hẹn giờ cho máy hành động. */
   _botTick() {
+    this._botRevision = (this._botRevision || 0) + 1;
+    const revision = this._botRevision;
     clearTimeout(this.botTimer);
     this.botTimer = null;
     const side = this.botSide();
@@ -258,22 +260,28 @@ export class DuelHandler {
     } else if (!p && this.game.turn === side) {
       const level = this.seats[side].bot;
       delay = level === 'easy' ? thinkMs(500, 1100) : thinkMs(350, 800);
-      run = () => {
-        const move = this._botMove(this.game, level);
+      run = async () => {
+        const game = this.game;
+        const move = await this._botMove(game, level);
+        // A move may finish after undo, timeout, a pending request, or room disposal.
+        if (this._botRevision !== revision || this.game !== game || this.status !== 'playing'
+          || this.pending || this.game.turn !== side || this.seats[side]?.id !== id) return;
         this._action(id, { type: 'move', ...move });
       };
     }
     if (!run) return;
-    this.botTimer = setTimeout(() => {
+    this.botTimer = setTimeout(async () => {
       this.botTimer = null;
       if (this.status !== 'playing' || this.seats[side]?.id !== id) return;
       try {
-        run();
+        await run();
       } catch (e) {
         console.error('[bot]', e);
       }
-      this._botTick();
-      this.room.changed();
+      if (this._botRevision === revision) {
+        this._botTick();
+        this.room.changed();
+      }
     }, delay);
   }
 
@@ -332,5 +340,5 @@ export class DuelHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); clearTimeout(this.botTimer); }
+  dispose() { this._botRevision = (this._botRevision || 0) + 1; clearTimeout(this.timer); clearTimeout(this.botTimer); }
 }

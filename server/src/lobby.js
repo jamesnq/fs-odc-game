@@ -32,6 +32,8 @@ export class Room {
     this.voice = new Map(); // userId -> { muted, sid } — ai đang trong kênh thoại của phòng
     this.handler = new GAMES[game].Handler(this, options);
     this._pending = false;
+    this._summaryKey = null;
+    this._presenceKey = null;
   }
 
   isOnline(id) { return this.lobby.isOnline(id); }
@@ -53,12 +55,19 @@ export class Room {
     queueMicrotask(() => {
       this._pending = false;
       if (!this.lobby.rooms.has(this.id)) return;
-      for (const uid of this.members) this.lobby.toUser(uid).emit('room:state', this.viewFor(uid));
-      this.lobby.broadcast(this.server);
+      const common = this.commonView();
+      for (const uid of this.members) this.lobby.toUser(uid).emit('room:state', this.viewFor(uid, common));
+      const summaryKey = JSON.stringify(this.summary());
+      const presenceKey = JSON.stringify([this.name, [...this.members], this.handler.playerIds()]);
+      if (summaryKey !== this._summaryKey || presenceKey !== this._presenceKey) {
+        this.lobby.broadcast(this.server, { rooms: summaryKey !== this._summaryKey, online: presenceKey !== this._presenceKey });
+        this._summaryKey = summaryKey;
+        this._presenceKey = presenceKey;
+      }
     });
   }
 
-  viewFor(uid) {
+  commonView() {
     const { lobby } = this;
     const players = new Set(this.handler.playerIds());
     return {
@@ -74,9 +83,12 @@ export class Room {
       })),
       chat: this.chat.slice(-60),
       voice: [...this.voice].map(([id, v]) => ({ id, muted: v.muted })),
-      state: this.handler.view(uid),
       serverTime: Date.now(),
     };
+  }
+
+  viewFor(uid, common = this.commonView()) {
+    return { ...common, state: this.handler.view(uid) };
   }
 
   summary() {
@@ -110,7 +122,7 @@ export class Lobby {
     this.byToken = new Map();
     /** @type {Map<string, Room>} */
     this.rooms = new Map();
-    this._broadcastPending = new Set();
+    this._broadcastPending = new Map();
     // Dọn danh tính lâu không hoạt động để bộ nhớ không tăng mãi
     setInterval(() => this.sweepIdleUsers(), 10 * 60_000).unref();
   }
@@ -179,13 +191,19 @@ export class Lobby {
   }
 
   /** Phát danh sách phòng và người online cho sảnh, gộp các thay đổi trong 100ms. */
-  broadcast(serverId) {
-    if (this._broadcastPending.has(serverId)) return;
-    this._broadcastPending.add(serverId);
+  broadcast(serverId, { rooms = true, online = true } = {}) {
+    const pending = this._broadcastPending.get(serverId);
+    if (pending) {
+      pending.rooms ||= rooms;
+      pending.online ||= online;
+      return;
+    }
+    const updates = { rooms, online };
+    this._broadcastPending.set(serverId, updates);
     setTimeout(() => {
       this._broadcastPending.delete(serverId);
-      this.io.to('lobby:' + serverId).emit('lobby:rooms', this.roomList(serverId));
-      this.io.to('lobby:' + serverId).emit('lobby:online', this.onlineList(serverId));
+      if (updates.rooms) this.io.to('lobby:' + serverId).emit('lobby:rooms', this.roomList(serverId));
+      if (updates.online) this.io.to('lobby:' + serverId).emit('lobby:online', this.onlineList(serverId));
     }, 100);
   }
 
@@ -216,6 +234,15 @@ export class Lobby {
 
   /** Vào phòng để chơi ('play') hoặc xem ('watch'). Trả về cảnh báo nếu không ngồi được. */
   join(user, room, mode) {
+    const players = new Set(room.handler.playerIds());
+    const spectators = [...room.members].filter((id) => !players.has(id)).length;
+    // Reserve actual player admission even when all spectator places are occupied.
+    // Attempt the seat before leaving the previous room, so a rejected join is harmless.
+    if (!room.members.has(user.id) && !players.has(user.id) && spectators >= LIMITS.spectatorsPerRoom) {
+      if (mode !== 'play') throw new Error('Phòng đã đủ người xem');
+      try { room.handler.sit(user); }
+      catch { throw new Error('Phòng đã đủ người xem'); }
+    }
     if (user.roomId && user.roomId !== room.id) this.leave(user);
     const isNew = !room.members.has(user.id);
     room.members.add(user.id);
