@@ -1761,9 +1761,15 @@ button.onet-racer { cursor: pointer; }
 .snake-big { font-size: 26px; font-weight: 800; letter-spacing: .12em; }
 .snake-pad { display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 42px); gap: 8px;
   grid-template-areas: ". up ." "left mid right" ". down ."; }
-.snake-pad .k { border: 0; border-radius: 12px; background: linear-gradient(#e8edf1, #b9c3cc); color: #1d2630; font: 700 18px/1 system-ui, sans-serif;
-  display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; box-shadow: 0 2px 0 #6b7782; touch-action: none; }
-.snake-pad .k:active { transform: translateY(2px); box-shadow: none; }
+.snake-pad .k { position: relative; border: 0; border-radius: 12px; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center; font: 700 18px/1 system-ui, sans-serif; color: #1d2630;
+  background: linear-gradient(#f4f7f9, #c3ccd4); transform: translateY(0);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -2px 0 rgba(0,0,0,.08), 0 4px 0 #6b7782, 0 6px 8px rgba(0,0,0,.35);
+  transition: transform .06s ease-out, box-shadow .06s ease-out, background .06s; }
+.snake-pad .k:hover { background: linear-gradient(#ffffff, #cbd3da); }
+/* Nhấn: lún xuống, bóng đổ co lại, mặt nút tối đi */
+.snake-pad .k:active, .snake-pad .k.on { transform: translateY(3px); background: linear-gradient(#b4bec7, #d3dae0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.35), 0 1px 0 #6b7782, 0 1px 2px rgba(0,0,0,.3); }
 .snake-pad .up { grid-area: up; } .snake-pad .down { grid-area: down; } .snake-pad .left { grid-area: left; } .snake-pad .right { grid-area: right; }
 .snake-pad .mid { grid-area: mid; border-radius: 50%; width: 36px; height: 36px; justify-self: center; align-self: center; }
 .snake-pad .mid.blank { visibility: hidden; }
@@ -1789,4 +1795,8 @@ button.onet-racer { cursor: pointer; }
 .snake-phone.modern .snake-over, .snake-phone.modern .snake-wait { inset: 0; color: #e2e8f0; font-family: system-ui, sans-serif; letter-spacing: .04em; }
 .snake-phone.modern .snake-over:not(.big) { background: rgba(9,13,29,.62); backdrop-filter: blur(2px); }
 .snake-phone.modern .snake-over.big { color: #34f5c5; text-shadow: 0 0 24px rgba(52,245,197,.7); }
-.snake-phone.modern .snake-pad .k { background: linear-gradient(#273258, #1a2342); color: #c7d2fe; box-shadow: 0 2px 0 #0b1022, 0 0 0 1px rgba(129,140,248,.3); }
+.snake-phone.modern .snake-pad .k { background: linear-gradient(#2c3963, #1b2445); color: #c7d2fe;
+  box-shadow: inset 0 1px 0 rgba(199,210,254,.18), 0 0 0 1px rgba(129,140,248,.3), 0 4px 0 #070b18, 0 6px 10px rgba(0,0,0,.45); }
+.snake-phone.modern .snake-pad .k:hover { background: linear-gradient(#34437a, #1f2a52); }
+.snake-phone.modern .snake-pad .k:active, .snake-phone.modern .snake-pad .k.on { color: #34f5c5; background: linear-gradient(#151d3a, #222c55);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.55), 0 0 0 1px rgba(52,245,197,.55), 0 0 14px rgba(52,245,197,.35), 0 1px 0 #070b18; }

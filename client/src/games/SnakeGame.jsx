@@ -286,11 +286,21 @@ function LocalPlay({ s, me, room, beep, theme }) {
     return () => { alive = false; cancelAnimationFrame(raf); };
   }, [s.tickMs, beep, sync]);
 
+  // Nút đang được nhấn trên bàn phím ảo (sáng lên cả khi bấm phím thật hay vuốt)
+  const [pressed, setPressed] = useState(null);
+  const pressTimer = useRef(0);
+  useEffect(() => () => clearTimeout(pressTimer.current), []);
+  const press = useCallback((k) => {
+    setPressed(k);
+    clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => setPressed(null), 140);
+  }, []);
   const turn = useCallback((dir) => {
+    press(dir);
     const r = R.current;
     if (r.over || r.paused) return;
     if (r.game.turn(dir)) r.log.push([r.game.tick, dir]);
-  }, []);
+  }, [press]);
 
   const togglePause = useCallback(() => {
     const r = R.current;
@@ -324,15 +334,15 @@ function LocalPlay({ s, me, room, beep, theme }) {
 
   const pad = (
     <div className="snake-pad">
-      <button type="button" className="k up" onPointerDown={(e) => { e.preventDefault(); turn('up'); }} aria-label="Lên">▲</button>
-      <button type="button" className="k left" onPointerDown={(e) => { e.preventDefault(); turn('left'); }} aria-label="Trái">◀</button>
+      <button type="button" className={`k up ${pressed === 'up' ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); turn('up'); }} aria-label="Lên">▲</button>
+      <button type="button" className={`k left ${pressed === 'left' ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); turn('left'); }} aria-label="Trái">◀</button>
       {solo ? (
-        <button type="button" className="k mid" onClick={togglePause} aria-label={r.paused ? 'Chơi tiếp' : 'Tạm dừng'}>
+        <button type="button" className={`k mid ${pressed === 'mid' ? 'on' : ''}`} onPointerDown={() => press('mid')} onClick={togglePause} aria-label={r.paused ? 'Chơi tiếp' : 'Tạm dừng'}>
           {r.paused ? <Play size={16} /> : <Pause size={16} />}
         </button>
       ) : <span className="k mid blank" />}
-      <button type="button" className="k right" onPointerDown={(e) => { e.preventDefault(); turn('right'); }} aria-label="Phải">▶</button>
-      <button type="button" className="k down" onPointerDown={(e) => { e.preventDefault(); turn('down'); }} aria-label="Xuống">▼</button>
+      <button type="button" className={`k right ${pressed === 'right' ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); turn('right'); }} aria-label="Phải">▶</button>
+      <button type="button" className={`k down ${pressed === 'down' ? 'on' : ''}`} onPointerDown={(e) => { e.preventDefault(); turn('down'); }} aria-label="Xuống">▼</button>
     </div>
   );
 
