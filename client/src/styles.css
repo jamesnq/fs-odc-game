@@ -272,8 +272,7 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
   .online-panel { position: sticky; top: calc(var(--topbar-h) + 16px); max-height: calc(100vh - var(--topbar-h) - 40px); }
   .online-panel.open .op-head { padding-bottom: 6px; }
   .op-scroll { max-height: none; }
-  /* Màn rộng, đã ẩn danh sách: cột phải chỉ còn tiêu đề gọn, khu phòng chơi rộng ra */
-  .lobby:has(.online-panel:not(.open)) { grid-template-columns: minmax(0, 1fr) auto; }
+  /* Màn rộng, đã ẩn danh sách: giữ nguyên bề rộng cột phải (chỉ còn tiêu đề) để thẻ game và danh sách phòng không bị dàn lại khi ẩn / hiện */
   .online-panel:not(.open) .op-head { padding: 10px 12px; }
 }
 .ri-icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--panel-2); color: var(--gc-fg, #fff); }
