@@ -161,13 +161,29 @@ export class Lobby {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  /** Phát danh sách phòng cho sảnh, gộp các thay đổi trong 100ms. */
+  /** Người đang kết nối trong server: đang ở sảnh hay ở phòng nào, chơi hay xem. */
+  onlineList(serverId) {
+    const list = [];
+    for (const u of this.users.values()) {
+      if (u.server !== serverId || !u.sockets.size) continue;
+      const room = u.roomId && this.rooms.get(u.roomId);
+      list.push({
+        id: u.id,
+        name: u.name,
+        room: room ? { id: room.id, name: room.name, game: room.game, playing: room.handler.playerIds().includes(u.id) } : null,
+      });
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }
+
+  /** Phát danh sách phòng và người online cho sảnh, gộp các thay đổi trong 100ms. */
   broadcast(serverId) {
     if (this._broadcastPending.has(serverId)) return;
     this._broadcastPending.add(serverId);
     setTimeout(() => {
       this._broadcastPending.delete(serverId);
       this.io.to('lobby:' + serverId).emit('lobby:rooms', this.roomList(serverId));
+      this.io.to('lobby:' + serverId).emit('lobby:online', this.onlineList(serverId));
     }, 100);
   }
 

@@ -85,11 +85,13 @@ export function handleConnection(socket, { lobby, voice, connections }) {
     socket.join('lobby:' + srv.id);
     const room = u.roomId && lobby.rooms.get(u.roomId);
     if (room) room.changed();
+    lobby.broadcast(srv.id); // báo cho sảnh: có người vừa online
     return {
       user: { id: u.id, name: u.name },
       token: u.token,
       roomId: room ? room.id : null,
       rooms: lobby.roomList(srv.id),
+      online: lobby.onlineList(srv.id),
       server: { id: srv.id, name: srv.name, gated: GATED },
       voice: voice.status(srv.name),
       session: issueSession(srv), // gia hạn phiên mỗi lần vào
@@ -113,7 +115,7 @@ export function handleConnection(socket, { lobby, voice, connections }) {
 
   // ---------- Sảnh & phòng ----------
 
-  on('lobby:list', () => ({ rooms: lobby.roomList(user.server) }));
+  on('lobby:list', () => ({ rooms: lobby.roomList(user.server), online: lobby.onlineList(user.server) }));
 
   on('room:create', ({ name, game, options }) => {
     if (!isGame(game)) throw new Error('Trò chơi không hợp lệ');
@@ -257,6 +259,7 @@ export function handleConnection(socket, { lobby, voice, connections }) {
     }
     if (u.sockets.size) return; // vẫn còn tab khác
     if (room) room.changed();
+    lobby.broadcast(u.server); // báo cho sảnh: người này vừa offline
     // Giữ chỗ một lúc để tải lại trang / mạng chập chờn không bị đưa ra khỏi phòng.
     // Danh tính (token) vẫn giữ để lần sau vào lại vẫn giữ tên; dọn sau LIMITS.userIdleMs không hoạt động.
     clearTimeout(u.graceTimer);

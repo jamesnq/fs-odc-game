@@ -230,6 +230,50 @@ input[type=checkbox] { width: 16px; height: 16px; min-height: 0; accent-color: v
 .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 10px; }
 .room-item { display: flex; gap: 14px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; transition: border-color .15s; }
 .room-item:hover { border-color: var(--line-strong); }
+
+/* Danh sách người đang online: cột bên phải trên màn rộng, nằm giữa thẻ game và danh sách phòng trên màn hẹp */
+.lobby { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "games" "online" "rooms"; }
+.lobby-games { grid-area: games; }
+.room-list { grid-area: rooms; }
+.online-panel { grid-area: online; display: flex; flex-direction: column; min-width: 0;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.op-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.op-head h2 { font-size: 16px; display: flex; align-items: center; margin-right: auto; white-space: nowrap; }
+.op-chevron { color: var(--muted); transition: transform .2s; flex: none; }
+.online-panel.open .op-chevron { transform: rotate(180deg); }
+.op-stack { display: flex; align-items: center; }
+.op-stack .op-avatar { font-size: 11px; box-shadow: 0 0 0 2px var(--panel); margin-left: -6px; }
+.op-stack .op-avatar::after { display: none; }
+.op-more { margin-left: 4px; font-size: 11px; color: var(--muted); }
+.op-content { display: none; flex-direction: column; gap: 8px; padding: 0 10px 10px; min-height: 0; }
+.online-panel.open .op-content { display: flex; }
+.online-panel.open .op-stack { display: none; }
+.online-panel .search { max-width: none; margin: 0 4px; }
+.op-scroll { overflow-y: auto; max-height: 340px; display: flex; flex-direction: column; }
+.op-group { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 8px 6px 4px; }
+.op-group span { font-variant-numeric: tabular-nums; opacity: .8; }
+.op-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.op-list li { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 10px; min-width: 0; }
+.op-list li:hover { background: rgba(255,255,255,.04); }
+.op-avatar { position: relative; flex: none; display: grid; place-items: center; border-radius: 50%; font-weight: 700; font-size: 14px;
+  background: hsl(var(--h, 210) 55% 30%); color: hsl(var(--h, 210) 90% 85%); }
+.op-avatar::after { content: ''; position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 2px var(--panel); }
+.op-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.op-body b { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-status { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; color: var(--muted); }
+.op-status svg { flex: none; color: var(--gc-fg, var(--muted)); }
+.op-room { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-join { flex: none; }
+.op-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 16px 8px 10px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+@media (min-width: 1100px) {
+  .lobby { grid-template-columns: minmax(0, 1fr) 300px; grid-template-areas: "games online" "rooms online"; column-gap: 20px; align-items: start; }
+  .online-panel { position: sticky; top: calc(var(--topbar-h) + 16px); max-height: calc(100vh - var(--topbar-h) - 40px); }
+  /* Màn rộng: luôn mở, tiêu đề không bấm được */
+  .op-head { cursor: default; pointer-events: none; padding-bottom: 6px; }
+  .op-chevron, .op-stack { display: none; }
+  .op-content { display: flex; }
+  .op-scroll { max-height: none; }
+}
 .ri-icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--panel-2); color: var(--gc-fg, #fff); }
 .ri-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .ri-title { display: flex; align-items: center; min-width: 0; }
@@ -624,6 +668,8 @@ button, a, [role=tab], input, label { touch-action: manipulation; -webkit-tap-hi
 /* Ô mật khẩu có nút hiện/ẩn */
 .pw-field { position: relative; margin-top: 6px; }
 .pw-field input { margin-top: 0; padding-right: 48px; padding-left: 48px; }
+/* Edge tự thêm nút hiện mật khẩu — ẩn đi vì app đã có nút riêng */
+input::-ms-reveal, input::-ms-clear { display: none; }
 .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); border-radius: 8px; cursor: pointer; }
 .pw-toggle:hover { color: var(--text); background: rgba(255,255,255,.06); }
 

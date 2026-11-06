@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Grid3x3, WholeWord, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -29,7 +29,7 @@ export default function Lobby() {
 
   return (
     <div className="lobby">
-      <section>
+      <section className="lobby-games">
         <div className="section-head">
           <div>
             <h2>Chọn trò chơi</h2>
@@ -117,8 +117,100 @@ export default function Lobby() {
           </div>
         )}
       </section>
+      <OnlinePanel />
       {creating && <CreateRoomDialog game={creating} onClose={() => setCreating(null)} />}
     </div>
+  );
+}
+
+/** Màu avatar cố định theo id để dễ phân biệt từng người. */
+const hueOf = (id) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
+const initial = (name) => name.trim().charAt(0).toUpperCase() || '?';
+
+function Avatar({ p, size = 34 }) {
+  return (
+    <span className="op-avatar" aria-hidden style={{ '--h': hueOf(p.id), width: size, height: size }}>{initial(p.name)}</span>
+  );
+}
+
+/**
+ * Người đang online cùng server (trừ mình), chia hai nhóm: ở sảnh (dễ rủ chơi) và đang trong phòng (bấm để vào cùng).
+ * Trên điện thoại khung thu gọn thành một dòng avatar, chạm để mở.
+ */
+function OnlinePanel() {
+  const { online, user, call } = useApp();
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const others = online.filter((p) => p.id !== user.id);
+  const match = (p) => !q || p.name.toLowerCase().includes(q.toLowerCase());
+  const byName = (a, b) => a.name.localeCompare(b.name, 'vi');
+  const idle = others.filter((p) => !p.room && match(p)).sort(byName);
+  const busy = others.filter((p) => p.room && match(p)).sort((a, b) => b.room.playing - a.room.playing || byName(a, b));
+
+  const row = (p) => {
+    const r = p.room;
+    return (
+      <li key={p.id}>
+        <Avatar p={p} />
+        <div className="op-body">
+          <b title={p.name}>{p.name}</b>
+          {r ? (
+            <span className={`op-status g-${r.game}`} title={`${GAME_META[r.game]?.name} · ${r.name}`}>
+              <GameIcon game={r.game} size={13} />
+              <span className="op-room">{r.playing ? 'Chơi' : 'Xem'} · {r.name}</span>
+            </span>
+          ) : <span className="op-status">Đang rảnh</span>}
+        </div>
+        {r && (
+          <button className="btn sm op-join" title={`Vào phòng ${r.name}`} aria-label={`Vào phòng ${r.name} cùng ${p.name}`}
+            onClick={() => call('room:join', { roomId: r.id, mode: r.playing ? 'play' : 'watch' })}>
+            <LogIn size={15} aria-hidden /> Vào
+          </button>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <aside className={`online-panel ${open ? 'open' : ''}`} aria-labelledby="online-title">
+      <button type="button" className="op-head" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="online-content">
+        <h2 id="online-title"><span className="dot on" aria-hidden />Đang online</h2>
+        <span className="op-stack" aria-hidden>
+          {others.slice(0, 4).map((p) => <Avatar key={p.id} p={p} size={24} />)}
+          {others.length > 4 && <span className="op-more">+{others.length - 4}</span>}
+        </span>
+        <span className="tab-count" aria-label={`${others.length} người khác`}>{others.length}</span>
+        <ChevronDown size={18} className="op-chevron" aria-hidden />
+      </button>
+      <div className="op-content" id="online-content">
+        {others.length === 0 ? (
+          <div className="op-empty">
+            <Users size={26} aria-hidden />
+            <span>Chỉ có bạn đang online.<br />Gửi link cho bạn bè để cùng chơi nhé!</span>
+          </div>
+        ) : (
+          <>
+            {others.length > 6 && (
+              <label className="search">
+                <Search size={16} aria-hidden />
+                <input type="search" placeholder="Tìm người chơi…" aria-label="Tìm người chơi" value={q} onChange={(e) => setQ(e.target.value)} />
+              </label>
+            )}
+            <div className="op-scroll">
+              {idle.length > 0 && <>
+                <h3 className="op-group">Ở sảnh <span>{idle.length}</span></h3>
+                <ul className="op-list">{idle.map(row)}</ul>
+              </>}
+              {busy.length > 0 && <>
+                <h3 className="op-group">Trong phòng <span>{busy.length}</span></h3>
+                <ul className="op-list">{busy.map(row)}</ul>
+              </>}
+              {!idle.length && !busy.length && <p className="muted small">Không tìm thấy ai</p>}
+            </div>
+          </>
+        )}
+      </div>
+    </aside>
   );
 }
 
