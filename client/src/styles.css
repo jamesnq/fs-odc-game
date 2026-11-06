@@ -1589,6 +1589,13 @@ textarea:focus { border-color: var(--primary-hi); box-shadow: 0 0 0 3px var(--pr
   .tp-fill .tp-step { margin-right: auto; }
   .tp.tp-fill { padding-top: 4px; }
 }
+/* Popup hết ván */
+.tp-end { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 6px 4px 2px; }
+.tp-end-start { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin-top: 6px; }
+.tp-end-start .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 16px; }
+.tp-end .bo-actions { flex-wrap: wrap; }
+.tp-end .bo-actions .btn { flex: 1 1 200px; }
+.tp-end-strip { position: sticky; top: 0; left: auto; transform: none; align-self: center; z-index: 4; max-width: 100%; }
 .tp-task > .tp-drawing { width: min(100%, calc((100vh - 330px) * 4 / 3)); width: min(100%, calc((100dvh - 330px) * 4 / 3)); min-width: 240px; align-self: center; }
 
 /* ---------- Nối thú ---------- */
