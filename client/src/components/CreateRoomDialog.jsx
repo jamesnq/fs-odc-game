@@ -5,6 +5,7 @@ import { GAME_META, GameIcon } from './Lobby.jsx';
 import { QUIZ_CATEGORIES } from '@game/shared/quiz';
 
 const DEFAULTS = {
+  chess: { minutes: 10 },
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true, bot: '' },
   wordchain: { maxSeats: 6, turnSeconds: 20, lives: 1, dictionary: true, strict: true, bot: '', bots: 1 },
@@ -23,6 +24,8 @@ const BOT_OPTIONS = [['', 'Không — chơi với người'], ['easy', 'Máy D�
 
 // [khóa, nhãn, min, max] · [khóa, nhãn, 'bool'] · [khóa, nhãn, 'select', các lựa chọn]
 const FIELDS = {
+  chess: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
+
   quiz: [
     ['category', 'Chủ đề (bộ câu hỏi có sẵn)', 'select', [['all', 'Tất cả chủ đề'], ...QUIZ_CATEGORIES.map((c) => [c, c])]],
     ['questions', 'Số câu mỗi ván', 3, 30],

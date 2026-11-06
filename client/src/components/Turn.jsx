@@ -6,6 +6,7 @@ export function turnInfo(room, userId) {
   const s = room.state;
   if (!s) return null;
   switch (room.game) {
+    case 'chess':
     case 'xiangqi':
     case 'caro':
       if (s.status !== 'playing') return null;

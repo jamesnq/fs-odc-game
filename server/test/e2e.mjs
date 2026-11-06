@@ -174,6 +174,54 @@ const [a, b, c, d] = await Promise.all(['An', 'Bình', 'Chi', 'Dũng'].map((n) =
   console.log('✔ Cờ tướng OK');
 }
 
+// ---------- Cờ vua ----------
+{
+  a.state = b.state = c.state = null;
+  const { roomId } = await a.req('room:create', { name: 'Cờ vua test', game: 'chess', options: { minutes: 10 } });
+  await b.req('room:join', { roomId, mode: 'play' });
+  await c.req('room:join', { roomId, mode: 'watch' });
+  await until(() => c.state?.members.length === 3);
+  assert.equal(c.state.state.myColor, null, 'người xem không có màu');
+  await a.act({ type: 'ready' });
+  await b.act({ type: 'ready' });
+  await until(() => a.state.state.status === 'playing');
+  const white = a.state.state.myColor === 'w' ? a : b;
+  const black = white === a ? b : a;
+  // e2: 6*8+4=52, e4: 4*8+4=36
+  await white.act({ type: 'move', from: 52, to: 36, promotion: 'Q' });
+  await assert.rejects(white.act({ type: 'move', from: 53, to: 37 }), /lượt/);
+  await assert.rejects(c.act({ type: 'resign' }), /xem/);
+  // Xin đi lại -> đối thủ đồng ý
+  await white.act({ type: 'requestUndo' });
+  await black.act({ type: 'respond', accept: true });
+  await until(() => white.state.state.moves.length === 0 && white.state.state.turn === 'w');
+  await white.act({ type: 'move', from: 52, to: 36, promotion: 'Q' });
+  // Cầu hòa -> từ chối
+  await black.act({ type: 'offerDraw' });
+  await white.act({ type: 'respond', accept: false });
+  await until(() => !white.state.state.pending);
+  await until(() => c.state.state.moves.length === 1);
+  assert.ok(c.state.state.clocks.w <= 10 * 60000 && c.state.state.clocks.w > 9 * 60000);
+  await black.act({ type: 'resign' });
+  await until(() => a.state.state.status === 'over');
+  assert.equal(a.state.state.result.winner, 'w');
+  await until(() => c.state.state.score.gameNo === 1);
+  const sc = c.state.state.score;
+  assert.equal(sc.gameNo, 1);
+  assert.equal(sc.rows[0].id, white.user.id, 'người thắng đứng đầu bảng điểm');
+  assert.deepEqual([sc.rows[0].wins, sc.rows[0].points, sc.rows[1].losses, sc.rows[1].points], [1, 1, 1, 0]);
+  await assert.rejects(b.act({ type: 'resetScore' }), /chủ phòng/);
+  await a.act({ type: 'rematch' });
+  await b.act({ type: 'rematch' });
+  await until(() => a.state.state.status === 'playing');
+  assert.notEqual(white.state.state.myColor, 'w', 'đổi màu khi chơi lại');
+  await c.req('room:leave');
+  await a.req('room:delete', { roomId });
+  await until(() => b.state === null || true);
+  console.log('✔ Cờ vua OK');
+}
+
+
 // ---------- Cờ caro ----------
 {
   a.state = b.state = c.state = null;

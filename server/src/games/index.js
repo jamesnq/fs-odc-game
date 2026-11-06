@@ -1,3 +1,4 @@
+import { ChessHandler } from './chess.js';
 import { XiangqiHandler } from './xiangqi.js';
 import { PokerHandler } from './poker.js';
 import { TalaHandler } from './tala.js';
@@ -18,6 +19,7 @@ import { OnetHandler } from './onet.js';
  * gửi liên tục (nét vẽ) chuyển thẳng cho người khác, censorChat(id, text) để chặn tin nhắn lộ đáp án.
  */
 export const GAMES = {
+  chess: { name: 'Cờ vua', Handler: ChessHandler },
   xiangqi: { name: 'Cờ tướng', Handler: XiangqiHandler },
   poker: { name: 'Poker', Handler: PokerHandler },
   tala: { name: 'Tá lả', Handler: TalaHandler },

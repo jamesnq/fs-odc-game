@@ -1,4 +1,4 @@
-# 🎲 Sảnh Trò Chơi — Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Đố vui · Đoán chữ
+# 🎲 Sảnh Trò Chơi — Cờ vua · Tá lả · Sâm lốc · Poker · Cờ tướng · Cờ caro · Nối từ · Vẽ đoán · Tam sao thất bản · Nối thú · Đố vui · Đoán chữ
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
@@ -77,7 +77,7 @@
 - Server kiểm tra mọi nước nối; người xem bấm tên người chơi để xem bàn của họ. Điện thoại dọc: bàn tự xoay dọc cho ô to hơn
 - **Phím tắt:** `H` gợi ý · `S` đổi hình · `Esc` bỏ chọn
 
-**Bảng điểm (Cờ tướng và Cờ caro)**
+**Bảng điểm (Cờ vua, Cờ tướng và Cờ caro)**
 - Thắng **+1**, hòa **+½**, thua **0**. Điểm tính theo người chơi nên chơi lại đổi màu vẫn cộng đúng người
 - Bảng tỉ số (số ván / thắng / hòa / thua / điểm) và lịch sử 30 ván gần nhất (ai cầm quân gì, lý do thắng, số nước)
 - Sau mỗi ván, phòng chat báo tỉ số hiện tại; chủ phòng có thể **đặt lại bảng điểm** khi không có ván đang chơi
