@@ -42,9 +42,9 @@ function handToText(e) {
     for (const a of acts) L.push(actionText(a, nameOf(e, a.seat)));
   }
   if (e.rabbit) L.push(`*** RABBIT (không tính) [${e.rabbit.map(cardLabel).join(' ')}] ***`);
-  if (e.showdown) {
-    L.push('*** SHOWDOWN ***');
-    for (const [seat, s] of Object.entries(e.shown)) L.push(`${nameOf(e, Number(seat))}: [${s.hole.map(cardLabel).join(' ')}] — ${s.hand}`);
+  if (Object.keys(e.shown).length) {
+    L.push(e.showdown ? '*** SHOWDOWN ***' : '*** SHOW BÀI ***');
+    for (const [seat, s] of Object.entries(e.shown)) L.push(`${nameOf(e, Number(seat))}: [${s.hole.map(cardLabel).join(' ')}]${s.hand ? ` — ${s.hand}` : ''}${s.voluntary ? ' (chủ động show)' : ''}`);
   }
   L.push('*** KẾT QUẢ ***');
   e.pots.forEach((pt, k) => L.push(`${e.pots.length > 1 ? (k ? `Pot phụ ${k}` : 'Pot chính') : 'Pot'} ${fmtNum(pt.amount)}: ${pt.winners.map((w) => nameOf(e, w)).join(', ')}${pt.hand ? ` (${pt.hand})` : ''}`));
@@ -196,12 +196,12 @@ function HandDetail({ e, onClose, onPrev, onNext, onCopy }) {
           </div>
         )}
 
-        {e.showdown && (
+        {Object.keys(e.shown).length > 0 && (
           <div className="hl-street">
-            <div className="hl-street-head"><b>Showdown</b></div>
+            <div className="hl-street-head"><b>{e.showdown ? 'Showdown' : 'Show bài'}</b></div>
             <ul>
               {Object.entries(e.shown).map(([seat, sh]) => (
-                <li key={seat}>{nameOf(e, Number(seat))}: <span className="hl-cards">{sh.hole.map((c) => <Card key={c} card={c} size="sm" />)}</span> — {sh.hand}</li>
+                <li key={seat}>{nameOf(e, Number(seat))}: <span className="hl-cards">{sh.hole.map((c) => <Card key={c} card={c} size="sm" />)}</span>{sh.hand ? ` — ${sh.hand}` : ''}{sh.voluntary && <span className="muted"> (chủ động show)</span>}</li>
               ))}
             </ul>
           </div>

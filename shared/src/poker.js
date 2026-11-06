@@ -61,6 +61,57 @@ export function bestHand(cards) {
   return { score: best, cards: bestCards, name: HAND_NAMES_VI[categoryOf(best)] };
 }
 
+/**
+ * Mô tả bài hiện tại của một người từ 2 lá tẩy + bài chung (0–5 lá), dùng cho bảng "Bài mạnh nhất".
+ * Trả về { cat, name, cards, used, draws }:
+ *  - cards: 5 lá tạo thành bộ mạnh nhất (preflop: chỉ 2 lá tẩy)
+ *  - used: các lá trong `cards` thật sự tạo nên bộ (bỏ kicker), để làm nổi bật
+ *  - draws: các bộ đang "chờ" (chỉ khi còn bài chung chưa ra)
+ */
+export function describeHand(hole, board = []) {
+  const all = [...hole, ...board];
+  let cat, cards;
+  if (all.length >= 5) {
+    const b = bestHand(all);
+    cat = categoryOf(b.score);
+    cards = b.cards.slice();
+  } else {
+    cat = hole.length === 2 && hole[0][0] === hole[1][0] ? 1 : 0;
+    cards = all.slice();
+  }
+  // Sắp xếp để hiển thị: nhóm đông trước, rồi giá trị lớn trước (sảnh A-5 để A cuối)
+  const cnt = {};
+  for (const c of cards) cnt[pv(c)] = (cnt[pv(c)] || 0) + 1;
+  const wheel = (cat === 4 || cat === 8) && cards.some((c) => pv(c) === 14) && cards.some((c) => pv(c) === 2);
+  const val = (c) => (wheel && pv(c) === 14 ? 1 : pv(c));
+  cards.sort((a, b) => cnt[pv(b)] - cnt[pv(a)] || val(b) - val(a));
+  let used;
+  if (cat === 0) used = cards.slice(0, 1);
+  else if ([1, 2, 3, 7].includes(cat)) used = cards.filter((c) => cnt[pv(c)] >= 2);
+  else used = cards.slice();
+  const draws = [];
+  if (board.length >= 3 && board.length < 5 && cat < 5) {
+    const suits = {};
+    for (const c of all) suits[c[1]] = (suits[c[1]] || 0) + 1;
+    if (Object.values(suits).some((n) => n === 4)) draws.push('Chờ thùng');
+    if (cat < 4) {
+      const vs = new Set(all.map(pv));
+      if (vs.has(14)) vs.add(1);
+      let open = false, gut = false;
+      for (let lo = 1; lo <= 10; lo++) {
+        const have = [0, 1, 2, 3, 4].filter((k) => vs.has(lo + k)).length;
+        if (have === 4) {
+          if (vs.has(lo) && vs.has(lo + 1) && vs.has(lo + 2) && vs.has(lo + 3) && lo + 4 <= 14 && lo > 1) open = true;
+          else gut = true;
+        }
+      }
+      if (open) draws.push('Chờ sảnh 2 đầu');
+      else if (gut) draws.push('Chờ sảnh');
+    }
+  }
+  return { cat, name: HAND_NAMES_VI[cat], cards, used, draws };
+}
+
 // ---------- Bàn chơi ----------
 export class PokerGame {
   constructor({ smallBlind = 10, bigBlind = 20, maxSeats = 6 } = {}) {
@@ -498,6 +549,31 @@ export class PokerGame {
     return cards;
   }
 
+  /**
+   * Chủ động show bài: khi ván đã kết thúc, người chơi trong ván mà bài chưa được lật
+   * (đã bỏ bài, hoặc thắng vì mọi người bỏ) có thể tự lật 2 lá tẩy cho cả bàn xem. Không ảnh hưởng kết quả.
+   */
+  canShow(id) {
+    const h = this.hand;
+    if (!h || h.street !== 'done' || !h.result) return false;
+    const p = Object.values(h.players).find((q) => q.id === id);
+    return !!p && !h.result.shown[p.seat];
+  }
+
+  showCards(id) {
+    const h = this.hand;
+    if (!h || h.street !== 'done' || !h.result) throw new Error('Chỉ show bài khi ván đã kết thúc');
+    const p = Object.values(h.players).find((q) => q.id === id);
+    if (!p) throw new Error('Bạn không chơi ván này');
+    if (h.result.shown[p.seat]) throw new Error('Bài của bạn đã được lật rồi');
+    const ev = h.board.length >= 3 ? bestHand([...p.hole, ...h.board]) : null;
+    h.result.shown[p.seat] = { hole: p.hole.slice(), hand: ev ? ev.name : null, best: ev ? ev.cards : null, voluntary: true };
+    const entry = this.history.find((e) => e.no === h.no);
+    if (entry) entry.shown[p.seat] = { hole: p.hole.slice(), hand: ev ? ev.name : null, voluntary: true };
+    this._log(`${p.name} show bài: ${p.hole.join(' ')}${ev ? ` (${ev.name})` : ''}`);
+    return p.hole.slice();
+  }
+
   /** Lưu ván vừa kết thúc vào Hands log. Bài tẩy được lưu đủ, view sẽ lọc theo người xem. */
   _archive(showdown) {
     const h = this.hand;
@@ -581,6 +657,7 @@ export class PokerGame {
       } : null,
       mySeat,
       canRabbit: this.canRabbit(viewerId),
+      canShow: this.canShow(viewerId),
       options: mySeat >= 0 && h ? this.options(mySeat) : null,
     };
   }
