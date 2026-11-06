@@ -6,7 +6,7 @@ import { request } from '../socket.js';
 import GameInfo from '../components/GameInfo.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
-import Modal from '../components/Modal.jsx';
+import GameOverDialog from '../components/GameOverDialog.jsx';
 import { useCountdown, useHotkeys } from '../hooks.js';
 import ScribbleCanvas, { renderOps } from './ScribbleCanvas.jsx';
 import DrawTools, { useDrawTools } from './DrawTools.jsx';
@@ -21,13 +21,6 @@ export default function TelephoneGame({ room, state: s }) {
   // Bước vẽ: đề bài + nút Xong nằm luôn trên thanh đầu, khung vẽ chiếm phần còn lại của màn hình
   const drawTask = playing && s.task?.kind === 'draw' ? s.task : null;
   const over = s.status === 'over';
-  // Hết ván: hiện popup (tự mở mỗi lần ván vừa kết thúc), đóng rồi vẫn mở lại được từ dải trên đầu
-  const [endOpen, setEndOpen] = useState(over);
-  const wasOver = useRef(over);
-  useEffect(() => {
-    if (over && !wasOver.current) setEndOpen(true);
-    wasOver.current = over;
-  }, [over]);
   const seatBtn = s.myId ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
     : s.seats.length < s.options.maxSeats && (
       <button className="btn primary" onClick={() => call('room:sit', {})}>{playing || s.status === 'reveal' ? 'Ngồi chờ ván sau' : 'Vào chơi'}</button>
@@ -59,11 +52,10 @@ export default function TelephoneGame({ room, state: s }) {
         </div>
       )}
 
-      {over && !endOpen && (
-        <button className="board-strip result tp-end-strip" onClick={() => setEndOpen(true)}>
-          <PartyPopper size={16} aria-hidden /><span>Ván đã kết thúc — <b>chơi ván mới?</b></span>
-        </button>
-      )}
+      <GameOverDialog over={over} icon={<PartyPopper size={26} />}
+        detail={`${s.albums.length} câu chuyện đã đi qua ${s.steps} người. Xem lại xem chúng “thất bản” tới đâu, hoặc chơi luôn ván mới.`}
+        seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!s.myId} min={s.minPlayers}
+        seatBtn={seatBtn} reviewLabel="Xem lại các câu chuyện" ReviewIcon={BookOpen} />
       {(s.status === 'reveal' || over) && <Albums s={s} isOwner={isOwner} act={act} />}
 
       {s.status === 'waiting' && (
@@ -87,25 +79,6 @@ export default function TelephoneGame({ room, state: s }) {
         </div>
       )}
 
-      {over && endOpen && (
-        <Modal onClose={() => setEndOpen(false)}>
-          <div className="tp-end" role="status">
-            <span className="bo-icon gold" aria-hidden><PartyPopper size={26} /></span>
-            <div className="bo-title">Hết ván!</div>
-            <div className="bo-detail">
-              {s.albums.length} câu chuyện đã đi qua {s.steps} người. Xem lại xem chúng “thất bản” tới đâu, hoặc chơi luôn ván mới.
-            </div>
-            <div className="tp-end-start">
-              <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!s.myId} min={s.minPlayers}
-                startLabel="Chơi ván mới" readyLabel="Chơi ván mới" />
-            </div>
-            <div className="bo-actions">
-              <button className="btn" autoFocus onClick={() => setEndOpen(false)}><BookOpen size={16} aria-hidden /> Xem lại các câu chuyện</button>
-              {seatBtn}
-            </div>
-          </div>
-        </Modal>
-      )}
 
       <GameInfo>
         <div className="panel small muted wc-rules">

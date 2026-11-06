@@ -6,6 +6,7 @@ import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import GameInfo from '../components/GameInfo.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
+import GameOverDialog, { GoRanking } from '../components/GameOverDialog.jsx';
 
 // 36 hình thú (emoji) — chỉ số 1..36 khớp với giá trị ô trên server
 const ANIMALS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
@@ -104,14 +105,15 @@ export default function OnetGame({ room, state: s }) {
               Màn {shown.level} · {SHIFT_LABEL[shown.shift]}
             </div>
           )}
-          {s.status === 'over' && s.result && <Result s={s} me={user.id} />}
           {playing && me?.done && (
             <div className="onet-done">{me.gaveUp ? 'Bạn đã bỏ cuộc' : me.timedOut ? `⏰ Hết giờ ở màn ${me.level} — chờ mọi người…`
               : `🎉 ${classic ? 'Phá đảo' : 'Dọn sạch'} sau ${fmtClock(me.finishedAt)} — chờ mọi người…`}</div>
           )}
         </div>
 
-        {(!playing || !s.myId) && <div className="board-actions">
+        {s.status === 'over' && s.result && <Result s={s} me={user.id} call={call} />}
+
+        {s.status !== 'over' && (!playing || !s.myId) && <div className="board-actions">
           {!playing && (s.myId ? (
             <>
               <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
@@ -287,32 +289,27 @@ function Racers({ s, ownerId, shownId, onPick }) {
   );
 }
 
-function Result({ s, me }) {
+function Result({ s, me, call }) {
   const byId = (id) => s.players.find((p) => p.id === id);
   const winner = byId(s.result.winner);
   const solo = s.players.length === 1;
   const classic = s.options.mode === 'classic';
+  const title = solo
+    ? (s.players[0].finishedAt != null ? (classic ? `🎉 Phá đảo ${s.levels} màn!` : '🎉 Dọn sạch bàn!')
+      : s.players[0].gaveUp ? (classic ? `🏳️ Bỏ cuộc ở màn ${s.players[0].level}` : '🏳️ Đã bỏ cuộc') : classic ? `⏰ Dừng ở màn ${s.players[0].level}` : '⏰ Hết giờ!')
+    : winner ? <>🏆 {winner.id === me ? 'Bạn' : winner.name} thắng!</> : 'Không ai thắng';
+  const rows = s.result.ranking.map((id) => {
+    const p = byId(id);
+    const note = `${classic && p.finishedAt == null ? `màn ${p.level} · ` : ''}${p.finishedAt != null ? `xong ${fmtClock(p.finishedAt)} (+${p.bonus})` : p.gaveUp ? 'bỏ cuộc' : `còn ${p.left} ô`}`;
+    return { id, name: p.name, value: p.score, note };
+  });
   return (
-    <div className="onet-result" role="status">
-      <div className="onet-big">
-        {solo ? (s.players[0].finishedAt != null ? (classic ? `🎉 Phá đảo ${s.levels} màn!` : '🎉 Dọn sạch bàn!') : classic ? `⏰ Dừng ở màn ${s.players[0].level}` : '⏰ Kết thúc') : winner ? <>🏆 {winner.id === me ? 'Bạn' : winner.name} thắng!</> : 'Không ai thắng'}
-      </div>
-      <ol className="onet-rank">
-        {s.result.ranking.map((id) => {
-          const p = byId(id);
-          return (
-            <li key={id} className={id === me ? 'me' : ''}>
-              <span className="onet-rname">{p.name}</span>
-              <span className="muted small">
-                {classic && p.finishedAt == null ? `màn ${p.level} · ` : ''}
-                {p.finishedAt != null ? `xong ${fmtClock(p.finishedAt)} (+${p.bonus})` : p.gaveUp ? 'bỏ cuộc' : `còn ${p.left} ô`}
-              </span>
-              <b>{p.score}</b>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+    <GameOverDialog over icon={<Trophy size={26} />} title={title} min={1}
+      seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!s.myId} reviewLabel="Xem lại bàn"
+      seatBtn={s.myId ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+        : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
+      <GoRanking me={me} rows={rows} />
+    </GameOverDialog>
   );
 }
 

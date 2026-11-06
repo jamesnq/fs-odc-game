@@ -1073,6 +1073,19 @@ input[aria-invalid=true]:focus { border-color: var(--danger); box-shadow: 0 0 0 
 .board-strip > span { overflow: hidden; text-overflow: ellipsis; }
 .board-strip.check { background: var(--danger); border-color: #fca5a5; color: #fff; font-weight: 700; top: auto; bottom: 8px; animation: pulse 1s infinite; }
 .board-strip.result { cursor: pointer; color: var(--gold); }
+/* Popup hết ván dùng chung (components/GameOverDialog.jsx) */
+.go { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 6px 4px 2px; }
+.go-start { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin-top: 6px; }
+.go-start .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 16px; }
+.go .bo-actions { flex-wrap: wrap; }
+.go .bo-actions .btn { flex: 1 1 200px; }
+.go-strip { position: sticky; top: 0; left: auto; transform: none; align-self: center; z-index: 7; max-width: 100%; flex: none; }
+.go-rank { list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto; }
+.go-rank li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); text-align: left; }
+.go-rank li.me { border-color: var(--gold); }
+.go-pos { width: 22px; text-align: center; color: var(--muted); font-weight: 700; flex: none; }
+.go-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
 .board-strip .btn.sm { min-height: 30px; padding: 0 10px; }
 .spin { animation: spin 1s linear infinite; }
 
@@ -1589,13 +1602,6 @@ textarea:focus { border-color: var(--primary-hi); box-shadow: 0 0 0 3px var(--pr
   .tp-fill .tp-step { margin-right: auto; }
   .tp.tp-fill { padding-top: 4px; }
 }
-/* Popup hết ván */
-.tp-end { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 6px 4px 2px; }
-.tp-end-start { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin-top: 6px; }
-.tp-end-start .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 16px; }
-.tp-end .bo-actions { flex-wrap: wrap; }
-.tp-end .bo-actions .btn { flex: 1 1 200px; }
-.tp-end-strip { position: sticky; top: 0; left: auto; transform: none; align-self: center; z-index: 4; max-width: 100%; }
 .tp-task > .tp-drawing { width: min(100%, calc((100vh - 330px) * 4 / 3)); width: min(100%, calc((100dvh - 330px) * 4 / 3)); min-width: 240px; align-self: center; }
 
 /* ---------- Nối thú ---------- */
@@ -1651,12 +1657,5 @@ button.onet-racer { cursor: pointer; }
 .onet-big { font-size: 26px; font-weight: 800; }
 .onet-done { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: rgba(15,23,42,.9); border: 1px solid var(--line-strong);
   padding: 6px 14px; border-radius: 999px; font-weight: 600; }
-.onet-result { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  background: rgba(10,15,30,.78); backdrop-filter: blur(2px); border-radius: inherit; padding: 16px; }
-.onet-rank { list-style: none; margin: 0; padding: 0; width: min(100%, 360px); display: flex; flex-direction: column; gap: 4px; counter-reset: r; }
-.onet-rank li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; counter-increment: r; }
-.onet-rank li::before { content: counter(r); width: 18px; color: var(--muted); font-weight: 700; }
-.onet-rank li.me { border-color: var(--gold); }
-.onet-rank .onet-rname { flex: 1; }
 @media (max-width: 640px) { .onet { padding: 6px; } .onet-tl, .onet-score-unit, .onet-shift { display: none; } .onet-bar { gap: 6px; } .onet-tools .btn { padding: 0 8px; } .onet-stage { padding: 2px; } .onet-racer { flex-basis: 100px; padding: 4px 8px; } }
 @media (prefers-reduced-motion: reduce) { .onet-tile.hint .onet-tile-face, .onet-tile.bad .onet-in, .onet-gone { animation: none; } .onet-levelup { animation-duration: .01s; animation-delay: 1.5s; } }

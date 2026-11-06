@@ -6,6 +6,7 @@ import { useCountdown } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import GameInfo from '../components/GameInfo.jsx';
 import StartBar from '../components/StartBar.jsx';
+import GameOverDialog from '../components/GameOverDialog.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 
 const PART_NAMES = { onset: 'Âm đầu', rhyme: 'Vần', tone: 'Thanh' };
@@ -24,9 +25,16 @@ export default function WordGuessGame({ room, state: s }) {
   const canGuess = playing && !!me && board && !board.done;
   const canEdit = !playing && (!!me || room.ownerId === user.id);
 
+  const over = s.status === 'over' && !!g?.result;
+
   return (
     <div className="wg">
       <div className="wg-main">
+        <GameOverDialog over={over} title={over ? resultTitle(g, me) : ''} startLabel="Ván mới" min={1}
+          detail={over ? <>Từ bí mật: <b className="wg-secret">{g.secret}</b>{g.daily && <><br />Từ của ngày — ngày mai có từ mới.</>}</> : null}
+          seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} reviewLabel="Xem lại bàn đoán"
+          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+            : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>} />
         <div className="wg-top">
           <span className="wg-mode">{coop ? <><Users size={15} aria-hidden /> Cùng đoán</> : <><Swords size={15} aria-hidden /> Đua</>}{(g ? g.daily : s.options.daily) && <> · <CalendarDays size={14} aria-hidden /> Từ của ngày</>}</span>
           {playing && <span className={`wc-time ${left < 30000 ? 'low' : ''}`}><Timer size={14} aria-hidden /> {mmss(left)}</span>}
@@ -49,7 +57,7 @@ export default function WordGuessGame({ room, state: s }) {
           )}
         </div>
 
-        <div className="board-actions">
+        {!over && <div className="board-actions">
           {me ? (
             playing ? (
               canGuess && <button className="btn danger" onClick={() => setGiveup(true)}><Flag size={16} aria-hidden /> Chịu thua</button>
@@ -68,7 +76,7 @@ export default function WordGuessGame({ room, state: s }) {
           )}
           {!me && !playing && <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={false} min={1}
             startLabel={s.status === 'over' ? 'Ván mới' : 'Bắt đầu'} />}
-        </div>
+        </div>}
         {giveup && (
           <ConfirmDialog title="Chịu thua?" danger okLabel="Chịu thua" icon={<Flag size={22} />}
             onOk={() => act({ type: 'giveup' })} onClose={() => setGiveup(false)}>
@@ -230,14 +238,16 @@ function Tracker({ guesses }) {
   );
 }
 
-function Result({ g, me }) {
-  const coop = g.mode === 'coop';
+function resultTitle(g, me) {
   const r = g.result;
-  let title;
-  if (coop) title = r.solved ? `🎉 Cả đội đoán đúng sau ${r.guesses} lượt!` : 'Chưa đoán ra rồi!';
-  else if (!r.winner) title = 'Không ai đoán ra!';
-  else if (r.winner === me) title = r.ranking.length > 1 ? '🏆 Bạn thắng!' : `🎉 Bạn đoán đúng sau ${g.mine.count} lượt!`;
-  else title = `🏆 ${g.others.find((b) => b.id === r.winner)?.name || '?'} thắng`;
+  if (g.mode === 'coop') return r.solved ? `🎉 Cả đội đoán đúng sau ${r.guesses} lượt!` : 'Chưa đoán ra rồi!';
+  if (!r.winner) return 'Không ai đoán ra!';
+  if (r.winner === me) return r.ranking.length > 1 ? '🏆 Bạn thắng!' : `🎉 Bạn đoán đúng sau ${g.mine.count} lượt!`;
+  return `🏆 ${g.others.find((b) => b.id === r.winner)?.name || '?'} thắng`;
+}
+
+function Result({ g, me }) {
+  const title = resultTitle(g, me);
   return (
     <div className="wg-result">
       <div className="wc-big">{title}</div>

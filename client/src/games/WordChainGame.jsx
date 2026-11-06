@@ -4,6 +4,7 @@ import { useApp } from '../store.jsx';
 import GameInfo from '../components/GameInfo.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import StartBar, { ReadyMark } from '../components/StartBar.jsx';
+import GameOverDialog, { GoRanking } from '../components/GameOverDialog.jsx';
 import { useCountdown } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import BotPicker, { canManageBots } from '../components/BotPicker.jsx';
@@ -26,10 +27,22 @@ export default function WordChainGame({ room, state: s }) {
   const manageBots = !playing && canManageBots(room, user, !!me);
   const botCount = s.seats.filter((x) => x.bot).length;
   const canAddBot = manageBots && s.seats.length < s.options.maxSeats && botCount < MAX_BOTS;
+  const over = s.status === 'over' && !!g?.result;
+  const winnerId = g?.result?.winner;
 
   return (
     <div className="wc">
       <div className="wc-main">
+        <GameOverDialog over={over} icon={<Trophy size={26} />}
+          title={winnerId ? <>{winnerId === me ? 'Bạn' : nameOf(winnerId)} thắng!</> : 'Hòa!'}
+          detail={g?.result?.reason === 'deadEnd'
+            ? `Nối “${g.result.word}” — không còn từ nào bắt đầu bằng “${g.result.word.split(' ')[1]}”, thắng luôn!`
+            : `Cả bàn nối được ${g?.total ?? 0} từ`}
+          seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me}
+          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+            : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
+          <GoRanking me={me} rows={g?.result?.ranking.map((id) => ({ id, name: nameOf(id) }))} />
+        </GameOverDialog>
         <PlayerRow s={s} timeLeft={timeLeft} ownerId={room.ownerId} onRemoveBot={manageBots ? (id) => act({ type: 'removeBot', id }) : null} />
 
         <div className={`panel wc-stage ${myTurn ? 'my-turn' : ''}`}>
@@ -94,7 +107,9 @@ export default function WordChainGame({ room, state: s }) {
           )}
         </div>
 
-        <div className="board-actions">
+        {over ? (
+          canAddBot && <div className="board-actions"><BotPicker label={botCount ? 'Thêm máy' : 'Chơi với máy'} onPick={(level) => act({ type: 'addBot', level })} /></div>
+        ) : <div className="board-actions">
           {me ? (
             <>
               {!playing && (
@@ -120,7 +135,7 @@ export default function WordChainGame({ room, state: s }) {
             </>
           )}
           {!me && canAddBot && <BotPicker label="Thêm máy" onPick={(level) => act({ type: 'addBot', level })} />}
-        </div>
+        </div>}
         {giveup && (
           <ConfirmDialog title="Chịu thua ván này?" danger okLabel="Chịu thua" icon={<Flag size={22} />}
             onOk={() => act({ type: 'giveup' })} onClose={() => setGiveup(false)}>
