@@ -9,6 +9,8 @@ import {
   checkGuess, revealsWord, maskWord, hintCount, guessPoints, DRAWER_POINTS, cleanOps, parseCustomWords, normalizeGuess,
 } from '@game/shared/scribble';
 import { bool, clampInt } from './options.js';
+import type { DrawOp } from '@game/shared/scribble';
+import type { GameAction, GameQuery, Identity, Requests } from '@game/shared/contracts';
 import { ReadyGate } from './ready.js';
 
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data');
@@ -21,38 +23,44 @@ const CHOICES = 3;
 const FEED_MAX = 60;
 const MAX_STORED_POINTS = 60_000; // giới hạn bộ nhớ của một bức vẽ
 
+interface ScribbleOptions { maxSeats: number; rounds: number; drawSeconds: number; hints: boolean; customCount: number; onlyCustom: boolean }
+interface ScribbleScore extends Identity { score: number }
+interface ScribbleWins extends Identity { games: number; wins: number }
+/** Dòng trong khung đoán; `to` = chỉ người đó thấy (vd "gần đúng rồi"). */
+interface FeedEntry { kind: 'sys' | 'correct' | 'guess' | 'close'; text: string; id?: string; name?: string; to?: string; n: number }
+
 export class ScribbleHandler {
   declare room: Room;
-  declare options: any;
-  declare pool: any;
-  declare seats: any;
-  declare ready: any;
+  declare options: ScribbleOptions;
+  declare pool: string[];
+  declare seats: Identity[];
+  declare ready: ReadyGate;
   declare status: string;
   declare gameNo: number;
-  declare wins: any;
-  declare last: any;
-  declare timer: any;
-  declare hintTimers: any;
-  declare order: any;
-  declare scores: any;
-  declare round: any;
-  declare drawerIdx: any;
-  declare drawerId: any;
-  declare phase: any;
-  declare turnNo: any;
-  declare choices: any;
-  declare word: any;
-  declare revealed: any;
-  declare guessed: any;
-  declare drawerGain: any;
-  declare ops: any;
-  declare points: any;
-  declare used: any;
-  declare feed: any;
-  declare deadline: any;
-  declare phaseTotal: any;
+  declare wins: Map<string, ScribbleWins>;
+  declare last: { no: number; ranking: ScribbleScore[]; winners: string[] } | null;
+  declare timer: ReturnType<typeof setTimeout> | null;
+  declare hintTimers: ReturnType<typeof setTimeout>[];
+  declare order: string[];
+  declare scores: Map<string, ScribbleScore>;
+  declare round: number;
+  declare drawerIdx: number;
+  declare drawerId: string | null;
+  declare phase: 'choose' | 'draw' | 'reveal' | null;
+  declare turnNo: number;
+  declare choices: string[];
+  declare word: string;
+  declare revealed: Set<number>;
+  declare guessed: Map<string, number>;
+  declare drawerGain: number;
+  declare ops: DrawOp[];
+  declare points: number;
+  declare used: Set<string>;
+  declare feed: FeedEntry[];
+  declare deadline: number;
+  declare phaseTotal: number;
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: Record<string, unknown>) {
     this.room = room;
     const custom = parseCustomWords(options.customWords);
     this.options = {
@@ -74,7 +82,7 @@ export class ScribbleHandler {
   }
 
   _resetGame() {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.hintTimers?.forEach(clearTimeout);
     this.timer = null;
     this.hintTimers = [];
@@ -99,12 +107,12 @@ export class ScribbleHandler {
   }
 
   get maxPlayers() { return this.options.maxSeats; }
-  playerIds() { return this.seats.map((s: any) => s.id); }
+  playerIds() { return this.seats.map((s) => s.id); }
   isPlaying() { return this.status === 'playing'; }
-  seated(id: any) { return this.seats.some((s: any) => s.id === id); }
-  nameOf(id: any) { return this.seats.find((s: any) => s.id === id)?.name || this.scores.get(id)?.name || '?'; }
+  seated(id: string) { return this.seats.some((s) => s.id === id); }
+  nameOf(id: string) { return this.seats.find((s) => s.id === id)?.name || this.scores.get(id)?.name || '?'; }
 
-  rename(id: any, name: any) {
+  rename(id: string, name: string) {
     for (const s of this.seats) if (s.id === id) s.name = name;
     const sc = this.scores.get(id);
     if (sc) sc.name = name;
@@ -113,21 +121,21 @@ export class ScribbleHandler {
   }
 
   /** Ngồi vào bàn — kể cả khi ván đang diễn ra (vào đoán ngay, tới lượt thì vẽ). */
-  sit(user: any) {
+  sit(user: Identity) {
     if (this.seated(user.id)) throw new Error('Bạn đã ngồi rồi');
     if (this.seats.length >= this.options.maxSeats) throw new Error('Bàn đã đủ người');
     this.seats.push({ id: user.id, name: user.name });
     if (this.status === 'playing') this._join(user.id, user.name);
   }
 
-  _join(id: any, name: any) {
+  _join(id: string, name: string) {
     if (!this.order.includes(id)) this.order.push(id);
     if (!this.scores.has(id)) this.scores.set(id, { id, name, score: 0 });
   }
 
-  stand(id: any) {
+  stand(id: string) {
     if (!this.seated(id)) return;
-    this.seats = this.seats.filter((s: any) => s.id !== id);
+    this.seats = this.seats.filter((s) => s.id !== id);
     this.ready.delete(id);
     if (this.status !== 'playing') return;
     if (this.seats.length < 2) {
@@ -141,9 +149,9 @@ export class ScribbleHandler {
     this._checkAllGuessed();
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     switch (a.type) {
       case 'start': {
         if (this.status === 'playing') throw new Error('Ván đang diễn ra');
@@ -174,17 +182,17 @@ export class ScribbleHandler {
   }
 
   /** Nét vẽ gửi lên liên tục (không qua room.changed): trả về gói để chuyển cho những người khác. */
-  stream(id: any, payload: any) {
+  stream(id: string, payload: Requests['game:stream']) {
     if (this.status !== 'playing' || this.phase !== 'draw' || id !== this.drawerId) return null;
     if (Number(payload.turn) !== this.turnNo) return null;
     const ops = cleanOps(payload.ops);
-    const out: any[] = [];
+    const out: DrawOp[] = [];
     for (const o of ops) {
       if (o.k === 'c') {
         this.ops = [];
         this.points = 0;
       } else if (o.k === 'u') {
-        this.ops = this.ops.filter((x: any) => x.id !== o.id);
+        this.ops = this.ops.filter((x) => !('id' in x) || x.id !== o.id);
       } else {
         const n = o.p.length / 2;
         if (this.points + n > MAX_STORED_POINTS) break; // bức vẽ quá lớn: bỏ qua phần thêm
@@ -196,13 +204,13 @@ export class ScribbleHandler {
     return out.length ? { turn: this.turnNo, ops: out } : null;
   }
 
-  query(viewerId: any, q: any) {
+  query(viewerId: string, q: GameQuery) {
     if (q.type === 'canvas') return { turn: this.turnNo, ops: this.phase === 'choose' ? [] : this.ops };
     throw new Error('Truy vấn không hợp lệ');
   }
 
   /** Không cho nhắc đáp án trong khung chat của phòng khi đang vẽ. */
-  censorChat(id: any, text: any) {
+  censorChat(id: string, text: string) {
     if (this.status === 'playing' && this.phase === 'draw' && revealsWord(text, this.word)) {
       throw new Error(id === this.drawerId || this.guessed.has(id)
         ? 'Không được để lộ đáp án'
@@ -224,21 +232,21 @@ export class ScribbleHandler {
     this.ready.clear();
     this.gameNo++;
     this.round = 1;
-    this.room.system(`Ván ${this.gameNo} bắt đầu — ${this.options.rounds} vòng, thứ tự vẽ: ${this.order.map((id: any) => this.nameOf(id)).join(' → ')}`);
+    this.room.system(`Ván ${this.gameNo} bắt đầu — ${this.options.rounds} vòng, thứ tự vẽ: ${this.order.map((id) => this.nameOf(id)).join(' → ')}`);
     this._nextTurn();
   }
 
-  _post(entry: any) {
+  _post(entry: Omit<FeedEntry, 'n'>) {
     this.feed.push({ ...entry, n: (this.feed.at(-1)?.n || 0) + 1 });
     if (this.feed.length > FEED_MAX) this.feed.shift();
   }
 
-  _setTimer(ms: any, fn: any) {
-    clearTimeout(this.timer);
+  _setTimer(ms: number, fn: () => void) {
+    clearTimeout(this.timer ?? undefined);
     this.deadline = Date.now() + ms;
     this.phaseTotal = ms;
     this.timer = setTimeout(() => {
-      try { fn(); } catch (e: any) { console.error('scribble timer', e); }
+      try { fn(); } catch (e) { console.error('scribble timer', e); }
       this.room.changed();
     }, ms);
   }
@@ -274,17 +282,17 @@ export class ScribbleHandler {
   }
 
   _pickChoices() {
-    let fresh = this.pool.filter((w: any) => !this.used.has(w));
+    let fresh = this.pool.filter((w) => !this.used.has(w));
     if (fresh.length < CHOICES) {
       this.used.clear();
       fresh = this.pool.slice();
     }
-    const out: any[] = [];
+    const out: string[] = [];
     while (out.length < CHOICES && fresh.length) out.push(fresh.splice(randInt(fresh.length), 1)[0]);
     return out;
   }
 
-  _beginDraw(word: any) {
+  _beginDraw(word: string) {
     this.word = word;
     this.used.add(word);
     this.choices = [];
@@ -317,7 +325,7 @@ export class ScribbleHandler {
     }
   }
 
-  _guess(id: any, text: any) {
+  _guess(id: string, text: string) {
     if (this.status !== 'playing' || this.phase !== 'draw') throw new Error('Chưa tới lúc đoán');
     if (!this.seated(id)) throw new Error('Người xem không đoán được — hãy vào chơi');
     if (id === this.drawerId) throw new Error('Bạn đang vẽ mà!');
@@ -330,9 +338,9 @@ export class ScribbleHandler {
     if (res === 'correct') {
       const pts = guessPoints(this.deadline - Date.now(), this.phaseTotal, this.guessed.size);
       this.guessed.set(id, pts);
-      this.scores.get(id).score += pts;
+      this.scores.get(id)!.score += pts;
       this.drawerGain += DRAWER_POINTS;
-      const d = this.scores.get(this.drawerId);
+      const d = this.drawerId ? this.scores.get(this.drawerId) : undefined;
       if (d) d.score += DRAWER_POINTS;
       this._post({ kind: 'correct', id, name, text: `${name} đã đoán đúng! (+${pts})` });
       this._checkAllGuessed();
@@ -345,8 +353,8 @@ export class ScribbleHandler {
   /** Mọi người (trừ người vẽ) đã đoán đúng thì kết thúc lượt sớm. */
   _checkAllGuessed() {
     if (this.phase !== 'draw') return;
-    const guessers = this.seats.filter((s: any) => s.id !== this.drawerId);
-    if (guessers.length && guessers.every((s: any) => this.guessed.has(s.id))) {
+    const guessers = this.seats.filter((s) => s.id !== this.drawerId);
+    if (guessers.length && guessers.every((s) => this.guessed.has(s.id))) {
       this._post({ kind: 'sys', text: '🎉 Tất cả đã đoán đúng!' });
       this._endTurn();
     }
@@ -363,7 +371,7 @@ export class ScribbleHandler {
   }
 
   _finish() {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.hintTimers.forEach(clearTimeout);
     this.hintTimers = [];
     this.timer = null;
@@ -384,7 +392,7 @@ export class ScribbleHandler {
     this.room.system(`🏆 Ván ${this.gameNo} kết thúc: ${ranking.map((r, i) => `${i + 1}. ${r.name} (${r.score})`).join(' · ') || 'không ai ghi điểm'}`);
   }
 
-  view(viewerId: any) {
+  view(viewerId: string) {
     const playing = this.status === 'playing';
     const isDrawer = viewerId === this.drawerId;
     const showWord = this.phase === 'reveal' || isDrawer || this.guessed.has(viewerId);
@@ -410,14 +418,14 @@ export class ScribbleHandler {
         : null,
       scores: [...this.scores.values()],
       order: this.order,
-      feed: this.feed.filter((f: any) => !f.to || f.to === viewerId).map(({ to, ...f }: any) => f),
+      feed: this.feed.filter((f) => !f.to || f.to === viewerId).map(({ to: _to, ...f }) => f),
       last: this.last,
       wins: [...this.wins.values()].sort((x, y) => y.wins - x.wins || x.games - y.games),
     };
   }
 
   dispose() {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.hintTimers.forEach(clearTimeout);
   }
 }

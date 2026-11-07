@@ -9,6 +9,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseWord } from '@game/shared/wordchain';
 import { scoreGuess, isSolved, dailyIndex, MAX_GUESSES } from '@game/shared/wordguess';
+import type { Marks } from '@game/shared/wordguess';
+import type { GameAction, Identity } from '@game/shared/contracts';
+import type { ActionOf } from './types.js';
 import { isKnownWord, isValidSyllable } from './wordchain.js';
 import { bool, clampInt } from './options.js';
 import { ReadyGate } from './ready.js';
@@ -17,20 +20,38 @@ const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/vi
 export const ANSWERS = fs.readFileSync(DATA, 'utf8').split('\n').map((s) => s.trim()).filter(Boolean);
 const HISTORY_MAX = 10;
 
+interface WordGuessOptions { mode: 'coop' | 'race'; maxSeats: number; minutes: number; daily: boolean; strict: boolean }
+interface Guess { text: string; key: string; marks: Marks[]; by: string; name: string }
+interface GuessBoard extends Identity {
+  guesses: Guess[]; done: boolean; solved: boolean; at: number; left: boolean; gaveUp: boolean; solvedBy?: string;
+}
+type GuessResult =
+  | { reason: string; solved: boolean; solvedBy: string | null; guesses: number }
+  | { reason: string; winner: string | null; ranking: string[] };
+interface WordGuessGame {
+  secret: string; mode: WordGuessOptions['mode']; daily: boolean; startAt: number; deadline: number;
+  boards: Map<string, GuessBoard>; shared: GuessBoard | null; result: GuessResult | null;
+}
+interface WordGuessScore extends Identity { games: number; wins: number; solved: number }
+interface WordGuessHistory {
+  no: number; endedAt: number; secret: string; mode: WordGuessOptions['mode']; solved: boolean;
+  ranking: (Identity & { guesses: number; solved: boolean })[];
+}
+
 export class WordGuessHandler {
   declare room: Room;
-  declare options: any;
-  declare seats: any;
-  declare ready: any;
+  declare options: WordGuessOptions;
+  declare seats: Identity[];
+  declare ready: ReadyGate;
   declare status: string;
-  declare game: any;
-  declare timer: any;
+  declare game: WordGuessGame | null;
+  declare timer: ReturnType<typeof setTimeout> | null;
   declare gameNo: number;
-  declare recent: any;
-  declare wins: any;
-  declare history: any;
+  declare recent: string[];
+  declare wins: Map<string, WordGuessScore>;
+  declare history: WordGuessHistory[];
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: Record<string, unknown>) {
     this.room = room;
     this.options = {
       mode: options.mode === 'coop' ? 'coop' : 'race',
@@ -51,11 +72,16 @@ export class WordGuessHandler {
   }
 
   get maxPlayers() { return this.options.maxSeats; }
-  playerIds() { return this.seats.map((s: any) => s.id); }
+  playerIds() { return this.seats.map((s) => s.id); }
   isPlaying() { return this.status === 'playing'; }
-  seated(id: any) { return this.seats.some((s: any) => s.id === id); }
+  seated(id: string) { return this.seats.some((s) => s.id === id); }
+  /** Ván hiện tại; chỉ gọi khi đã có ván. */
+  _game() {
+    if (!this.game) throw new Error('Ván chưa bắt đầu');
+    return this.game;
+  }
 
-  rename(id: any, name: any) {
+  rename(id: string, name: string) {
     for (const s of this.seats) if (s.id === id) s.name = name;
     const b = this.game?.boards.get(id);
     if (b) b.name = name;
@@ -63,26 +89,26 @@ export class WordGuessHandler {
     if (w) w.name = name;
   }
 
-  sit(user: any) {
+  sit(user: Identity) {
     if (this.seated(user.id)) throw new Error('Bạn đã ngồi rồi');
     if (this.status === 'playing') throw new Error('Ván đang diễn ra, đợi ván sau nhé');
     if (this.seats.length >= this.options.maxSeats) throw new Error('Bàn đã đủ người');
     this.seats.push({ id: user.id, name: user.name });
   }
 
-  stand(id: any) {
+  stand(id: string) {
     if (!this.seated(id)) return;
-    this.seats = this.seats.filter((s: any) => s.id !== id);
+    this.seats = this.seats.filter((s) => s.id !== id);
     this.ready.delete(id);
     if (this.status !== 'playing') return;
-    const b = this.game.boards.get(id);
+    const b = this._game().boards.get(id);
     if (b && !b.done) { b.done = true; b.left = true; }
     if (!this.seats.length || this._allDone()) this._finish();
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     if (a.type === 'setMode') return this._setMode(id, a);
     if (a.type === 'start') {
       if (this.status === 'playing') throw new Error('Ván đang diễn ra');
@@ -100,7 +126,7 @@ export class WordGuessHandler {
       case 'giveup': {
         if (this.status !== 'playing') throw new Error('Ván chưa bắt đầu');
         if (this.options.mode === 'coop') return this._finish('giveup');
-        const b = this.game.boards.get(id);
+        const b = this._game().boards.get(id);
         if (!b || b.done) throw new Error('Bạn đã xong rồi');
         b.done = true;
         b.gaveUp = true;
@@ -114,7 +140,7 @@ export class WordGuessHandler {
     }
   }
 
-  _setMode(id: any, a: any) {
+  _setMode(id: string, a: ActionOf<'setMode'>) {
     if (!this.seated(id) && this.room.ownerId !== id) throw new Error('Chỉ người đang chơi hoặc chủ phòng mới được đổi chế độ');
     if (this.status === 'playing') throw new Error('Ván đang diễn ra');
     if (a.mode !== undefined) this.options.mode = a.mode === 'coop' ? 'coop' : 'race';
@@ -125,7 +151,7 @@ export class WordGuessHandler {
 
   _pickSecret() {
     if (this.options.daily) return ANSWERS[dailyIndex(ANSWERS.length)];
-    let w;
+    let w: string;
     do w = ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
     while (this.recent.includes(w) && this.recent.length < ANSWERS.length);
     this.recent.push(w);
@@ -133,7 +159,7 @@ export class WordGuessHandler {
     return w;
   }
 
-  _newBoard(s: any) { return { id: s.id, name: s.name, guesses: [] as any[], done: false, solved: false, at: 0, left: false, gaveUp: false }; }
+  _newBoard(s: Identity): GuessBoard { return { id: s.id, name: s.name, guesses: [], done: false, solved: false, at: 0, left: false, gaveUp: false }; }
 
   _start() {
     this.status = 'playing';
@@ -147,11 +173,11 @@ export class WordGuessHandler {
       daily: this.options.daily,
       startAt,
       deadline: startAt + this.options.minutes * 60_000,
-      boards: new Map(this.seats.map((s: any) => [s.id, this._newBoard(s)])),
+      boards: new Map(this.seats.map((s) => [s.id, this._newBoard(s)])),
       shared: coop ? { ...this._newBoard({ id: 'team', name: 'Cả đội' }) } : null,
       result: null,
     };
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.timer = setTimeout(() => {
       if (this.status !== 'playing') return;
       this._finish('timeout');
@@ -160,9 +186,9 @@ export class WordGuessHandler {
     this.room.system(`Ván ${this.gameNo} bắt đầu — ${coop ? 'Cùng đoán' : 'Đua'}${this.options.daily ? ' · Từ của ngày' : ''}: đoán từ 2 chữ trong ${MAX_GUESSES} lượt, ${this.options.minutes} phút`);
   }
 
-  _guess(id: any, input: any) {
+  _guess(id: string, input: string) {
     if (this.status !== 'playing') throw new Error('Ván chưa bắt đầu');
-    const g = this.game;
+    const g = this._game();
     const coop = g.mode === 'coop';
     const board = coop ? g.shared : g.boards.get(id);
     if (!board) throw new Error('Bạn không tham gia ván này');
@@ -172,9 +198,9 @@ export class WordGuessHandler {
     if (bad) throw new Error(`"${bad}" không phải chữ tiếng Việt`);
     if (this.options.strict && !isKnownWord(w)) throw new Error(`"${w.text}" không có trong từ điển`);
     const key = w.keys.join(' ');
-    if (board.guesses.some((x: any) => x.key === key)) throw new Error(`Đã đoán "${w.text}" rồi`);
+    if (board.guesses.some((x) => x.key === key)) throw new Error(`Đã đoán "${w.text}" rồi`);
     const marks = scoreGuess(g.secret, w.text);
-    const name = this.seats.find((s: any) => s.id === id)?.name || '?';
+    const name = this.seats.find((s) => s.id === id)?.name || '?';
     board.guesses.push({ text: w.text, key, marks, by: id, name });
     if (isSolved(marks)) {
       board.solved = true;
@@ -192,26 +218,25 @@ export class WordGuessHandler {
   }
 
   _allDone() {
-    const g = this.game;
-    if (g.mode === 'coop') return g.shared.done;
+    const g = this._game();
+    if (g.shared) return g.shared.done;
     return [...g.boards.values()].every((b) => b.done);
   }
 
   /** Xếp hạng chế độ Đua: đoán đúng trước, ít lượt hơn, nhanh hơn. */
   _ranking() {
-    return [...this.game.boards.values()].sort((a, b) =>
-      (b.solved - a.solved) || (a.solved ? a.guesses.length - b.guesses.length || a.at - b.at : b.guesses.length - a.guesses.length));
+    return [...this._game().boards.values()].sort((a, b) =>
+      (Number(b.solved) - Number(a.solved)) || (a.solved ? a.guesses.length - b.guesses.length || a.at - b.at : b.guesses.length - a.guesses.length));
   }
 
   _finish(reason = 'done') {
     if (this.status !== 'playing') return;
-    clearTimeout(this.timer);
-    const g = this.game;
+    clearTimeout(this.timer ?? undefined);
+    const g = this._game();
     this.status = 'over';
-    const coop = g.mode === 'coop';
-    let ranking: any[] = [];
-    if (coop) {
-      const s = g.shared;
+    const s = g.shared;
+    let ranking: GuessBoard[] = [];
+    if (s) {
       g.result = { reason, solved: s.solved, solvedBy: s.solvedBy || null, guesses: s.guesses.length };
       for (const b of g.boards.values()) this._record(b, s.solved, s.solved);
       this.room.system(s.solved
@@ -233,15 +258,15 @@ export class WordGuessHandler {
       endedAt: Date.now(),
       secret: g.secret,
       mode: g.mode,
-      solved: coop ? g.shared.solved : ranking.some((b) => b.solved),
-      ranking: coop
-        ? [...g.boards.values()].map(({ id, name }) => ({ id, name, guesses: g.shared.guesses.filter((x: any) => x.by === id).length, solved: g.shared.solved }))
+      solved: s ? s.solved : ranking.some((b) => b.solved),
+      ranking: s
+        ? [...g.boards.values()].map(({ id, name }) => ({ id, name, guesses: s.guesses.filter((x) => x.by === id).length, solved: s.solved }))
         : ranking.map(({ id, name, guesses, solved }) => ({ id, name, guesses: guesses.length, solved })),
     });
     if (this.history.length > HISTORY_MAX) this.history.pop();
   }
 
-  _record(b: any, solved: any, won: any) {
+  _record(b: GuessBoard, solved: boolean, won: boolean) {
     const w = this.wins.get(b.id) || { id: b.id, name: b.name, games: 0, wins: 0, solved: 0 };
     w.name = b.name;
     w.games++;
@@ -250,40 +275,41 @@ export class WordGuessHandler {
     this.wins.set(b.id, w);
   }
 
-  view(viewerId: any) {
-    const g = this.game;
+  _gameView(g: WordGuessGame, viewerId: string) {
     const over = this.status === 'over';
-    let game: any = null;
-    if (g) {
-      const coop = g.mode === 'coop';
-      const showBoard = (b: any, full: any) => ({
-        id: b.id,
-        name: b.name,
-        done: b.done,
-        solved: b.solved,
-        left: b.left,
-        gaveUp: b.gaveUp,
-        count: b.guesses.length,
-        // Bàn của người khác trong lúc đua: chỉ màu ô, giấu chữ
-        guesses: b.guesses.map((x: any) => (full ? { text: x.text, marks: x.marks, name: x.name } : { marks: x.marks })),
-      });
-      game = {
-        mode: g.mode,
-        daily: g.daily,
-        timeLeft: this.status === 'playing' ? Math.max(0, g.deadline - Date.now()) : 0,
-        totalMs: this.options.minutes * 60_000,
-        maxGuesses: MAX_GUESSES,
-        secret: over ? g.secret : null,
-        result: g.result,
-        shared: coop ? showBoard(g.shared, true) : null,
-        mine: !coop && g.boards.has(viewerId) ? showBoard(g.boards.get(viewerId), true) : null,
-        others: coop ? [] : [...g.boards.values()].filter((b) => b.id !== viewerId).map((b) => showBoard(b, over)),
-      };
-    }
+    const showBoard = (b: GuessBoard, full: boolean) => ({
+      id: b.id,
+      name: b.name,
+      done: b.done,
+      solved: b.solved,
+      left: b.left,
+      gaveUp: b.gaveUp,
+      count: b.guesses.length,
+      // Bàn của người khác trong lúc đua: chỉ màu ô, giấu chữ
+      guesses: b.guesses.map((x) => (full ? { text: x.text, marks: x.marks, name: x.name } : { marks: x.marks })),
+
+    });
+    const mine = g.shared ? undefined : g.boards.get(viewerId);
+    return {
+      mode: g.mode,
+      daily: g.daily,
+      timeLeft: this.status === 'playing' ? Math.max(0, g.deadline - Date.now()) : 0,
+      totalMs: this.options.minutes * 60_000,
+      maxGuesses: MAX_GUESSES,
+      secret: over ? g.secret : null,
+      result: g.result,
+      shared: g.shared ? showBoard(g.shared, true) : null,
+      mine: mine ? showBoard(mine, true) : null,
+      others: g.shared ? [] : [...g.boards.values()].filter((b) => b.id !== viewerId).map((b) => showBoard(b, over)),
+    };
+  }
+
+  view(viewerId: string) {
+    const game = this.game ? this._gameView(this.game, viewerId) : null;
     return {
       options: this.options,
       seats: this.seats,
-      ...this.ready.view(this.seats.map((x: any) => x.id)),
+      ...this.ready.view(this.playerIds()),
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,
@@ -294,5 +320,5 @@ export class WordGuessHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer ?? undefined); }
 }

@@ -131,7 +131,7 @@ export function cleanOps(ops: unknown): DrawOp[] {
 }
 
 /** Danh sách từ tự thêm của chủ phòng: cách nhau dấu phẩy hoặc xuống dòng. */
-export function parseCustomWords(text: string, max = 300) {
+export function parseCustomWords(text: unknown, max = 300) {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of String(text || '').split(/[,\n;]/)) {

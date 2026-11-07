@@ -4,7 +4,7 @@ export interface OnlineUser extends Identity { room: { id: string; name: string;
 export interface ServerInfo { id: string; name: string | null; gated: boolean }
 export interface VoiceStatus { enabled: boolean; reason?: string | null; hidden?: boolean; maxPerRoom: number; relay?: boolean }
 export interface IceServer { urls: string | string[]; username?: string; credential?: string }
-export type VoiceSignal = { description: { type: 'offer' | 'answer'; sdp: string }; candidate?: never }
+export type VoiceSignal = { description: { type: 'offer' | 'answer' | 'rollback'; sdp: string }; candidate?: never }
   | { candidate: { candidate?: string; sdpMid?: string | null; sdpMLineIndex?: number | null; usernameFragment?: string | null } | null; description?: never };
 export interface IncomingSignal { from: string; data: VoiceSignal }
 export type GameAction =

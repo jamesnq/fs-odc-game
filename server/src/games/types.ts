@@ -10,7 +10,8 @@ export interface Seat extends Identity { bot?: string }
 
 /** Giao diện chung mà phòng dùng để điều khiển mọi trò chơi (xem `games/index.ts`). */
 export interface GameHandler {
-  room: Room;
+  /** Liên kết ngược tới phòng; được gắn lại sau khi khôi phục snapshot. */
+  room: Pick<Room, 'ownerId' | 'system' | 'changed'>;
   readonly options: object;
   readonly maxPlayers: number;
   playerIds(): string[];

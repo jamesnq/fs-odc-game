@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { LIMITS } from './config.js';
 import { GAMES, type GameId } from './games/index.js';
 import type { GameServer } from './socketTypes.js';
+import type { GameHandler } from './games/types.js';
 import type { RoomState, RoomSummary, OnlineUser } from '@game/shared/contracts';
 import type { Cluster, StoredIdentity } from './cluster.js';
 
@@ -32,7 +33,7 @@ export class Room {
   declare members: Set<string>;
   declare chat: ChatEntry[];
   declare voice: Map<string, {muted: boolean; sid: string}>;
-  declare handler: any;
+  declare handler: GameHandler;
   declare _pending: boolean;
   declare _summaryKey: string | null;
   declare _presenceKey: string | null;
@@ -124,7 +125,7 @@ export class Room {
       maxPlayers: this.handler.maxPlayers,
       spectators: this.members.size - players.length,
       playing: this.handler.isPlaying(),
-      options: this.handler.options,
+      options: { ...this.handler.options },
       createdAt: this.createdAt,
     };
   }
@@ -259,13 +260,13 @@ export class Lobby {
   // ---------- Phòng ----------
 
   /** Phòng theo id, chỉ khi cùng server với người dùng. */
-  roomFor(user: User, id: string) {
+  roomFor(user: User, id: string | null | undefined) {
     const r = id && this.rooms.get(id);
     return r && r.server === user.server ? r : null;
   }
 
   /** Phòng người dùng đang ở, báo lỗi nếu chưa vào phòng nào. */
-  currentRoom(user: any) {
+  currentRoom(user: User) {
     const room = user.roomId && this.rooms.get(user.roomId);
     if (!room) throw new Error('Bạn chưa vào phòng');
     return room;
@@ -297,12 +298,12 @@ export class Lobby {
     room.members.add(user.id);
     user.roomId = room.id;
     if (isNew) room.system(`${user.name} vào phòng${mode === 'watch' ? ' (xem)' : ''}`);
-    let warning: any = null;
+    let warning: string | null = null;
     if (mode === 'play' && !room.handler.playerIds().includes(user.id)) {
       try {
         room.handler.sit(user);
-      } catch (e: any) {
-        warning = e.message + ' — bạn đang ở chế độ xem';
+      } catch (e) {
+        warning = (e instanceof Error ? e.message : String(e)) + ' — bạn đang ở chế độ xem';
       }
     }
     room.changed();
@@ -313,7 +314,7 @@ export class Lobby {
    * Ra khỏi phòng. Không còn ai đang kết nối trong phòng thì xóa luôn phòng
    * (những người đang mất kết nối chờ vào lại cũng bị đưa ra) để không giữ lại tài nguyên vô ích.
    */
-  leave(user: any) {
+  leave(user: User) {
     const room = user.roomId && this.rooms.get(user.roomId);
     user.roomId = null;
     if (!room) return;
@@ -333,7 +334,7 @@ export class Lobby {
   }
 
   /** Xóa phòng, báo cho mọi thành viên còn lại. */
-  close(room: any, reason: string) {
+  close(room: Room, reason: string) {
     room.handler.dispose();
     this.rooms.delete(room.id);
     for (const uid of room.members) {
