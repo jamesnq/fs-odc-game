@@ -1,5 +1,13 @@
 import crypto from 'node:crypto';
 
+interface DeckCommitment {
+  no: number;
+  deck: string[];
+  salts: string[];
+  leaves: string[];
+  commit: string;
+}
+
 /**
  * Xáo bài kiểm chứng được (commit–reveal, "provably fair"), cam kết theo từng lá:
  *
@@ -14,13 +22,13 @@ import crypto from 'node:crypto';
  * Muối riêng từng lá giúp: không dò ngược được lá từ leaf (chỉ có 52 khả năng/lá nếu không có muối),
  * và có thể công bố một phần bộ bài mà không lộ phần còn lại.
  */
-const sha256 = (s: any) => crypto.createHash('sha256').update(s).digest('hex');
-export const leafOf = (i: any, card: any, salt: any) => sha256(`${i}:${card}:${salt}`);
-export const commitOfLeaves = (leaves: any) => sha256(leaves.join(''));
+const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
+export const leafOf = (i: number, card: string, salt: string) => sha256(`${i}:${card}:${salt}`);
+export const commitOfLeaves = (leaves: readonly string[]) => sha256(leaves.join(''));
 
 export class DeckCommitments {
-  declare ref: any;
-  declare current: any;
+  declare ref: readonly string[] | null;
+  declare current: DeckCommitment | null;
   declare no: number;
 
   constructor() {
@@ -30,11 +38,11 @@ export class DeckCommitments {
   }
 
   /** Gọi trước khi phát trạng thái: nếu vừa xáo bộ mới thì tạo cam kết mới. */
-  track(deck: any) {
+  track(deck: readonly string[] | null | undefined) {
     if (!deck || deck === this.ref) return;
     this.ref = deck;
     const salts = deck.map(() => crypto.randomBytes(16).toString('hex'));
-    const leaves = deck.map((c: any, i: any) => leafOf(i, c, salts[i]));
+    const leaves = deck.map((c: string, i: number) => leafOf(i, c, salts[i]));
     this.current = { no: ++this.no, deck: deck.slice(), salts, leaves, commit: commitOfLeaves(leaves) };
   }
 
@@ -43,15 +51,15 @@ export class DeckCommitments {
    * @param finished ván hiện tại đã xong chưa (chưa xong thì chỉ có commit)
    * @param visible  (cards[]) => Set|null — các lá người xem được thấy của một ván; null = cả bộ
    */
-  view(finished: any, visible: (deck: string[]) => Set<string> | null = () => null) {
+  view(finished: boolean, visible: (deck: string[]) => Set<string> | null = () => null) {
     if (!this.current) return null;
-    const reveal = (c: any) => {
+    const reveal = (c: DeckCommitment) => {
       const allowed = visible(c.deck);
       return {
         no: c.no,
         commit: c.commit,
         leaves: c.leaves,
-        cards: c.deck.flatMap((card: any, i: any) => (!allowed || allowed.has(card) ? [{ i, card, salt: c.salts[i] }] : [])),
+        cards: c.deck.flatMap((card: string, i: number) => (!allowed || allowed.has(card) ? [{ i, card, salt: c.salts[i] }] : [])),
         total: c.deck.length,
       };
     };

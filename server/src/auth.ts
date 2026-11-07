@@ -1,10 +1,13 @@
 // Cổng xác thực: kiểm tra mật khẩu / phiên đăng nhập ngay khi socket kết nối.
 import crypto from 'node:crypto';
 import { AUTH, DEBUG_IP, GATED, LIMITS, SERVERS, TRUST_PROXY } from './config.js';
+import type { ServerConfig } from './config.js';
+import type { GameSocket } from './socketTypes.js';
+import type { ConnectionCounter } from './rateLimit.js';
 import { WindowCounter } from './rateLimit.js';
 
-const sha = (s: any) => crypto.createHash('sha256').update(String(s)).digest();
-const hmac = (key: any, data: any) => crypto.createHmac('sha256', key).update(data).digest();
+const sha = (s: unknown) => crypto.createHash('sha256').update(String(s)).digest();
+const hmac = (key: string | Buffer, data: string) => crypto.createHmac('sha256', key).update(data).digest();
 
 for (const s of SERVERS) {
   s.hash = s.password ? sha(s.password) : null;
@@ -16,7 +19,7 @@ const failsByIp = new WindowCounter(AUTH.windowMs, 50_000);
 const globalFails = new WindowCounter(AUTH.globalWindowMs);
 
 /** IP thật của client: phần tử thứ TRUST_PROXY tính từ CUỐI X-Forwarded-For (phần đầu do client tự điền). */
-function clientIp(socket: any) {
+function clientIp(socket: GameSocket) {
   const direct = socket.handshake.address;
   if (!TRUST_PROXY) return direct;
   const xff = String(socket.handshake.headers['x-forwarded-for'] || '');
@@ -25,13 +28,13 @@ function clientIp(socket: any) {
 }
 
 /** Phiên đăng nhập ký HMAC: "<serverId>.<hết hạn>.<chữ ký>" — không cần lưu mật khẩu ở trình duyệt. */
-export function issueSession(srv: any) {
+export function issueSession(srv: ServerConfig) {
   if (!srv.sessionKey) return null;
   const body = `${srv.id}.${Date.now() + AUTH.sessionTtlMs}`;
   return `${body}.${hmac(srv.sessionKey, body).toString('base64url')}`;
 }
 
-function verifySession(token: any) {
+function verifySession(token: unknown) {
   if (typeof token !== 'string' || token.length > 200) return null;
   const [id, exp, sig] = token.split('.');
   const srv = SERVERS.find((s) => s.id === id);
@@ -42,9 +45,9 @@ function verifySession(token: any) {
 }
 
 /** So mật khẩu với mọi server (không dừng sớm) để thời gian phản hồi không lộ thông tin. */
-function serverByPassword(pw: any) {
+function serverByPassword(pw: string) {
   const h = sha(pw);
-  let match: any = null;
+  let match: ServerConfig | null = null;
   for (const s of SERVERS) if (crypto.timingSafeEqual(h, s.hash!) && !match) match = s;
   return match;
 }
@@ -53,8 +56,8 @@ function serverByPassword(pw: any) {
  * Middleware socket.io: gắn `socket.data.ip` và `socket.data.server` (sảnh người dùng được vào).
  * @param {import('./rateLimit.js').ConnectionCounter} connections số kết nối hiện có theo IP
  */
-export function authGate(connections: any) {
-  return (socket: any, next: any) => {
+export function authGate(connections: ConnectionCounter) {
+  return (socket: GameSocket, next: (error?: Error) => void) => {
     const ip = clientIp(socket);
     socket.data.ip = ip;
     if (DEBUG_IP) console.log('[ip]', ip, 'xff=', socket.handshake.headers['x-forwarded-for'] || '-', 'addr=', socket.handshake.address);
@@ -64,14 +67,15 @@ export function authGate(connections: any) {
       return next();
     }
     // 1) Phiên đăng nhập còn hạn → vào luôn, không cần mật khẩu
-    const bySession = verifySession(socket.handshake.auth?.session);
+    const credentials: { session?: unknown; password?: unknown } | undefined = socket.handshake.auth;
+    const bySession = verifySession(credentials?.session);
     if (bySession) {
       socket.data.server = bySession;
       return next();
     }
     // 2) Mật khẩu
     if (failsByIp.count(ip) >= AUTH.maxFails) return next(new Error('AUTH_LOCKED'));
-    const pw = socket.handshake.auth?.password;
+    const pw = credentials?.password;
     if (typeof pw !== 'string' || !pw || pw.length > 256) return next(new Error('AUTH_REQUIRED'));
     if (globalFails.count('*') >= AUTH.globalMaxFails) return next(new Error('AUTH_BUSY'));
     const match = serverByPassword(pw);
