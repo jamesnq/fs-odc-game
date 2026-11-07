@@ -49,7 +49,7 @@ export function initialBoard() {
 }
 
 export function createGame(): XiangqiState {
-  return { board: initialBoard(), turn: 'r', history: [] as any[] };
+  return { board: initialBoard(), turn: 'r', history: [] };
 }
 
 const inBoard = (r: number, c: number) => r >= 0 && r < ROWS && c >= 0 && c < COLS;

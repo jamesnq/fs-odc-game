@@ -1,7 +1,19 @@
+import type { ReactNode } from 'react';
+
+interface ConfirmDialogProps {
+  title?: ReactNode;
+  children: ReactNode;
+  okLabel?: string;
+  danger?: boolean;
+  icon?: ReactNode;
+  onOk: () => unknown;
+  onClose: () => void;
+}
+
 import Modal from './Modal.js';
 
 /** Hộp xác nhận trong app (thay cho confirm() của trình duyệt): rõ ràng, có nút to, đóng bằng Esc. */
-export default function ConfirmDialog({ title, children, okLabel = 'Đồng ý', danger, icon, onOk, onClose }: any) {
+export default function ConfirmDialog({ title, children, okLabel = 'Đồng ý', danger, icon, onOk, onClose }: ConfirmDialogProps) {
   return (
     <Modal title={title} onClose={onClose}>
       <div className="confirm-body">

@@ -120,15 +120,15 @@ test('báo Sâm: thành công và bị chặn', () => {
   ok.declareSam('p1', false);
   ok.declareSam('p0', true);
   assert.equal(ok.turn, 0);
-  assert.equal(ok.view('p1').players[1].hand.length, 10);
+  assert.equal(ok.view('p1').players[1].hand!.length, 10);
   assert.equal(ok.view('p1').players[0].hand, null, 'không lộ bài người khác');
   ok.play('p0', t('TS JS QS KS AS'));
   ok.pass('p1');
   ok.play('p0', t('9H 9D 9C'));
   ok.pass('p1');
   ok.play('p0', t('2S 2H'));
-  assert.equal(ok.result.type, 'sam');
-  assert.deepEqual(ok.result.scores, [SAM_RULES.sam, -SAM_RULES.sam]);
+  assert.equal(ok.result!.type, 'sam');
+  assert.deepEqual(ok.result!.scores, [SAM_RULES.sam, -SAM_RULES.sam]);
 
   // Bị chặn: người báo Sâm đền mỗi nhà
   const bad = rigged(['3S 4S 5S 6H 8H 9D JD QS KC AH', '3H 4D 6S 7S 8C TD JH QH KH AS', '2S 2H 5H 5D 7D 7C 9S 9C TS KD']);
@@ -136,21 +136,21 @@ test('báo Sâm: thành công và bị chặn', () => {
   assert.throws(() => bad.declareSam('p0', true), /hết thời gian/);
   bad.play('p1', ['3H']);
   bad.play('p2', ['2S']);
-  assert.equal(bad.result.type, 'samFail');
-  assert.deepEqual(bad.result.scores, [SAM_RULES.sam, -2 * SAM_RULES.sam, SAM_RULES.sam]);
+  assert.equal(bad.result!.type, 'samFail');
+  assert.deepEqual(bad.result!.scores, [SAM_RULES.sam, -2 * SAM_RULES.sam, SAM_RULES.sam]);
 });
 
 test('tới trắng ngay khi chia, tự động đánh khi hết giờ', () => {
   const g = rigged(['3S 4S 5S 6H 8H 9D JD QS KC AH', '2S 2H 2D 2C 4D 6S 7S 8C TD JH']);
-  assert.equal(g.result.type, 'toiTrang');
-  assert.equal(g.result.winner, 1);
-  assert.deepEqual(g.result.scores, [-SAM_RULES.toiTrang, SAM_RULES.toiTrang]);
+  assert.equal(g.result!.type, 'toiTrang');
+  assert.equal(g.result!.winner, 1);
+  assert.deepEqual(g.result!.scores, [-SAM_RULES.toiTrang, SAM_RULES.toiTrang]);
 
   const h = rigged(['3S 4S 5S 6H 8H 9D JD QS KC AH', '3H 4D 6S 7S 8C TD JH QH KH AS']);
   h.autoPlay('p0'); h.autoPlay('p1'); // hết giờ báo Sâm
   assert.equal(h.phase, 'play');
   h.autoPlay('p0'); // đi đầu → đánh lá nhỏ nhất
-  assert.deepEqual(h.lastPlay.combo.cards, ['3S']);
+  assert.deepEqual(h.lastPlay!.combo.cards, ['3S']);
   h.autoPlay('p1'); // phải chặn hoặc bỏ → bỏ
   assert.equal(h.turn, 0);
 });

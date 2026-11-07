@@ -1,3 +1,30 @@
+import type { Identity } from './contracts.js';
+export interface Meld {
+  cards: string[];
+  owner: number;
+}
+
+export interface Arrangement {
+  melds: string[][];
+  count: number;
+  points: number;
+}
+
+export interface ArrangementOptions {
+  objective?: 'points' | 'count';
+  maxCards?: number;
+}
+
+export interface TalaResult {
+  type: 'normal' | 'u';
+  winner: number;
+  ranking: number[];
+  points: number[];
+  mom: boolean[];
+  scores: number[];
+  den?: number | null;
+}
+
 // Engine Tá lả (Phỏm) — luật phổ biến miền Bắc:
 //  - 2–4 người, bộ 52 lá. Người đi đầu (cái) 10 lá, còn lại 9 lá. Đi theo vòng.
 //  - Phỏm: ≥3 lá cùng hạng (bộ) hoặc ≥3 lá liên tiếp cùng chất (sảnh). A là lá nhỏ nhất, không có Q-K-A.
@@ -25,27 +52,27 @@ export const TALA_RULES = {
 };
 
 // ---------- Phỏm ----------
-export function isSet(cards: any) {
-  return cards.length >= 3 && cards.length <= 4 && cards.every((c: any) => c[0] === cards[0][0]);
+export function isSet(cards: string[]) {
+  return cards.length >= 3 && cards.length <= 4 && cards.every((c) => c[0] === cards[0][0]);
 }
 
-export function isRun(cards: any) {
+export function isRun(cards: string[]) {
   if (cards.length < 3) return false;
-  if (!cards.every((c: any) => suitOf(c) === suitOf(cards[0]))) return false;
-  const r = cards.map(rankOf).sort((a: any, b: any) => a - b);
+  if (!cards.every((c) => suitOf(c) === suitOf(cards[0]))) return false;
+  const r = cards.map(rankOf).sort((a, b) => a - b);
   for (let i = 1; i < r.length; i++) if (r[i] !== r[i - 1] + 1) return false;
   return true;
 }
 
-export const isMeld = (cards: any) => isSet(cards) || isRun(cards);
+export const isMeld = (cards: string[]) => isSet(cards) || isRun(cards);
 
-export const points = (cards: any) => cards.reduce((a: any, c: any) => a + rankOf(c), 0);
+export const points = (cards: string[]) => cards.reduce((a, c) => a + rankOf(c), 0);
 
 /** Liệt kê mọi phỏm có thể tạo từ tập lá. */
-export function enumerateMelds(cards: any) {
-  const melds: any[] = [];
-  const byRank: Record<string, any> = {};
-  const bySuit: Record<string, any> = {};
+export function enumerateMelds(cards: string[]) {
+  const melds: string[][] = [];
+  const byRank: Record<string, string[]> = {};
+  const bySuit: Record<string, string[]> = {};
   for (const c of cards) {
     (byRank[c[0]] ||= []).push(c);
     (bySuit[c[1]] ||= []).push(c);
@@ -54,11 +81,11 @@ export function enumerateMelds(cards: any) {
     if (g.length === 3) melds.push(g);
     if (g.length === 4) {
       melds.push(g);
-      for (let i = 0; i < 4; i++) melds.push(g.filter((_: any, j: any) => j !== i));
+      for (let i = 0; i < 4; i++) melds.push(g.filter((_, j) => j !== i));
     }
   }
   for (const g of Object.values(bySuit)) {
-    const sorted = g.slice().sort((a: any, b: any) => rankOf(a) - rankOf(b));
+    const sorted = g.slice().sort((a, b) => rankOf(a) - rankOf(b));
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 2; j < sorted.length; j++) {
         const seg = sorted.slice(i, j + 1);
@@ -77,22 +104,22 @@ export function enumerateMelds(cards: any) {
  * maxCards: giới hạn số lá được xếp (để còn lá đánh).
  * Trả về { melds, count, points } hoặc null nếu không thể xếp hết lá đã ăn.
  */
-export function bestArrangement(hand: any, locked: any[] = [], { objective = 'points', maxCards = Infinity }: any = {}) {
+export function bestArrangement(hand: string[], locked: string[] = [], { objective = 'points', maxCards = Infinity }: ArrangementOptions = {}): Arrangement | null {
   const lockedSet = new Set(locked);
-  const melds = enumerateMelds(hand).filter((m) => m.filter((c: any) => lockedSet.has(c)).length <= 1);
-  const index = new Map<string, number>(hand.map((c: any, i: any) => [c, i]));
-  const masks = melds.map((m) => m.reduce((a: any, c: any) => a | (1 << index.get(c)!), 0));
+  const melds = enumerateMelds(hand).filter((m) => m.filter((c) => lockedSet.has(c)).length <= 1);
+  const index = new Map<string, number>(hand.map((c, i) => [c, i]));
+  const masks = melds.map((m) => m.reduce((a, c) => a | (1 << index.get(c)!), 0));
   let lockedMask = 0;
   for (const c of locked) if (index.has(c)) lockedMask |= 1 << index.get(c)!;
   if (locked.some((c) => !index.has(c))) return null;
 
-  let best: any = null;
-  const chosen: any[] = [];
-  const evalScore = (count: any, pts: any) => (objective === 'count' ? count * 1000 + pts : pts * 100 + count);
-  function rec(i: any, used: any, count: any, pts: any) {
+  const search: { best: (Arrangement & { s: number }) | null } = { best: null };
+  const chosen: string[][] = [];
+  const evalScore = (count: number, pts: number) => (objective === 'count' ? count * 1000 + pts : pts * 100 + count);
+  function rec(i: number, used: number, count: number, pts: number) {
     if ((used & lockedMask) === lockedMask) {
       const s = evalScore(count, pts);
-      if (!best || s > best.s) best = { s, melds: chosen.slice(), count, points: pts };
+      if (!search.best || s > search.best.s) search.best = { s, melds: chosen.slice(), count, points: pts };
     }
     for (let k = i; k < melds.length; k++) {
       if (masks[k] & used) continue;
@@ -104,50 +131,51 @@ export function bestArrangement(hand: any, locked: any[] = [], { objective = 'po
     }
   }
   rec(0, 0, 0, 0);
-  return best && { melds: best.melds, count: best.count, points: best.points };
+  const result = search.best;
+  return result && { melds: result.melds, count: result.count, points: result.points };
 }
 
 /** Gom từng phỏm hợp lệ lên trước, bài rác xếp theo hạng ở cuối. Không sửa bài đầu vào. */
-export function sortByMeld(hand: any, locked: any[] = []) {
-  const byRank = (a: any, b: any) => rankOf(a) - rankOf(b) || a[1].localeCompare(b[1]);
+export function sortByMeld(hand: string[], locked: string[] = []) {
+  const byRank = (a: string, b: string) => rankOf(a) - rankOf(b) || a[1].localeCompare(b[1]);
   const sorted = hand.slice().sort(byRank);
   const best = bestArrangement(sorted, locked);
   const melds = best?.melds || [];
   const used = new Set(melds.flat());
-  return [...melds.flatMap((m: any) => m.slice().sort(byRank)), ...sorted.filter((c: any) => !used.has(c))];
+  return [...melds.flatMap((m) => m.slice().sort(byRank)), ...sorted.filter((c) => !used.has(c))];
 }
 
-export const lockedFeasible = (hand: any, locked: any) => !!bestArrangement(hand, locked, { objective: 'count' });
+export const lockedFeasible = (hand: string[], locked: string[]) => !!bestArrangement(hand, locked, { objective: 'count' });
 
 // ---------- Ván chơi ----------
 export class TalaGame {
-  declare players: any;
-  declare n: any;
-  declare first: any;
-  declare deck: any;
-  declare initialDeck: any;
-  declare hands: any;
-  declare eaten: any;
-  declare discards: any;
-  declare discardCount: any;
-  declare melds: any;
-  declare finished: any;
-  declare finishOrder: any;
-  declare scores: any;
-  declare turn: any;
+  declare players: Identity[];
+  declare n: number;
+  declare first: number;
+  declare deck: string[];
+  declare initialDeck: string[];
+  declare hands: string[][];
+  declare eaten: string[][];
+  declare discards: string[][];
+  declare discardCount: number[];
+  declare melds: Meld[][];
+  declare finished: boolean[];
+  declare finishOrder: number[];
+  declare scores: number[];
+  declare turn: number;
   declare phase: string;
-  declare lastDiscard: any;
-  declare eatenThisTurn: any;
-  declare result: any;
-  declare log: any;
+  declare lastDiscard: {card: string; by: number} | null;
+  declare eatenThisTurn: number | null;
+  declare result: TalaResult | null;
+  declare log: string[];
 
   /**
    * players: [{ id, name }] theo thứ tự ngồi (chiều kim đồng hồ)
    * first: chỉ số người đi đầu (cầm 10 lá)
    */
-  constructor(players: any, first = 0) {
+  constructor(players: readonly Identity[], first = 0) {
     if (players.length < 2 || players.length > 4) throw new Error('Cần 2–4 người chơi');
-    this.players = players.map((p: any) => ({ id: p.id, name: p.name }));
+    this.players = players.map((p) => ({ id: p.id, name: p.name }));
     const n = players.length;
     this.n = n;
     this.first = first;
@@ -155,8 +183,8 @@ export class TalaGame {
     /** Thứ tự bộ bài lúc vừa xáo (lá chia trước ở cuối mảng) — để server cam kết/công bố. */
     this.initialDeck = this.deck.slice();
     this.hands = Array.from({ length: n }, () => []);
-    for (let r = 0; r < 9; r++) for (let i = 0; i < n; i++) this.hands[(first + i) % n].push(this.deck.pop());
-    this.hands[first].push(this.deck.pop());
+    for (let r = 0; r < 9; r++) for (let i = 0; i < n; i++) this.hands[(first + i) % n].push(this.deck.pop()!);
+    this.hands[first].push(this.deck.pop()!);
     this.eaten = Array.from({ length: n }, () => []);
     this.discards = Array.from({ length: n }, () => []);
     this.discardCount = Array(n).fill(0);
@@ -173,16 +201,16 @@ export class TalaGame {
     this._log(`${this.players[first].name} đi đầu`);
   }
 
-  _log(m: any) {
+  _log(m: string) {
     this.log.push(m);
     if (this.log.length > 50) this.log.shift();
   }
 
-  indexOf(id: any) {
-    return this.players.findIndex((p: any) => p.id === id);
+  indexOf(id: string) {
+    return this.players.findIndex((p) => p.id === id);
   }
 
-  _me(id: any, phases: any) {
+  _me(id: string, phases: string[]) {
     if (this.result) throw new Error('Ván đã kết thúc');
     const i = this.indexOf(id);
     if (i < 0) throw new Error('Bạn không chơi ván này');
@@ -195,14 +223,14 @@ export class TalaGame {
     return this.discardCount[this.turn] === 3;
   }
 
-  _afterTake(i: any) {
+  _afterTake(i: number) {
     this.phase = this.discardCount[i] === 3 ? 'lay' : 'discard';
   }
 
-  draw(id: any) {
+  draw(id: string) {
     const i = this._me(id, ['draw']);
     if (!this.deck.length) throw new Error('Hết nọc');
-    const c = this.deck.pop();
+    const c = this.deck.pop()!;
     this.hands[i].push(c);
     this.lastDiscard = null;
     this._log(`${this.players[i].name} bốc bài`);
@@ -210,16 +238,16 @@ export class TalaGame {
     return c;
   }
 
-  canEat(i: any) {
+  canEat(i: number) {
     if (this.result || i !== this.turn || this.phase !== 'draw' || !this.lastDiscard) return false;
     const c = this.lastDiscard.card;
     return lockedFeasible([...this.hands[i], c], [...this.eaten[i], c]);
   }
 
-  eat(id: any) {
+  eat(id: string) {
     const i = this._me(id, ['draw']);
     if (!this.canEat(i)) throw new Error('Không ăn được lá này');
-    const { card, by } = this.lastDiscard;
+    const { card, by } = this.lastDiscard!;
     this.discards[by].pop();
     this.hands[i].push(card);
     this.eaten[i].push(card);
@@ -233,19 +261,19 @@ export class TalaGame {
     this._afterTake(i);
   }
 
-  canDiscard(i: any, card: any) {
+  canDiscard(i: number, card: string) {
     if (!this.hands[i].includes(card) || this.eaten[i].includes(card)) return false;
-    const rest = this.hands[i].filter((c: any) => c !== card);
+    const rest = this.hands[i].filter((c) => c !== card);
     return lockedFeasible(rest, this.eaten[i]);
   }
 
-  discard(id: any, card: any) {
+  discard(id: string, card: string) {
     const i = this._me(id, ['discard', 'lay']);
     if (this.eaten[i].includes(card)) throw new Error('Không được đánh lá đã ăn');
     if (!this.hands[i].includes(card)) throw new Error('Bạn không có lá này');
     if (this.phase === 'lay' && this.eaten[i].length) throw new Error('Phải hạ hết phỏm chứa lá đã ăn trước');
     if (!this.canDiscard(i, card)) throw new Error('Đánh lá này sẽ phá phỏm chứa lá đã ăn');
-    this.hands[i] = this.hands[i].filter((c: any) => c !== card);
+    this.hands[i] = this.hands[i].filter((c) => c !== card);
     this.discards[i].push(card);
     this.discardCount[i]++;
     this.lastDiscard = { card, by: i };
@@ -256,22 +284,22 @@ export class TalaGame {
       this.finishOrder.push(i);
       if (!this.melds[i].length) this._log(`${this.players[i].name} MÓM`);
     }
-    if (this.discardCount.every((d: any) => d >= 4)) return this._finish();
+    if (this.discardCount.every((d) => d >= 4)) return this._finish();
     this.turn = (i + 1) % this.n;
     this.phase = 'draw';
   }
 
   /** Hạ một phỏm (chỉ ở lượt cuối). */
-  layMeld(id: any, cards: any) {
+  layMeld(id: string, cards: string[]) {
     const i = this._me(id, ['lay']);
     cards = [...new Set(cards)];
-    if (!cards.every((c: any) => this.hands[i].includes(c))) throw new Error('Lá không có trên tay');
+    if (!cards.every((c) => this.hands[i].includes(c))) throw new Error('Lá không có trên tay');
     if (!isMeld(cards)) throw new Error('Không phải phỏm hợp lệ');
-    const lockedIn = cards.filter((c: any) => this.eaten[i].includes(c));
+    const lockedIn = cards.filter((c) => this.eaten[i].includes(c));
     if (lockedIn.length > 1) throw new Error('Một phỏm không được chứa 2 lá đã ăn');
-    const rest = this.hands[i].filter((c: any) => !cards.includes(c));
+    const rest = this.hands[i].filter((c) => !cards.includes(c));
     if (!rest.length) throw new Error('Phải giữ lại ít nhất 1 lá để đánh');
-    const restLocked = this.eaten[i].filter((c: any) => !cards.includes(c));
+    const restLocked = this.eaten[i].filter((c) => !cards.includes(c));
     if (!lockedFeasible(rest, restLocked)) throw new Error('Cách hạ này làm lá đã ăn không còn phỏm');
     this.hands[i] = rest;
     this.eaten[i] = restLocked;
@@ -280,7 +308,7 @@ export class TalaGame {
   }
 
   /** Hạ tự động: xếp tối đa điểm, giữ lại ít nhất 1 lá. */
-  autoLay(id: any) {
+  autoLay(id: string) {
     const i = this._me(id, ['lay']);
     const best = bestArrangement(this.hands[i], this.eaten[i], { maxCards: this.hands[i].length - 1 });
     if (!best) throw new Error('Không thể hạ');
@@ -289,7 +317,7 @@ export class TalaGame {
   }
 
   /** Gửi 1 lá vào phỏm đã hạ của người khác (hoặc của mình). */
-  send(id: any, card: any, target: any, meldIdx: any) {
+  send(id: string, card: string, target: number, meldIdx: number) {
     const i = this._me(id, ['lay']);
     if (!this.melds[i].length) throw new Error('Phải hạ phỏm trước khi gửi');
     if (!this.hands[i].includes(card)) throw new Error('Lá không có trên tay');
@@ -300,28 +328,28 @@ export class TalaGame {
     const next = [...m.cards, card];
     if (!isMeld(next)) throw new Error('Lá này không gửi được vào phỏm đó');
     m.cards = sortMeld(next);
-    this.hands[i] = this.hands[i].filter((c: any) => c !== card);
+    this.hands[i] = this.hands[i].filter((c) => c !== card);
     this._log(`${this.players[i].name} gửi ${card} cho ${this.players[target].name}`);
   }
 
   /** Tìm chỗ gửi được cho lá `card`. */
-  sendTargets(card: any) {
-    const res: any[] = [];
-    this.melds.forEach((ms: any, t: any) => ms.forEach((m: any, k: any) => { if (isMeld([...m.cards, card])) res.push({ target: t, meldIdx: k }); }));
+  sendTargets(card: string) {
+    const res: {target: number; meldIdx: number}[] = [];
+    this.melds.forEach((ms, t) => ms.forEach((m, k) => { if (isMeld([...m.cards, card])) res.push({ target: t, meldIdx: k }); }));
     return res;
   }
 
-  canU(i: any) {
+  canU(i: number) {
     if (this.result || i !== this.turn || this.phase === 'draw') return false;
     if (this.melds[i].length || this.hands[i].length < 10) return false;
     const best = bestArrangement(this.hands[i], this.eaten[i], { objective: 'count' });
     return !!best && best.count >= 9;
   }
 
-  declareU(id: any) {
+  declareU(id: string) {
     const i = this._me(id, ['discard', 'lay']);
     if (!this.canU(i)) throw new Error('Chưa Ù được');
-    const best = bestArrangement(this.hands[i], this.eaten[i], { objective: 'count' });
+    const best = bestArrangement(this.hands[i], this.eaten[i], { objective: 'count' })!;
     const pay = TALA_RULES.uPay;
     const den = this.eatenThisTurn;
     for (let k = 0; k < this.n; k++) {
@@ -330,15 +358,15 @@ export class TalaGame {
       else this.scores[k] -= pay;
       this.scores[i] += pay;
     }
-    this.melds[i] = best.melds.map((m: any) => ({ cards: sortMeld(m), owner: i }));
+    this.melds[i] = best.melds.map((m) => ({ cards: sortMeld(m), owner: i }));
     const used = new Set(best.melds.flat());
-    this.hands[i] = this.hands[i].filter((c: any) => !used.has(c));
+    this.hands[i] = this.hands[i].filter((c) => !used.has(c));
     this._log(`${this.players[i].name} Ù!${den !== null && den !== undefined ? ` ${this.players[den].name} đền làng.` : ''}`);
     this.result = {
       type: 'u',
       winner: i,
       den,
-      ranking: [i, ...this.players.map((_: any, k: any) => k).filter((k: any) => k !== i)],
+      ranking: [i, ...this.players.map((_, k) => k).filter((k) => k !== i)],
       points: this.hands.map(points),
       mom: Array(this.n).fill(false),
       scores: this.scores.slice(),
@@ -349,11 +377,11 @@ export class TalaGame {
 
   _finish() {
     const pts = this.hands.map(points);
-    const mom = this.melds.map((m: any) => m.length === 0);
+    const mom = this.melds.map((m) => m.length === 0);
     const order = this.finishOrder;
-    const ranking = order.slice().sort((a: any, b: any) => (mom[a] - mom[b]) || (pts[a] - pts[b]) || (order.indexOf(a) - order.indexOf(b)));
+    const ranking = order.slice().sort((a, b) => (Number(mom[a]) - Number(mom[b])) || (pts[a] - pts[b]) || (order.indexOf(a) - order.indexOf(b)));
     const winner = ranking[0];
-    ranking.forEach((p: any, rank: any) => {
+    ranking.forEach((p, rank) => {
       if (rank === 0) return;
       const pay = mom[p] ? TALA_RULES.momPay : TALA_RULES.rankPay[rank];
       this.scores[p] -= pay;
@@ -366,16 +394,16 @@ export class TalaGame {
   }
 
   /** Gợi ý lá nên đánh: lá rác có điểm cao nhất. */
-  suggestDiscard(i: any) {
+  suggestDiscard(i: number) {
     const hand = this.hands[i];
     const best = bestArrangement(hand, this.eaten[i], { maxCards: hand.length - 1 });
     const inMeld = new Set(best ? best.melds.flat() : []);
-    const cands = hand.filter((c: any) => this.canDiscard(i, c)).sort((a: any, b: any) => (Number(inMeld.has(a)) - Number(inMeld.has(b))) || rankOf(b) - rankOf(a));
+    const cands = hand.filter((c) => this.canDiscard(i, c)).sort((a, b) => (Number(inMeld.has(a)) - Number(inMeld.has(b))) || rankOf(b) - rankOf(a));
     return cands[0];
   }
 
   /** Tự đánh khi hết giờ. */
-  autoPlay(id: any) {
+  autoPlay(id: string) {
     const i = this.indexOf(id);
     if (i !== this.turn || this.result) return;
     if (this.phase === 'draw') this.draw(id);
@@ -383,11 +411,11 @@ export class TalaGame {
     this.discard(id, this.suggestDiscard(i));
   }
 
-  view(viewerId: any) {
+  view(viewerId: string) {
     const me = this.indexOf(viewerId);
     const done = !!this.result;
     return {
-      players: this.players.map((p: any, i: any) => ({
+      players: this.players.map((p, i) => ({
         id: p.id,
         name: p.name,
         handCount: this.hands[i].length,
@@ -413,6 +441,6 @@ export class TalaGame {
   }
 }
 
-export function sortMeld(cards: any) {
-  return cards.slice().sort((a: any, b: any) => rankOf(a) - rankOf(b) || a[1].localeCompare(b[1]));
+export function sortMeld(cards: string[]) {
+  return cards.slice().sort((a, b) => rankOf(a) - rankOf(b) || a[1].localeCompare(b[1]));
 }

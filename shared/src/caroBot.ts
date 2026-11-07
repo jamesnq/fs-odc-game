@@ -1,3 +1,4 @@
+import type { CaroState } from './caro.js';
 // Máy chơi Cờ caro (thuần JS, không phụ thuộc server).
 //  - Chấm điểm mỗi ô trống gần các quân đã đánh theo "cửa sổ 5 ô": cửa sổ nào chỉ có quân một bên
 //    thì càng nhiều quân càng nguy hiểm. Điểm tấn công = lợi cho mình, điểm phòng thủ = chặn đối thủ.
@@ -18,18 +19,18 @@ const WINDOW = [0, 1, 10, 120, 1500, 1e6];
 const WIN_SCORE = 1e9;
 
 /** Các cửa sổ 5 ô (mảng chỉ số ô) của bàn, và danh sách cửa sổ đi qua từng ô. */
-const cache = new Map();
-function windowsOf(size: any) {
+const cache = new Map<number, {all: number[][]; byCell: number[][]}>();
+function windowsOf(size: number) {
   let w = cache.get(size);
   if (w) return w;
-  const all: any[] = [];
+  const all: number[][] = [];
   const byCell = Array.from({ length: size * size }, () => [] as number[]);
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
       for (const [dr, dc] of DIRS) {
         const er = r + dr * 4, ec = c + dc * 4;
         if (er < 0 || er >= size || ec < 0 || ec >= size) continue;
-        const cells: any[] = [];
+        const cells: number[] = [];
         for (let k = 0; k < 5; k++) cells.push((r + dr * k) * size + (c + dc * k));
         const idx = all.length;
         all.push(cells);
@@ -43,8 +44,8 @@ function windowsOf(size: any) {
 }
 
 /** Ô trống trong bán kính `dist` quanh các quân đã đánh. */
-function candidates(board: any, size: any, dist = 2) {
-  const out: any[] = [];
+function candidates(board: string[], size: number, dist = 2) {
+  const out: number[] = [];
   const seen = new Uint8Array(board.length);
   for (let i = 0; i < board.length; i++) {
     if (board[i] === '.') continue;
@@ -64,7 +65,7 @@ function candidates(board: any, size: any, dist = 2) {
 }
 
 /** Điểm tấn công / phòng thủ khi `me` đặt quân vào ô trống `i`. */
-function cellScore(board: any, size: any, i: any, me: any) {
+function cellScore(board: string[], size: number, i: number, me: string) {
   const { all, byCell } = windowsOf(size);
   const opp = other(me);
   let attack = 0, defend = 0, mine4 = false, theirs4 = false;
@@ -81,7 +82,7 @@ function cellScore(board: any, size: any, i: any, me: any) {
 }
 
 /** Điểm tĩnh của cả bàn theo góc nhìn `me` (bên sắp đi được thưởng thêm vì có lượt). */
-function evaluate(board: any, size: any, me: any) {
+function evaluate(board: string[], size: number, me: string) {
   const { all } = windowsOf(size);
   const opp = other(me);
   let s = 0;
@@ -98,7 +99,7 @@ function evaluate(board: any, size: any, me: any) {
 }
 
 /** Ô làm `who` thắng ngay (theo đúng luật của ván, kể cả chặn hai đầu), hoặc -1. */
-function winningCell(board: any, size: any, cells: any, who: any, blockTwoEnds: any) {
+function winningCell(board: string[], size: number, cells: number[], who: string, blockTwoEnds: boolean) {
   for (const i of cells) {
     board[i] = who;
     const win = findWin(board, size, i, blockTwoEnds);
@@ -109,16 +110,16 @@ function winningCell(board: any, size: any, cells: any, who: any, blockTwoEnds: 
 }
 
 /** Xếp các ô ứng viên theo điểm (tấn công + phòng thủ) cho bên `me`. */
-function ranked(board: any, size: any, me: any, cells: any, defendWeight = 1) {
+function ranked(board: string[], size: number, me: string, cells: number[], defendWeight = 1) {
   return cells
-    .map((i: any) => {
+    .map((i) => {
       const s = cellScore(board, size, i, me);
       return { i, score: s.attack + s.defend * defendWeight, ...s };
     })
-    .sort((a: any, b: any) => b.score - a.score);
+    .sort((a, b) => b.score - a.score);
 }
 
-function negamax(board: any, size: any, me: any, depth: any, alpha: any, beta: any, width: any, blockTwoEnds: any, deadline: any) {
+function negamax(board: string[], size: number, me: string, depth: number, alpha: number, beta: number, width: number, blockTwoEnds: boolean, deadline: number): number {
   const cells = candidates(board, size, 1);
   if (!cells.length) return 0;
   const list = ranked(board, size, me, cells);
@@ -132,7 +133,7 @@ function negamax(board: any, size: any, me: any, depth: any, alpha: any, beta: a
   }
   if (depth === 0 || Date.now() > deadline) return evaluate(board, size, me);
   // Đối thủ dọa thắng → chỉ xét các ô chặn
-  const forced = list.filter((m: any) => m.theirs4);
+  const forced = list.filter((m) => m.theirs4);
   const moves = (forced.length ? forced : list).slice(0, width);
   let best = -Infinity;
   for (const m of moves) {
@@ -153,7 +154,7 @@ function negamax(board: any, size: any, me: any, depth: any, alpha: any, beta: a
  * @param rng hàm ngẫu nhiên [0,1) (để test cố định được)
  * @returns chỉ số ô
  */
-export function chooseMove(state: any, level = 'medium', rng = Math.random) {
+export function chooseMove(state: CaroState, level = 'medium', rng = Math.random) {
   const { size, blockTwoEnds } = state;
   const board = state.board.slice();
   const me = state.turn;
@@ -186,7 +187,7 @@ export function chooseMove(state: any, level = 'medium', rng = Math.random) {
   if (level === 'medium') {
     // Tham lam: ô điểm cao nhất, hòa điểm thì chọn ngẫu nhiên
     const best = list[0].score;
-    const ties = list.filter((m: any) => m.score >= best * 0.95);
+    const ties = list.filter((m) => m.score >= best * 0.95);
     return ties[Math.floor(rng() * ties.length)].i;
   }
 

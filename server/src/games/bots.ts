@@ -4,14 +4,18 @@ import { randomUUID } from 'node:crypto';
 export const BOT_LEVELS = ['easy', 'medium', 'hard'];
 export const BOT_LEVEL_NAMES = { easy: 'Dễ', medium: 'Vừa', hard: 'Khó' };
 
-export const isBot = (id: any) => typeof id === 'string' && id.startsWith('bot:');
-export const botLevel = (v: any, def: any = null) => (BOT_LEVELS.includes(v) ? v : def);
+export const isBot = (id: unknown) => typeof id === 'string' && id.startsWith('bot:');
+export function botLevel(v: unknown, def: string): string;
+export function botLevel(v: unknown, def?: null): string | null;
+export function botLevel(v: unknown, def: string | null = null): string | null {
+  return typeof v === 'string' && BOT_LEVELS.includes(v) ? v : def;
+}
 
 /** Thời gian "suy nghĩ" ngẫu nhiên trong [min, max] ms cho tự nhiên. */
-export const thinkMs = (min: any, max: any) => Math.round(min + Math.random() * (max - min));
+export const thinkMs = (min: number, max: number) => Math.round(min + Math.random() * (max - min));
 
 /** Chỉ người đang ngồi chơi hoặc chủ phòng mới được thêm / bỏ máy. */
-export function requireBotManager(handler: any, id: any) {
+export function requireBotManager(handler: { playerIds(): string[]; room: { ownerId: string } }, id: string) {
   if (!handler.playerIds().includes(id) && handler.room.ownerId !== id) {
     throw new Error('Chỉ người đang ngồi chơi hoặc chủ phòng mới được thêm / bỏ máy');
   }

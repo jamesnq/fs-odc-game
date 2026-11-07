@@ -1,3 +1,89 @@
+export interface PokerSeat {
+  id: string;
+  name: string;
+  chips: number;
+  sitOut: boolean;
+  left: boolean;
+}
+
+export interface ShownHand {
+  hole: string[];
+  hand: string | null;
+  best?: string[] | null;
+  voluntary?: boolean;
+}
+
+export interface PokerPot {
+  amount: number;
+  winners: number[];
+  hand: string | null;
+}
+
+export interface PokerResult {
+  winnings: Record<number, number>;
+  shown: Record<number, ShownHand>;
+  pots: PokerPot[];
+}
+
+export interface PokerAction {
+  street: string;
+  seat: number;
+  type: string;
+  amount: number;
+  to: number;
+  allIn: boolean;
+}
+
+export interface PokerHand {
+  no: number;
+  deck: string[];
+  board: string[];
+  street: string;
+  players: Record<number, PokerPlayer>;
+  dealer: number;
+  sb: number;
+  bb: number;
+  currentBet: number;
+  minRaise: number;
+  toAct: number;
+  result: PokerResult | null;
+  log: string[];
+  actions: PokerAction[];
+  startedAt: number;
+  rabbit?: string[];
+}
+
+export interface HandHistoryPlayer {
+  seat: number;
+  id: string;
+  name: string;
+  startChips: number;
+  hole: string[];
+  invested: number;
+  won: number;
+  net: number;
+  folded: boolean;
+}
+
+export interface HandHistory {
+  no: number;
+  startedAt: number;
+  endedAt: number;
+  smallBlind: number;
+  bigBlind: number;
+  dealer: number;
+  sb: number;
+  bb: number;
+  board: string[];
+  showdown: boolean;
+  players: HandHistoryPlayer[];
+  actions: PokerAction[];
+  shown: Record<number, ShownHand>;
+  pots: PokerPot[];
+  pot: number;
+  rabbit: string[] | null;
+}
+
 // Engine Poker Texas Hold'em No-Limit.
 // Luật tham khảo: Robert's Rules of Poker / luật TDA:
 //  - Nút dealer xoay vòng; SB, BB bắt buộc. Heads-up: dealer là SB, đi trước preflop, đi sau các vòng sau.
@@ -56,7 +142,7 @@ export const categoryOf = (score: number) => Math.floor(score / 16 ** 5);
 
 /** Bài mạnh nhất từ 5–7 lá. */
 export function bestHand(cards: string[]) {
-  let best = -1, bestCards: any = null;
+  let best = -1, bestCards: string[] | null = null;
   const n = cards.length;
   for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) for (let c = b + 1; c < n; c++)
     for (let d = c + 1; d < n; d++) for (let e = d + 1; e < n; e++) {
@@ -80,7 +166,7 @@ export function describeHand(hole: string[], board: string[] = []) {
   if (all.length >= 5) {
     const b = bestHand(all);
     cat = categoryOf(b.score);
-    cards = b.cards.slice();
+    cards = b.cards!.slice();
   } else {
     cat = hole.length === 2 && hole[0][0] === hole[1][0] ? 1 : 0;
     cards = all.slice();
@@ -88,14 +174,14 @@ export function describeHand(hole: string[], board: string[] = []) {
   // Sắp xếp để hiển thị: nhóm đông trước, rồi giá trị lớn trước (sảnh A-5 để A cuối)
   const cnt: Record<string, number> = {};
   for (const c of cards) cnt[pv(c)] = (cnt[pv(c)] || 0) + 1;
-  const wheel = (cat === 4 || cat === 8) && cards.some((c: any) => pv(c) === 14) && cards.some((c: any) => pv(c) === 2);
-  const val = (c: any) => (wheel && pv(c) === 14 ? 1 : pv(c));
-  cards.sort((a: any, b: any) => cnt[pv(b)] - cnt[pv(a)] || val(b) - val(a));
+  const wheel = (cat === 4 || cat === 8) && cards.some((c) => pv(c) === 14) && cards.some((c) => pv(c) === 2);
+  const val = (c: string) => (wheel && pv(c) === 14 ? 1 : pv(c));
+  cards.sort((a, b) => cnt[pv(b)] - cnt[pv(a)] || val(b) - val(a));
   let used;
   if (cat === 0) used = cards.slice(0, 1);
-  else if ([1, 2, 3, 7].includes(cat)) used = cards.filter((c: any) => cnt[pv(c)] >= 2);
+  else if ([1, 2, 3, 7].includes(cat)) used = cards.filter((c) => cnt[pv(c)] >= 2);
   else used = cards.slice();
-  const draws: any[] = [];
+  const draws: string[] = [];
   if (board.length >= 3 && board.length < 5 && cat < 5) {
     const suits: Record<string, number> = {};
     for (const c of all) suits[c[1]] = (suits[c[1]] || 0) + 1;
@@ -120,18 +206,18 @@ export function describeHand(hole: string[], board: string[] = []) {
 
 // ---------- Bàn chơi ----------
 export class PokerGame {
-  declare smallBlind: any;
-  declare bigBlind: any;
-  declare seats: any;
+  declare smallBlind: number;
+  declare bigBlind: number;
+  declare seats: (PokerSeat | null)[];
   declare dealer: number;
-  declare hand: any;
+  declare hand: PokerHand | null;
   declare handNo: number;
-  declare nextBlinds: any;
-  declare history: any;
+  declare nextBlinds: {smallBlind: number; bigBlind: number} | null;
+  declare history: HandHistory[];
   declare historyMax: number;
-  declare lastDeck: any;
+  declare lastDeck: string[];
 
-  constructor({ smallBlind = 10, bigBlind = 20, maxSeats = 6 }: any = {}) {
+  constructor({ smallBlind = 10, bigBlind = 20, maxSeats = 6 }: {smallBlind?: number; bigBlind?: number; maxSeats?: number} = {}) {
     this.smallBlind = smallBlind;
     this.bigBlind = bigBlind;
     this.seats = Array(maxSeats).fill(null); // { id, name, chips, sitOut, left }
@@ -147,26 +233,26 @@ export class PokerGame {
     return !!this.hand && this.hand.street !== 'done';
   }
 
-  sit(seat: any, id: any, name: any, chips: any) {
+  sit(seat: number, id: string, name: string, chips: number) {
     if (this.seats[seat]) throw new Error('Ghế đã có người');
-    if (this.seats.some((s: any) => s && s.id === id)) throw new Error('Bạn đã ngồi rồi');
+    if (this.seats.some((s) => s && s.id === id)) throw new Error('Bạn đã ngồi rồi');
     this.seats[seat] = { id, name, chips, sitOut: false, left: false };
   }
 
-  seatOf(id: any) {
-    return this.seats.findIndex((s: any) => s && s.id === id);
+  seatOf(id: string) {
+    return this.seats.findIndex((s) => s && s.id === id);
   }
 
   /** Rời ghế. Nếu đang trong ván thì tự bỏ bài, ghế được giải phóng khi hết ván. */
-  leave(id: any) {
+  leave(id: string) {
     const seat = this.seatOf(id);
     if (seat < 0) return;
-    const hp = this.inHand && this.hand.players[seat];
+    const hp = this.inHand && this.hand!.players[seat];
     if (hp && !hp.folded) {
-      this.seats[seat].left = true;
+      this.seats[seat]!.left = true;
       this._forceFold(seat);
     } else if (this.inHand && hp) {
-      this.seats[seat].left = true;
+      this.seats[seat]!.left = true;
     } else {
       this.seats[seat] = null;
     }
@@ -174,14 +260,14 @@ export class PokerGame {
 
   /** Giải phóng ghế của người đã rời khi ván kết thúc. */
   cleanup() {
-    if (!this.inHand) this.seats = this.seats.map((s: any) => (s && s.left ? null : s));
+    if (!this.inHand) this.seats = this.seats.map((s) => (s && s.left ? null : s));
   }
 
   canStart() {
-    return !this.inHand && this.seats.filter((s: any) => s && !s.left && !s.sitOut && s.chips > 0).length >= 2;
+    return !this.inHand && this.seats.filter((s) => s && !s.left && !s.sitOut && s.chips > 0).length >= 2;
   }
 
-  _nextSeat(from: any, pred: any) {
+  _nextSeat(from: number, pred: (seat: number) => boolean) {
     const n = this.seats.length;
     for (let k = 1; k <= n; k++) {
       const i = (from + k + n) % n;
@@ -194,7 +280,7 @@ export class PokerGame {
    * Đổi mức blind. Đang giữa ván thì chờ tới ván sau mới áp dụng.
    * @returns true nếu áp dụng ngay, false nếu chờ ván sau
    */
-  setBlinds(smallBlind: any, bigBlind: any) {
+  setBlinds(smallBlind: number, bigBlind: number) {
     const sb = Math.floor(Number(smallBlind));
     const bb = Math.floor(Number(bigBlind));
     if (!Number.isFinite(sb) || !Number.isFinite(bb) || sb < 1 || bb < 2) throw new Error('Blind không hợp lệ');
@@ -216,17 +302,17 @@ export class PokerGame {
       this.nextBlinds = null;
     }
     // Dọn ghế của người đã rời
-    this.seats = this.seats.map((s: any) => (s && s.left ? null : s));
-    const eligible = (i: any) => { const s = this.seats[i]; return !!s && !s.sitOut && s.chips > 0; };
-    const participants = this.seats.map((_: any, i: any) => i).filter(eligible);
+    this.seats = this.seats.map((s) => (s && s.left ? null : s));
+    const eligible = (i: number) => { const s = this.seats[i]; return !!s && !s.sitOut && s.chips > 0; };
+    const participants = this.seats.map((_, i) => i).filter(eligible);
     this.dealer = this._nextSeat(this.dealer < 0 ? -1 : this.dealer, eligible);
-    const players: Record<string, any> = {};
+    const players: Record<number, PokerPlayer> = {};
     for (const i of participants) {
-      players[i] = { seat: i, id: this.seats[i].id, name: this.seats[i].name, startChips: this.seats[i].chips, hole: [] as any[], bet: 0, total: 0, folded: false, allIn: false, acted: false, lastAction: null };
+      players[i] = { seat: i, id: this.seats[i]!.id, name: this.seats[i]!.name, startChips: this.seats[i]!.chips, hole: [], bet: 0, total: 0, folded: false, allIn: false, acted: false, lastAction: null };
     }
     const heads = participants.length === 2;
-    const sb = heads ? this.dealer : this._nextSeat(this.dealer, (i: any) => !!players[i]);
-    const bb = this._nextSeat(sb, (i: any) => !!players[i]);
+    const sb = heads ? this.dealer : this._nextSeat(this.dealer, (i) => !!players[i]);
+    const bb = this._nextSeat(sb, (i) => !!players[i]);
     this.handNo++;
     const deck = shuffle(newDeck());
     /** Thứ tự bộ bài lúc vừa xáo (lá chia trước ở cuối mảng) — để server cam kết/công bố. */
@@ -234,7 +320,7 @@ export class PokerGame {
     this.hand = {
       no: this.handNo,
       deck,
-      board: [] as any[],
+      board: [],
       street: 'preflop',
       players,
       dealer: this.dealer,
@@ -243,12 +329,12 @@ export class PokerGame {
       minRaise: this.bigBlind,
       toAct: -1,
       result: null,
-      log: [] as any[],
-      actions: [] as any[], // { street, seat, type, amount, to, allIn } — dùng cho Hands log
+      log: [],
+      actions: [], // { street, seat, type, amount, to, allIn } — dùng cho Hands log
       startedAt: Date.now(),
     };
-    this._put(sb, Math.min(this.smallBlind, this.seats[sb].chips));
-    this._put(bb, Math.min(this.bigBlind, this.seats[bb].chips));
+    this._put(sb, Math.min(this.smallBlind, this.seats[sb]!.chips));
+    this._put(bb, Math.min(this.bigBlind, this.seats[bb]!.chips));
     players[sb].lastAction = 'SB';
     players[bb].lastAction = 'BB';
     this._record(sb, 'sb', players[sb].bet);
@@ -258,30 +344,32 @@ export class PokerGame {
     for (let r = 0; r < 2; r++) {
       let s = sb;
       for (let k = 0; k < participants.length; k++) {
-        players[s].hole.push(this.hand.deck.pop());
-        s = this._nextSeat(s, (i: any) => !!players[i]);
+        players[s].hole.push(this.hand.deck.pop()!);
+        s = this._nextSeat(s, (i) => !!players[i]);
       }
     }
-    this._log(`Ván #${this.handNo} bắt đầu. Dealer: ${this.seats[this.dealer].name}`);
+    this._log(`Ván #${this.handNo} bắt đầu. Dealer: ${this.seats[this.dealer]!.name}`);
     this.hand.toAct = bb; // tìm người kế tiếp sau BB
     this._advance(true);
   }
 
+  // Transition helpers below run only after startHand creates a hand. Occupied
+  // participant seats stay allocated until cleanup, including players who leave.
   /** Ghi một hành động có cấu trúc cho Hands log. amount = số chip bỏ thêm, to = mức cược sau hành động. */
-  _record(seat: any, type: any, amount = 0) {
-    const h = this.hand;
+  _record(seat: number, type: string, amount = 0) {
+    const h = this.hand!;
     const p = h.players[seat];
     h.actions.push({ street: h.street, seat, type, amount, to: p.bet, allIn: p.allIn });
   }
 
-  _log(msg: any) {
-    this.hand.log.push(msg);
-    if (this.hand.log.length > 60) this.hand.log.shift();
+  _log(msg: string) {
+    this.hand!.log.push(msg);
+    if (this.hand!.log.length > 60) this.hand!.log.shift();
   }
 
-  _put(seat: any, amount: any) {
-    const p = this.hand.players[seat];
-    const s = this.seats[seat];
+  _put(seat: number, amount: number) {
+    const p = this.hand!.players[seat];
+    const s = this.seats[seat]!;
     amount = Math.min(amount, s.chips);
     s.chips -= amount;
     p.bet += amount;
@@ -291,36 +379,36 @@ export class PokerGame {
 
   get pot() {
     if (!this.hand) return 0;
-    return Object.values(this.hand.players as Record<number, PokerPlayer>).reduce((a, p) => a + p.total, 0);
+    return Object.values(this.hand.players).reduce((a, p) => a + p.total, 0);
   }
 
   _active() {
-    return Object.values(this.hand.players as Record<number, PokerPlayer>).filter((p) => !p.folded);
+    return Object.values(this.hand!.players).filter((p) => !p.folded);
   }
 
-  _needsToAct(p: any) {
-    const h = this.hand;
+  _needsToAct(p: PokerPlayer) {
+    const h = this.hand!;
     if (p.folded || p.allIn) return false;
-    const othersCanAct = Object.values(h.players as Record<number, PokerPlayer>).some((q) => q !== p && !q.folded && !q.allIn);
+    const othersCanAct = Object.values(h.players).some((q) => q !== p && !q.folded && !q.allIn);
     if (p.bet >= h.currentBet && !othersCanAct) return false;
     return !p.acted || p.bet < h.currentBet;
   }
 
   /** Các lựa chọn hợp lệ cho ghế đang tới lượt. */
-  options(seat: any) {
+  options(seat: number) {
     const h = this.hand;
-    if (!this.inHand || h.toAct !== seat) return null;
+    if (!h || !this.inHand || h.toAct !== seat) return null;
     const p = h.players[seat];
-    const chips = this.seats[seat].chips;
+    const chips = this.seats[seat]!.chips;
     const toCall = Math.max(0, h.currentBet - p.bet);
-    const othersCanAct = Object.values(h.players as Record<number, PokerPlayer>).some((q) => q !== p && !q.folded && !q.allIn);
+    const othersCanAct = Object.values(h.players).some((q) => q !== p && !q.folded && !q.allIn);
     const maxTo = p.bet + chips;
     const canRaise = !p.acted && othersCanAct && maxTo > h.currentBet;
     const minTo = Math.min(maxTo, h.currentBet === 0 ? this.bigBlind : h.currentBet + h.minRaise);
     // All-in thực tế: không đặt quá mức đối thủ còn theo được (phần dư vô nghĩa), và nếu không được tố thì chỉ theo
     let reach = h.currentBet;
-    for (const [k, q] of Object.entries(h.players as Record<number, PokerPlayer>)) {
-      if (q !== p && !q.folded) reach = Math.max(reach, q.bet + (q.allIn ? 0 : this.seats[k].chips));
+    for (const [k, q] of Object.entries(h.players)) {
+      if (q !== p && !q.folded) reach = Math.max(reach, q.bet + (q.allIn ? 0 : this.seats[Number(k)]!.chips));
     }
     const allInTo = canRaise ? Math.min(maxTo, Math.max(reach, minTo)) : Math.min(maxTo, h.currentBet);
     return {
@@ -342,14 +430,14 @@ export class PokerGame {
    * action: 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allin'
    * amount (bet/raise): tổng số chip muốn đặt trong vòng này ("raise to").
    */
-  act(id: any, action: any, amount?: number) {
+  act(id: string, action: string, amount?: number) {
     const h = this.hand;
-    if (!this.inHand) throw new Error('Chưa có ván nào');
+    if (!h || !this.inHand) throw new Error('Chưa có ván nào');
     const seat = this.seatOf(id);
     if (seat < 0 || h.toAct !== seat) throw new Error('Chưa tới lượt bạn');
     const p = h.players[seat];
     const o = this.options(seat)!;
-    const name = this.seats[seat].name;
+    const name = this.seats[seat]!.name;
     switch (action) {
       case 'fold':
         p.folded = true;
@@ -405,7 +493,7 @@ export class PokerGame {
         this._put(seat, add);
         if (full) {
           h.minRaise = Math.max(h.minRaise, raiseSize);
-          for (const q of Object.values(h.players as Record<number, PokerPlayer>)) if (q !== p) q.acted = false;
+          for (const q of Object.values(h.players)) if (q !== p) q.acted = false;
         }
         const wasBet = h.currentBet === 0;
         h.currentBet = to;
@@ -421,8 +509,8 @@ export class PokerGame {
     this._advance(false);
   }
 
-  _forceFold(seat: any) {
-    const h = this.hand;
+  _forceFold(seat: number) {
+    const h = this.hand!;
     const p = h.players[seat];
     p.folded = true;
     p.acted = true;
@@ -435,23 +523,23 @@ export class PokerGame {
   /** Hết giờ: tự check nếu được, không thì bỏ bài. */
   timeout() {
     if (!this.inHand) return;
-    const seat = this.hand.toAct;
+    const seat = this.hand!.toAct;
     const o = this.options(seat);
     if (!o) return;
-    this.act(this.seats[seat].id, o.canCheck ? 'check' : 'fold');
+    this.act(this.seats[seat]!.id, o.canCheck ? 'check' : 'fold');
   }
 
   _advance(first?: boolean) {
-    const h = this.hand;
+    const h = this.hand!;
     const active = this._active();
     if (active.length === 1) return this._finish();
-    const next = this._nextSeat(h.toAct, (i: any) => h.players[i] && this._needsToAct(h.players[i]));
+    const next = this._nextSeat(h.toAct, (i) => h.players[i] && this._needsToAct(h.players[i]));
     if (next >= 0 && (first || next !== h.toAct || this._needsToAct(h.players[next]))) {
       h.toAct = next;
       return;
     }
     // Hết vòng cược
-    for (const p of Object.values(h.players as Record<number, PokerPlayer>)) { p.bet = 0; p.acted = false; if (!p.folded && !p.allIn) p.lastAction = null; }
+    for (const p of Object.values(h.players)) { p.bet = 0; p.acted = false; if (!p.folded && !p.allIn) p.lastAction = null; }
     h.currentBet = 0;
     h.minRaise = this.bigBlind;
     const canAct = active.filter((p) => !p.allIn).length;
@@ -460,38 +548,38 @@ export class PokerGame {
       return this._finish();
     }
     this._dealStreet();
-    h.toAct = this._nextSeat(h.dealer, (i: any) => h.players[i] && !h.players[i].folded && !h.players[i].allIn);
+    h.toAct = this._nextSeat(h.dealer, (i) => h.players[i] && !h.players[i].folded && !h.players[i].allIn);
   }
 
   _dealStreet() {
-    const h = this.hand;
+    const h = this.hand!;
     h.deck.pop(); // burn
-    if (h.board.length === 0) { h.board.push(h.deck.pop(), h.deck.pop(), h.deck.pop()); h.street = 'flop'; }
-    else if (h.board.length === 3) { h.board.push(h.deck.pop()); h.street = 'turn'; }
-    else { h.board.push(h.deck.pop()); h.street = 'river'; }
+    if (h.board.length === 0) { h.board.push(h.deck.pop()!, h.deck.pop()!, h.deck.pop()!); h.street = 'flop'; }
+    else if (h.board.length === 3) { h.board.push(h.deck.pop()!); h.street = 'turn'; }
+    else { h.board.push(h.deck.pop()!); h.street = 'river'; }
     this._log(`--- ${h.street.toUpperCase()}: ${h.board.join(' ')}`);
   }
 
   _finish() {
-    const h = this.hand;
-    const all = Object.values(h.players as Record<number, PokerPlayer>);
+    const h = this.hand!;
+    const all = Object.values(h.players);
     const active = this._active();
-    const winnings: Record<string, any> = {};
-    const shown: Record<string, any> = {};
-    const potsOut: any[] = [];
+    const winnings: Record<number, number> = {};
+    const shown: Record<number, ShownHand> = {};
+    const potsOut: PokerPot[] = [];
     if (active.length === 1) {
       const w = active[0];
       winnings[w.seat] = this.pot;
       potsOut.push({ amount: this.pot, winners: [w.seat], hand: null });
       this._log(`${w.name} thắng ${this.pot}`);
     } else {
-      const evals: Record<string, any> = {};
+      const evals: Record<number, ReturnType<typeof bestHand>> = {};
       for (const p of active) {
         evals[p.seat] = bestHand([...p.hole, ...h.board]);
         shown[p.seat] = { hole: p.hole, hand: evals[p.seat].name, best: evals[p.seat].cards };
       }
       // Thứ tự chia chip lẻ: bắt đầu bên trái dealer
-      const orderFromDealer: any[] = [];
+      const orderFromDealer: number[] = [];
       let s = h.dealer;
       for (let k = 0; k < this.seats.length; k++) {
         s = (s + 1) % this.seats.length;
@@ -523,12 +611,12 @@ export class PokerGame {
         winnings[w] += totalAll - distributed;
       }
       for (const pot of potsOut) {
-        this._log(`${pot.winners.map((w: any) => h.players[w].name).join(', ')} thắng ${pot.amount} (${pot.hand})`);
+        this._log(`${pot.winners.map((w) => h.players[w].name).join(', ')} thắng ${pot.amount} (${pot.hand})`);
       }
     }
     for (const [seat, amt] of Object.entries(winnings)) {
-      const st = this.seats[seat];
-      if (st && st.id === h.players[seat].id) st.chips += amt;
+      const st = this.seats[Number(seat)];
+      if (st && st.id === h.players[Number(seat)].id) st.chips += amt;
     }
     h.result = { winnings, shown, pots: potsOut };
     const showdown = active.length > 1;
@@ -541,27 +629,27 @@ export class PokerGame {
    * Rabbit hunt: ván kết thúc sớm (mọi người bỏ bài) thì lật các lá bài chung lẽ ra sẽ ra tiếp,
    * đúng theo thứ tự chia thật (có đốt bài). Không ảnh hưởng kết quả.
    */
-  canRabbit(id: any) {
+  canRabbit(id: string) {
     const h = this.hand;
     return !!h && h.street === 'done' && h.board.length < 5 && !h.rabbit
-      && Object.values(h.players as Record<number, PokerPlayer>).some((p) => p.id === id);
+      && Object.values(h.players).some((p) => p.id === id);
   }
 
-  rabbitHunt(id: any) {
+  rabbitHunt(id: string) {
     const h = this.hand;
     if (!h || h.street !== 'done') throw new Error('Chỉ xem rabbit khi ván đã kết thúc');
     if (h.board.length >= 5) throw new Error('Ván đã ra đủ 5 lá bài chung');
     if (h.rabbit) throw new Error('Đã lật rabbit rồi');
-    if (!Object.values(h.players as Record<number, PokerPlayer>).some((p) => p.id === id)) throw new Error('Chỉ người chơi trong ván mới được xem rabbit');
+    if (!Object.values(h.players).some((p) => p.id === id)) throw new Error('Chỉ người chơi trong ván mới được xem rabbit');
     const deck = h.deck.slice();
-    const cards: string[][] = [];
+    const cards: string[] = [];
     while (h.board.length + cards.length < 5) {
       deck.pop(); // đốt bài như khi chia thật
-      if (h.board.length + cards.length === 0) cards.push(deck.pop(), deck.pop(), deck.pop());
-      else cards.push(deck.pop());
+      if (h.board.length + cards.length === 0) cards.push(deck.pop()!, deck.pop()!, deck.pop()!);
+      else cards.push(deck.pop()!);
     }
     h.rabbit = cards;
-    const entry = this.history.find((e: any) => e.no === h.no);
+    const entry = this.history.find((e) => e.no === h.no);
     if (entry) entry.rabbit = cards.slice();
     return cards;
   }
@@ -570,31 +658,31 @@ export class PokerGame {
    * Chủ động show bài: khi ván đã kết thúc, người chơi trong ván mà bài chưa được lật
    * (đã bỏ bài, hoặc thắng vì mọi người bỏ) có thể tự lật 2 lá tẩy cho cả bàn xem. Không ảnh hưởng kết quả.
    */
-  canShow(id: any) {
+  canShow(id: string) {
     const h = this.hand;
     if (!h || h.street !== 'done' || !h.result) return false;
-    const p = Object.values(h.players as Record<number, PokerPlayer>).find((q) => q.id === id);
+    const p = Object.values(h.players).find((q) => q.id === id);
     return !!p && !h.result.shown[p.seat];
   }
 
-  showCards(id: any) {
+  showCards(id: string) {
     const h = this.hand;
     if (!h || h.street !== 'done' || !h.result) throw new Error('Chỉ show bài khi ván đã kết thúc');
-    const p = Object.values(h.players as Record<number, PokerPlayer>).find((q) => q.id === id);
+    const p = Object.values(h.players).find((q) => q.id === id);
     if (!p) throw new Error('Bạn không chơi ván này');
     if (h.result.shown[p.seat]) throw new Error('Bài của bạn đã được lật rồi');
     const ev = h.board.length >= 3 ? bestHand([...p.hole, ...h.board]) : null;
     h.result.shown[p.seat] = { hole: p.hole.slice(), hand: ev ? ev.name : null, best: ev ? ev.cards : null, voluntary: true };
-    const entry = this.history.find((e: any) => e.no === h.no);
+    const entry = this.history.find((e) => e.no === h.no);
     if (entry) entry.shown[p.seat] = { hole: p.hole.slice(), hand: ev ? ev.name : null, voluntary: true };
     this._log(`${p.name} show bài: ${p.hole.join(' ')}${ev ? ` (${ev.name})` : ''}`);
     return p.hole.slice();
   }
 
   /** Lưu ván vừa kết thúc vào Hands log. Bài tẩy được lưu đủ, view sẽ lọc theo người xem. */
-  _archive(showdown: any) {
-    const h = this.hand;
-    const r = h.result;
+  _archive(showdown: boolean) {
+    const h = this.hand!;
+    const r = h.result!;
     this.history.push({
       no: h.no,
       startedAt: h.startedAt,
@@ -604,14 +692,14 @@ export class PokerGame {
       dealer: h.dealer, sb: h.sb, bb: h.bb,
       board: h.board.slice(),
       showdown,
-      players: Object.values(h.players as Record<number, PokerPlayer>).map((p) => ({
+      players: Object.values(h.players).map((p) => ({
         seat: p.seat, id: p.id, name: p.name, startChips: p.startChips, hole: p.hole.slice(),
         invested: p.total, won: r.winnings[p.seat] || 0, net: (r.winnings[p.seat] || 0) - p.total, folded: p.folded,
       })),
       actions: h.actions.slice(),
-      shown: Object.fromEntries(Object.entries(r.shown as Record<string, {hole: string[]; hand: string | null}>).map(([s, v]) => [s, { hole: v.hole.slice(), hand: v.hand }])),
-      pots: r.pots.map((pt: any) => ({ amount: pt.amount, winners: pt.winners.slice(), hand: pt.hand })),
-      pot: Object.values(h.players as Record<number, PokerPlayer>).reduce((a, p) => a + p.total, 0),
+      shown: Object.fromEntries(Object.entries(r.shown).map(([s, v]) => [s, { hole: v.hole.slice(), hand: v.hand }])),
+      pots: r.pots.map((pt) => ({ amount: pt.amount, winners: pt.winners.slice(), hand: pt.hand })),
+      pot: Object.values(h.players).reduce((a, p) => a + p.total, 0),
       rabbit: null,
     });
     if (this.history.length > this.historyMax) this.history.shift();
@@ -621,10 +709,10 @@ export class PokerGame {
    * Hands log cho người xem: chỉ lộ bài tẩy của chính mình và bài đã lật ở showdown.
    * Bài đã bỏ (muck) của người khác luôn bị ẩn.
    */
-  historyView(viewerId: any, limit = this.historyMax) {
-    return this.history.slice(-limit).reverse().map((e: any) => ({
+  historyView(viewerId: string, limit = this.historyMax) {
+    return this.history.slice(-limit).reverse().map((e) => ({
       ...e,
-      players: e.players.map(({ hole, ...p }: any) => ({
+      players: e.players.map(({ hole, ...p }) => ({
         ...p,
         hole: p.id === viewerId ? hole : e.shown[p.seat] ? e.shown[p.seat].hole : null,
         me: p.id === viewerId,
@@ -633,15 +721,15 @@ export class PokerGame {
   }
 
   /** Dữ liệu gửi cho client, ẩn bài tẩy của người khác. */
-  view(viewerId: any) {
+  view(viewerId: string) {
     const h = this.hand;
-    const seats = this.seats.map((s: any, i: any) => {
+    const seats = this.seats.map((s, i) => {
       if (!s) return null;
       const hp = h && h.players[i];
       let hole: string[] | null = null;
       if (hp) {
         if (s.id === viewerId) hole = hp.hole;
-        else if (h.result && h.result.shown[i]) hole = h.result.shown[i].hole;
+        else if (h && h.result && h.result.shown[i]) hole = h.result.shown[i].hole;
         else hole = hp.folded ? [] : ['??', '??'];
       }
       return {

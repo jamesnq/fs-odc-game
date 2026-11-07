@@ -35,9 +35,9 @@ test('phỏm hợp lệ', () => {
 test('tìm cách xếp tốt nhất', () => {
   const hand = ['5S', '5D', '5H', '6S', '7S', 'KD', 'KC', 'KH', '2C'];
   const best = bestArrangement(hand);
-  assert.equal(best.points, 5 + 6 + 7 + 13 * 3);
+  assert.equal(best!.points, 5 + 6 + 7 + 13 * 3);
   const withLock = bestArrangement(hand, ['6S']);
-  assert.ok(withLock.melds.some((m: any) => m.includes('6S') && m.includes('5S')));
+  assert.ok(withLock!.melds.some((m: any) => m.includes('6S') && m.includes('5S')));
   assert.equal(enumerateMelds(['2H', '3H', '4H', '5H']).length, 3);
   // 2 lá ăn không được cùng 1 phỏm
   assert.equal(bestArrangement(['5S', '5D', '5H'], ['5S', '5D']), null);

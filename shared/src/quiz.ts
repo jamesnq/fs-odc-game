@@ -84,7 +84,7 @@ export function parseQuizText(text: unknown) {
       if (!body) fail(n, 'câu hỏi đang trống');
       if (body.length > LIMITS.question) fail(n, `câu hỏi dài quá ${LIMITS.question} ký tự`);
       if (questions.length >= LIMITS.questions) fail(n, `tối đa ${LIMITS.questions} câu hỏi`);
-      cur = { q: body, choices: [] as any[], marks: [] as any[], line: n };
+      cur = { q: body, choices: [], marks: [], line: n };
       return;
     }
     if (mark === '*' || mark === '-') {

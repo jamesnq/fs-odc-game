@@ -1,7 +1,21 @@
+import type { MouseEventHandler } from 'react';
+
+interface CardProps {
+  card?: string | null;
+  size?: string;
+  selected?: boolean;
+  focused?: boolean;
+  dim?: boolean;
+  locked?: boolean;
+  highlight?: boolean;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  title?: string;
+}
+
 import { SUIT_SYMBOL, RANK_LABEL, isRed } from '@game/shared/cards';
 
 /** Lá bài. card = "AS" | "??" (úp). */
-export default function Card({ card, size = 'md', selected, focused, dim, locked, highlight, onClick, title }: any) {
+export default function Card({ card, size = 'md', selected, focused, dim, locked, highlight, onClick, title }: CardProps) {
   if (!card || card === '??') {
     return <div className={`card back ${size}`} />;
   }

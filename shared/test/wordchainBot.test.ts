@@ -12,6 +12,7 @@ test('Máy nối đúng chữ, không lặp từ đã dùng', () => {
   g.submit('a', 'con mèo');
   for (let k = 0; k < 20; k++) {
     const w = chooseWord(g, 'medium', index, opts());
+    assert.ok(w);
     assert.ok(w.startsWith('mèo '), w);
   }
   g.used.add('meo0 con0');

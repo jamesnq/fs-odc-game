@@ -91,11 +91,18 @@ const int = (v: unknown, min: number, max: number) => {
  *   { k: 'u', id }                                 hoàn tác nét có id này
  *   { k: 'c' }                                     xóa hết
  */
-export function cleanOps(ops: unknown) {
+export type DrawOp =
+  | { k: 'c' }
+  | { k: 'u'; id: number }
+  | { k: 'f'; id: number; c: number; p: [number, number] }
+  | { k: 'l'; id: number; c: number; w: number; p: number[] };
+
+export function cleanOps(ops: unknown): DrawOp[] {
   if (!Array.isArray(ops)) return [];
-  const out: any[] = [];
-  for (const o of ops.slice(0, MAX_OPS_PER_PACKET)) {
-    if (!o || typeof o !== 'object') continue;
+  const out: DrawOp[] = [];
+  for (const rawOp of ops.slice(0, MAX_OPS_PER_PACKET) as unknown[]) {
+    if (!rawOp || typeof rawOp !== 'object') continue;
+    const o = rawOp as Record<string, unknown>;
     if (o.k === 'c') { out.push({ k: 'c' }); continue; }
     const id = int(o.id, 0, 1e9);
     if (id === null) continue;
@@ -125,8 +132,8 @@ export function cleanOps(ops: unknown) {
 
 /** Danh sách từ tự thêm của chủ phòng: cách nhau dấu phẩy hoặc xuống dòng. */
 export function parseCustomWords(text: string, max = 300) {
-  const seen = new Set();
-  const out: any[] = [];
+  const seen = new Set<string>();
+  const out: string[] = [];
   for (const raw of String(text || '').split(/[,\n;]/)) {
     const w = normalizeGuess(raw);
     if (!w || w.length > 30 || seen.has(guessKey(w))) continue;

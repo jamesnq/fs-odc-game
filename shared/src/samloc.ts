@@ -1,3 +1,25 @@
+import type { Identity } from './contracts.js';
+export interface SamCombo {
+  type: 'single' | 'pair' | 'triple' | 'four' | 'straight';
+  len: number;
+  top: number;
+  cards: string[];
+}
+
+export interface SamPlayer extends Identity {
+  hand: string[];
+  played: number;
+  passed: boolean;
+}
+
+export interface SamBonus {
+  from: number;
+  to: number;
+  amount: number;
+  reason: string;
+}
+
+export interface SamResult {winner: number; type: 'normal' | 'sam' | 'samFail' | 'toiTrang'; text: string; scores: number[]; lines: {amount: number; reason: string; with: number}[][]; samBy: number}
 // Engine Sâm lốc (luật miền Bắc phổ biến):
 //  - 2–5 người, mỗi người 10 lá. Thứ tự: 3 < 4 < … < K < A < 2 (heo). KHÔNG xét chất.
 //  - Bộ đánh: rác (1 lá), đôi, sám (3 lá cùng số), tứ quý, sảnh (≥3 lá liên tiếp).
@@ -11,7 +33,7 @@
 //  - Người hết bài đầu tiên thắng, ván kết thúc ngay.
 import { newDeck, shuffle, isRed, cardLabel } from './cards.js';
 
-const cardsText = (cards: any) => cards.map(cardLabel).join(' ');
+const cardsText = (cards: string[]) => cards.map(cardLabel).join(' ');
 
 /** Mức trả (đơn vị). Có thể chỉnh theo luật từng nơi. */
 export const SAM_RULES = {
@@ -24,25 +46,25 @@ export const SAM_RULES = {
 };
 export const HAND_SIZE = 10;
 
-const VALUE: Record<string, any> = { 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, T: 10, J: 11, Q: 12, K: 13, A: 14, 2: 15 };
+const VALUE: Record<string, number> = { 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, T: 10, J: 11, Q: 12, K: 13, A: 14, 2: 15 };
 /** Giá trị lá: 3..13, A = 14, 2 (heo) = 15 */
-export const valueOf = (c: any) => VALUE[c[0]];
-export const isHeo = (c: any) => c[0] === '2';
-export const sortHand = (cards: any) => cards.slice().sort((a: any, b: any) => valueOf(a) - valueOf(b) || a[1].localeCompare(b[1]));
-export const COMBO_VI: Record<string, any> = { single: 'Rác', pair: 'Đôi', triple: 'Sám', four: 'Tứ quý', straight: 'Sảnh' };
+export const valueOf = (c: string) => VALUE[c[0]];
+export const isHeo = (c: string) => c[0] === '2';
+export const sortHand = (cards: string[]) => cards.slice().sort((a, b) => valueOf(a) - valueOf(b) || a[1].localeCompare(b[1]));
+export const COMBO_VI: Record<string, string> = { single: 'Rác', pair: 'Đôi', triple: 'Sám', four: 'Tứ quý', straight: 'Sảnh' };
 
 /** Giá trị dùng cho sảnh: A có thể là 1 hoặc 14, heo = 2. */
-function straightTop(cards: any) {
+function straightTop(cards: string[]) {
   if (cards.length < 3) return 0;
-  const vals = cards.map(valueOf).map((v: any) => (v === 15 ? 2 : v));
-  const tryVals = (vs: any) => {
-    const s = vs.slice().sort((a: any, b: any) => a - b);
+  const vals = cards.map(valueOf).map((v) => (v === 15 ? 2 : v));
+  const tryVals = (vs: number[]) => {
+    const s = vs.slice().sort((a, b) => a - b);
     for (let i = 1; i < s.length; i++) if (s[i] !== s[i - 1] + 1) return 0;
     if (s.includes(2) && s[0] !== 1) return 0; // heo chỉ nằm trong sảnh bắt đầu bằng A
     return s[s.length - 1];
   };
   const high = tryVals(vals); // A = 14
-  const low = vals.includes(14) ? tryVals(vals.map((v: any) => (v === 14 ? 1 : v))) : 0; // A = 1
+  const low = vals.includes(14) ? tryVals(vals.map((v) => (v === 14 ? 1 : v))) : 0; // A = 1
   return Math.max(high, low);
 }
 
@@ -50,7 +72,7 @@ function straightTop(cards: any) {
  * Phân loại bộ bài. Trả về { type, len, top, cards } hoặc null nếu không hợp lệ.
  * top: giá trị để so sánh (lá cao nhất).
  */
-export function classify(cards: any) {
+export function classify(cards: string[]): SamCombo | null {
   if (!Array.isArray(cards) || !cards.length) return null;
   const vals = cards.map(valueOf);
   if (vals.some((v) => !v)) return null;
@@ -66,7 +88,7 @@ export function classify(cards: any) {
 }
 
 /** `next` có chặn được `prev` không. */
-export function beats(next: any, prev: any) {
+export function beats(next: SamCombo | null, prev: SamCombo | null) {
   if (!next) return false;
   if (!prev) return true;
   if (next.type === prev.type && next.len === prev.len) return next.top > prev.top;
@@ -76,43 +98,43 @@ export function beats(next: any, prev: any) {
 }
 
 /** Kiểm tra tới trắng. Trả về tên hoặc null. */
-export function instantWin(hand: any) {
+export function instantWin(hand: string[]) {
   if (hand.length !== HAND_SIZE) return null;
-  const counts: Record<string, any> = {};
+  const counts: Record<number, number> = {};
   for (const c of hand) counts[valueOf(c)] = (counts[valueOf(c)] || 0) + 1;
   if (counts[15] === 4) return 'Tứ quý heo';
   if (straightTop(hand)) return 'Sảnh rồng';
   const groups = Object.values(counts);
   if (groups.reduce((a, n) => a + Math.floor(n / 2), 0) >= 5) return '5 đôi';
   if (groups.filter((n) => n >= 3).length >= 3) return '3 sám';
-  if (hand.every(isRed) || hand.every((c: any) => !isRed(c))) return 'Đồng màu';
+  if (hand.every(isRed) || hand.every((c) => !isRed(c))) return 'Đồng màu';
   return null;
 }
 
 export class SamLocGame {
-  declare initialDeck: any;
-  declare players: any;
-  declare leader: any;
-  declare turn: any;
+  declare initialDeck: string[];
+  declare players: SamPlayer[];
+  declare leader: number;
+  declare turn: number;
   declare phase: string;
-  declare samDecided: any;
+  declare samDecided: Set<number>;
   declare samBy: number;
-  declare lastPlay: any;
-  declare bonuses: any;
-  declare log: any;
-  declare result: any;
+  declare lastPlay: {by: number; combo: SamCombo} | null;
+  declare bonuses: SamBonus[];
+  declare log: string[];
+  declare result: SamResult | null;
 
   /**
    * @param players [{ id, name }] theo thứ tự lượt
    * @param leader chỉ số người đi trước
    * @param deck tùy chọn (để test)
    */
-  constructor(players: any, leader = 0, deck: any = null) {
+  constructor(players: readonly Identity[], leader = 0, deck: string[] | null = null) {
     if (players.length < 2 || players.length > 5) throw new Error('Sâm lốc chơi 2–5 người');
     const d = deck ? deck.slice() : shuffle(newDeck());
     /** Thứ tự bộ bài lúc vừa xáo (lá chia trước ở đầu mảng) — để server cam kết/công bố. */
     this.initialDeck = d.slice();
-    this.players = players.map((p: any) => ({
+    this.players = players.map((p) => ({
       id: p.id, name: p.name, hand: sortHand(d.splice(0, HAND_SIZE)), played: 0, passed: false,
     }));
     this.leader = leader;
@@ -132,16 +154,16 @@ export class SamLocGame {
     }
   }
 
-  indexOf(id: any) { return this.players.findIndex((p: any) => p.id === id); }
-  _seat(id: any) {
+  indexOf(id: string) { return this.players.findIndex((p) => p.id === id); }
+  _seat(id: string) {
     const i = this.indexOf(id);
     if (i < 0) throw new Error('Bạn không chơi ván này');
     return i;
   }
-  _next(i: any) { return (i + 1) % this.players.length; }
+  _next(i: number) { return (i + 1) % this.players.length; }
 
   // ---------- Báo Sâm ----------
-  declareSam(id: any, yes: any) {
+  declareSam(id: string, yes: boolean) {
     if (this.phase !== 'sam') throw new Error('Đã hết thời gian báo Sâm');
     const i = this._seat(id);
     if (this.samDecided.has(i)) throw new Error('Bạn đã quyết định rồi');
@@ -160,7 +182,7 @@ export class SamLocGame {
     if (this.phase === 'sam') this._startPlay(this.leader);
   }
 
-  _startPlay(leader: any) {
+  _startPlay(leader: number) {
     this.phase = 'play';
     this.turn = leader;
     this.leader = leader;
@@ -168,17 +190,17 @@ export class SamLocGame {
 
   // ---------- Đánh bài ----------
   /** Luật báo 1: người kế tiếp (chưa bỏ lượt vòng này hoặc sẽ đi vòng mới) còn 1 lá. */
-  _nextHasOne(i: any) {
+  _nextHasOne(i: number) {
     return this.players[this._next(i)].hand.length === 1;
   }
 
   /** Kiểm tra một nước đánh, trả về combo hoặc ném lỗi. */
-  check(id: any, cards: any) {
+  check(id: string, cards: string[]) {
     if (this.phase !== 'play') throw new Error(this.phase === 'sam' ? 'Đang chờ báo Sâm' : 'Ván đã kết thúc');
     const i = this._seat(id);
     if (this.turn !== i) throw new Error('Chưa tới lượt bạn');
     const p = this.players[i];
-    if (new Set(cards).size !== cards.length || !cards.every((c: any) => p.hand.includes(c))) throw new Error('Bạn không có những lá này');
+    if (new Set(cards).size !== cards.length || !cards.every((c) => p.hand.includes(c))) throw new Error('Bạn không có những lá này');
     const combo = classify(cards);
     if (!combo) throw new Error('Bộ bài không hợp lệ');
     if (this.lastPlay && !beats(combo, this.lastPlay.combo)) {
@@ -191,13 +213,13 @@ export class SamLocGame {
     return combo;
   }
 
-  play(id: any, cards: any) {
+  play(id: string, cards: string[]) {
     const combo = this.check(id, cards);
     const i = this.turn;
     const p = this.players[i];
     // Bị chặn khi đang báo Sâm → Sâm thất bại
     if (this.samBy >= 0 && i !== this.samBy && this.lastPlay) {
-      p.hand = p.hand.filter((c: any) => !cards.includes(c));
+      p.hand = p.hand.filter((c) => !cards.includes(c));
       p.played += cards.length;
       this.lastPlay = { by: i, combo };
       this.log.push(`${p.name} chặn Sâm bằng ${COMBO_VI[combo.type].toLowerCase()} ${cardsText(cards)}`);
@@ -205,11 +227,11 @@ export class SamLocGame {
     }
     // Tứ quý chặt heo
     if (this.lastPlay && combo.type === 'four' && this.lastPlay.combo.type === 'single' && this.lastPlay.combo.top === 15) {
-      const victim = this.lastPlay.by;
+      const victim = this.lastPlay!.by;
       this.bonuses.push({ from: victim, to: i, amount: SAM_RULES.chatHeo, reason: 'Chặt heo' });
       this.log.push(`${p.name} chặt heo của ${this.players[victim].name}!`);
     }
-    p.hand = p.hand.filter((c: any) => !cards.includes(c));
+    p.hand = p.hand.filter((c) => !cards.includes(c));
     p.played += cards.length;
     this.lastPlay = { by: i, combo };
     this.log.push(`${p.name}: ${COMBO_VI[combo.type]} ${cardsText(cards)}`);
@@ -217,7 +239,7 @@ export class SamLocGame {
     this._advance();
   }
 
-  pass(id: any) {
+  pass(id: string) {
     if (this.phase !== 'play') throw new Error('Không thể bỏ lượt lúc này');
     const i = this._seat(id);
     if (this.turn !== i) throw new Error('Chưa tới lượt bạn');
@@ -231,17 +253,17 @@ export class SamLocGame {
     const n = this.players.length;
     for (let k = 1; k < n; k++) {
       const j = (this.turn + k) % n;
-      if (j === this.lastPlay.by) break;
+      if (j === this.lastPlay!.by) break;
       if (!this.players[j].passed) { this.turn = j; return; }
     }
     // Mọi người đã bỏ → người đánh cuối đi vòng mới
-    this.turn = this.lastPlay.by;
+    this.turn = this.lastPlay!.by;
     this.lastPlay = null;
     for (const p of this.players) p.passed = false;
   }
 
   /** Nước đi tự động khi hết giờ: đi đầu thì đánh lá nhỏ nhất (theo luật báo 1), không thì bỏ. */
-  autoPlay(id: any) {
+  autoPlay(id: string) {
     if (this.phase === 'sam') return this.declareSam(id, false);
     const i = this._seat(id);
     if (this.turn !== i || this.phase !== 'play') return;
@@ -252,11 +274,11 @@ export class SamLocGame {
   }
 
   // ---------- Kết thúc ----------
-  _finish(winner: any, type: any, detail: any = null) {
+  _finish(winner: number, type: SamResult['type'], detail: string | null = null) {
     const n = this.players.length;
     const scores = Array(n).fill(0);
     const lines = Array.from({ length: n }, () => [] as {amount: number; reason: string; with: number}[]);
-    const pay = (from: any, to: any, amount: any, reason: any) => {
+    const pay = (from: number, to: number, amount: number, reason: string) => {
       scores[from] -= amount;
       scores[to] += amount;
       lines[from].push({ amount: -amount, reason, with: to });
@@ -282,13 +304,13 @@ export class SamLocGame {
     for (const b of this.bonuses) pay(b.from, b.to, b.amount, b.reason);
     this.phase = 'done';
     this.turn = -1;
-    const TYPE_VI: Record<string, any> = { normal: 'Về nhất', sam: 'Sâm thành công', samFail: `${this.samBy >= 0 ? this.players[this.samBy].name : ''} bị chặn Sâm`, toiTrang: `Tới trắng: ${detail}` };
+    const TYPE_VI: Record<string, string> = { normal: 'Về nhất', sam: 'Sâm thành công', samFail: `${this.samBy >= 0 ? this.players[this.samBy].name : ''} bị chặn Sâm`, toiTrang: `Tới trắng: ${detail}` };
     // Khi đền Sâm, người "thắng" ván là người chặn; người thua là người báo Sâm
     this.result = { winner, type, text: TYPE_VI[type], scores, lines, samBy: this.samBy };
     this.log.push(`Kết thúc — ${this.players[winner].name}: ${TYPE_VI[type]}`);
   }
 
-  view(viewerId: any) {
+  view(viewerId: string) {
     const me = this.indexOf(viewerId);
     const reveal = !!this.result;
     return {
@@ -298,11 +320,11 @@ export class SamLocGame {
       leader: this.leader,
       samBy: this.samBy,
       samDecided: [...this.samDecided],
-      players: this.players.map((p: any, i: any) => ({
+      players: this.players.map((p, i) => ({
         id: p.id, name: p.name, count: p.hand.length, played: p.played, passed: p.passed,
         hand: i === me || reveal ? p.hand : null,
       })),
-      lastPlay: this.lastPlay && { by: this.lastPlay.by, type: this.lastPlay.combo.type, cards: this.lastPlay.combo.cards },
+      lastPlay: this.lastPlay && { by: this.lastPlay!.by, type: this.lastPlay.combo.type, cards: this.lastPlay.combo.cards },
       log: this.log.slice(-30),
       result: this.result,
     };

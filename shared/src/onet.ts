@@ -1,3 +1,19 @@
+export type Cell = [number, number];
+interface SearchNode {
+  r: number;
+  c: number;
+  d: number;
+  dist: number;
+  turns?: number;
+  from: SearchNode | null;
+}
+
+export interface OnetOptions {
+  gravity?: boolean;
+  shift?: string;
+  rand?: () => number;
+}
+
 // Nối thú (kiểu "Pikachu" / Onet): chọn hai ô cùng hình, nối được bằng đường gấp khúc
 // tối đa 3 đoạn thẳng (≤ 2 lần rẽ), đi qua ô trống hoặc vòng ra ngoài viền bàn.
 // Bàn là mảng 2 chiều grid[r][c]: 0 = trống, 1..n = loại hình.
@@ -41,7 +57,7 @@ export function createBoard(rows: number, cols: number, seed: number, kinds = TI
   const k = Math.min(kinds, pairs);
   // Chọn ngẫu nhiên k loại trong bộ hình để mỗi ván trông khác nhau
   const pick = shuffleArr(Array.from({ length: kinds }, (_, i) => i + 1), rand).slice(0, k);
-  const tiles: any[] = [];
+  const tiles: number[] = [];
   for (let i = 0; i < pairs; i++) tiles.push(pick[i % k], pick[i % k]);
   shuffleArr(tiles, rand);
   const grid = Array.from({ length: rows }, (_, r) => tiles.slice(r * cols, (r + 1) * cols));
@@ -55,7 +71,7 @@ const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
  * Trả về các điểm gãy [[r,c], ...] từ a tới b (có thể nằm ngoài bàn: hàng -1/rows, cột -1/cols),
  * hoặc null nếu không nối được. Ưu tiên ít lần rẽ rồi đến đường ngắn.
  */
-export function findPath(grid: number[][], a: any, b: any) {
+export function findPath(grid: number[][], a: readonly number[], b: readonly number[]) {
   const rows = grid.length, cols = grid[0].length;
   const [ar, ac] = a, [br, bc] = b;
   if (!inside(grid, ar, ac) || !inside(grid, br, bc)) return null;
@@ -65,13 +81,13 @@ export function findPath(grid: number[][], a: any, b: any) {
   // BFS theo số lần rẽ trên bàn có viền 1 ô bao quanh
   const W = cols + 2;
   const key = (r: number, c: number) => (r + 1) * W + (c + 1);
-  const best = new Map(); // key*4+dir -> {turns, dist}
-  const prev = new Map();
-  let layer: any[] = [];
+  const best = new Map<number, {turns: number; dist: number}>(); // key*4+dir -> {turns, dist}
+  const prev = new Map<number, Omit<SearchNode, 'd'>>();
+  let layer: SearchNode[] = [];
   for (let d = 0; d < 4; d++) layer.push({ r: ar, c: ac, d, turns: 0, dist: 0, from: null });
-  let found: any = null;
+  let found: SearchNode | null = null;
   for (let turns = 0; turns <= 2 && !found; turns++) {
-    const next: any[] = [];
+    const next: SearchNode[] = [];
     for (const s of layer) {
       const [dr, dc] = DIRS[s.d];
       let r = s.r + dr, c = s.c + dc, dist = s.dist;
@@ -97,7 +113,7 @@ export function findPath(grid: number[][], a: any, b: any) {
   }
   if (!found) return null;
   // Dựng lại các điểm gãy: mỗi trạng thái bắt đầu một đoạn thẳng từ (r,c) của nó
-  const pts = [[br, bc]];
+  const pts: Cell[] = [[br, bc]];
   for (let s = found.from; s; s = s.from) {
     const last = pts[pts.length - 1];
     if (last[0] !== s.r || last[1] !== s.c) pts.push([s.r, s.c]);
@@ -107,11 +123,11 @@ export function findPath(grid: number[][], a: any, b: any) {
 
 /** Một cặp nối được bất kỳ ([a, b]) hoặc null nếu bế tắc. */
 export function findMove(grid: number[][]) {
-  const byKind = new Map();
+  const byKind = new Map<number, Cell[]>();
   grid.forEach((row, r) => row.forEach((v, c) => {
     if (!v) return;
     if (!byKind.has(v)) byKind.set(v, []);
-    byKind.get(v).push([r, c]);
+    byKind.get(v)!.push([r, c]);
   }));
   for (const cells of byKind.values()) {
     for (let i = 0; i < cells.length; i++) {
@@ -126,9 +142,9 @@ export function findMove(grid: number[][]) {
 export const remaining = (grid: number[][]) => grid.reduce((n, row) => n + row.filter(Boolean).length, 0);
 
 /** Xáo lại các hình còn lại (giữ nguyên vị trí ô trống). Trả về bàn mới. */
-export function shuffleBoard(grid: number[][], rand: any) {
-  const cells: any[] = [];
-  const vals: any[] = [];
+export function shuffleBoard(grid: number[][], rand: () => number) {
+  const cells: Cell[] = [];
+  const vals: number[] = [];
   grid.forEach((row, r) => row.forEach((v, c) => { if (v) { cells.push([r, c]); vals.push(v); } }));
   const g = grid.map((row) => row.slice());
   shuffleArr(vals, rand);
@@ -137,7 +153,7 @@ export function shuffleBoard(grid: number[][], rand: any) {
 }
 
 /** Xáo cho tới khi có nước đi (bàn trống thì giữ nguyên). */
-export function ensureMove(grid: number[][], rand: any) {
+export function ensureMove(grid: number[][], rand: () => number) {
   let g = grid;
   for (let tries = 0; remaining(g) && !findMove(g) && tries < 200; tries++) g = shuffleBoard(g, rand);
   if (remaining(g) && !findMove(g)) g = forceAdjacentPair(g);
@@ -169,9 +185,9 @@ function forceAdjacentPair(grid: number[][]) {
 }
 
 /** Dồn các ô khác 0 của một dãy về đầu (toStart) hoặc cuối dãy. */
-const compact = (line: any, toStart: any) => {
+const compact = (line: number[], toStart: boolean) => {
   const vals = line.filter(Boolean);
-  const pad = Array(line.length - vals.length).fill(0);
+  const pad = Array<number>(line.length - vals.length).fill(0);
   return toStart ? [...vals, ...pad] : [...pad, ...vals];
 };
 
@@ -182,18 +198,18 @@ const compact = (line: any, toStart: any) => {
 export const SHIFTS = ['none', 'down', 'left', 'up', 'right', 'vin', 'hin', 'vout', 'hout'];
 
 /** Dồn các hình theo kiểu `dir` (xem SHIFTS). Trả về bàn mới. */
-export function applyShift(grid: number[][], dir: any) {
+export function applyShift(grid: number[][], dir: string) {
   if (!dir || dir === 'none') return grid.map((row) => row.slice());
   const rows = grid.length, cols = grid[0].length;
   const g = grid.map((row) => row.slice());
-  const halves = (n: any, toward: any) => (line: any) => {
+  const halves = (n: number, toward: boolean) => (line: number[]) => {
     const m = Math.floor(n / 2);
     // vào giữa: nửa đầu dồn về cuối nửa, nửa sau dồn về đầu nửa; tách ra: ngược lại
     return [...compact(line.slice(0, m), !toward), ...compact(line.slice(m), toward)];
   };
-  const fns: Record<string, any> = {
-    down: (l: any) => compact(l, false), up: (l: any) => compact(l, true),
-    right: (l: any) => compact(l, false), left: (l: any) => compact(l, true),
+  const fns: Record<string, (line: number[]) => number[]> = {
+    down: (l: number[]) => compact(l, false), up: (l: number[]) => compact(l, true),
+    right: (l: number[]) => compact(l, false), left: (l: number[]) => compact(l, true),
     vin: halves(rows, true), vout: halves(rows, false),
     hin: halves(cols, true), hout: halves(cols, false),
   };
@@ -219,15 +235,15 @@ export const applyGravity = (grid: number[][]) => applyShift(grid, 'down');
  */
 export class OnetBoard {
   declare grid: number[][];
-  declare shift: any;
-  declare rand: any;
-  declare left: any;
+  declare shift: string;
+  declare rand: () => number;
+  declare left: number;
   declare pairs: number;
   declare combo: number;
   declare lastMatchAt: number;
   declare score: number;
 
-  constructor(grid: number[][], { gravity = false, shift = gravity ? 'down' : 'none', rand = Math.random }: any = {}) {
+  constructor(grid: number[][], { gravity = false, shift = gravity ? 'down' : 'none', rand = Math.random }: OnetOptions = {}) {
     this.grid = grid.map((row) => row.slice());
     this.shift = shift;
     this.rand = rand;
@@ -242,7 +258,7 @@ export class OnetBoard {
    * Nối a với b. Trả về { path, points, autoShuffled } hoặc ném lỗi.
    * Điểm: 10 mỗi cặp, cộng thêm combo nếu nối liên tiếp trong 3 giây.
    */
-  match(a: any, b: any, now = Date.now()) {
+  match(a: readonly number[], b: readonly number[], now = Date.now()) {
     const path = findPath(this.grid, a, b);
     if (!path) throw new Error('Hai ô này không nối được');
     this.grid[a[0]][a[1]] = 0;

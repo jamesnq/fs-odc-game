@@ -1,3 +1,42 @@
+export interface WordPlayer {
+  id: string;
+  name: string;
+  bot?: string | null;
+}
+
+export type ParsedWord = {text: string; syllables: string[]; keys: string[]};
+export interface WordChainPlayer extends WordPlayer {
+  bot: string | null;
+  lives: number;
+  out: boolean;
+  words: number;
+  outAt: number;
+}
+
+export interface WordEntry extends ParsedWord {
+  known: boolean | null;
+  by: string;
+  name: string;
+  ts: number;
+}
+
+export interface WordChainResult {
+  winner: string | null;
+  ranking: string[];
+  reason: 'last' | 'deadEnd';
+  word?: string;
+}
+
+export interface WordChainOptions {
+  lives?: number;
+  isValidSyllable?: ((s: string) => boolean) | null;
+  isKnownWord?: ((word: ParsedWord) => boolean) | null;
+  strict?: boolean;
+  first?: number;
+  countNext?: ((key: string, used: Set<string>) => number) | null;
+  firstMinNext?: number;
+}
+
 // Engine trò Nối từ (tiếng Việt):
 //  - Mỗi từ gồm đúng 2 âm tiết. Âm tiết đầu của từ mới phải trùng âm tiết cuối của từ trước
 //    (vd: "con mèo" → "mèo con" → "con đường").
@@ -90,18 +129,18 @@ export function makeSyllableChecker(list: readonly string[]) {
 }
 
 export class WordChainGame {
-  declare players: any;
-  declare turn: any;
-  declare chain: any;
-  declare used: any;
+  declare players: WordChainPlayer[];
+  declare turn: number;
+  declare chain: WordEntry[];
+  declare used: Set<string>;
   declare objections: Set<string>;
-  declare isValidSyllable: any;
-  declare isKnownWord: any;
-  declare strict: any;
-  declare countNext: any;
-  declare firstMinNext: any;
-  declare result: any;
-  declare outOrder: any;
+  declare isValidSyllable: WordChainOptions['isValidSyllable'];
+  declare isKnownWord: WordChainOptions['isKnownWord'];
+  declare strict: boolean;
+  declare countNext: WordChainOptions['countNext'];
+  declare firstMinNext: number;
+  declare result: WordChainResult | null;
+  declare outOrder: string[];
 
   /**
    * @param players [{ id, name }] theo thứ tự lượt
@@ -111,9 +150,9 @@ export class WordChainGame {
    *   countNext(firstKey, used): số từ trong từ điển còn nối tiếp được — bật luật "từ mở đầu không quá khó"
    *     (ít nhất firstMinNext từ nối tiếp) và "nối từ cụt thì thắng luôn"
    */
-  constructor(players: any, { lives = 1, isValidSyllable = null, isKnownWord = null, strict = false, first = 0, countNext = null, firstMinNext = FIRST_MIN_NEXT }: any = {}) {
+  constructor(players: readonly WordPlayer[], { lives = 1, isValidSyllable = null, isKnownWord = null, strict = false, first = 0, countNext = null, firstMinNext = FIRST_MIN_NEXT }: WordChainOptions = {}) {
     if (players.length < 2) throw new Error('Cần ít nhất 2 người chơi');
-    this.players = players.map((p: any) => ({ id: p.id, name: p.name, bot: p.bot || null, lives, out: false, words: 0, outAt: 0 }));
+    this.players = players.map((p) => ({ id: p.id, name: p.name, bot: p.bot || null, lives, out: false, words: 0, outAt: 0 }));
     this.turn = Number.isInteger(first) && first >= 0 && first < players.length ? first : 0;
     this.chain = []; // { text, syllables, keys, by, name, ts }
     this.used = new Set(); // khóa của các từ đã dùng
@@ -129,12 +168,12 @@ export class WordChainGame {
 
   get current() { return this.players[this.turn]; }
   get last() { return this.chain[this.chain.length - 1] || null; }
-  get active() { return this.players.filter((p: any) => !p.out); }
+  get active() { return this.players.filter((p) => !p.out); }
   /** Âm tiết từ mới phải bắt đầu bằng (null nếu là từ đầu tiên). */
   get required() { return this.last ? this.last.syllables[WORD_SYLLABLES - 1] : null; }
-  indexOf(id: any) { return this.players.findIndex((p: any) => p.id === id); }
+  indexOf(id: string) { return this.players.findIndex((p) => p.id === id); }
 
-  submit(id: any, input: any) {
+  submit(id: string, input: unknown) {
     if (this.result) throw new Error('Ván đã kết thúc');
     if (this.current.id !== id) throw new Error('Chưa tới lượt bạn');
     const w = parseWord(input);
@@ -142,7 +181,8 @@ export class WordChainGame {
       throw new Error(`Từ phải bắt đầu bằng "${this.required}"`);
     }
     if (this.isValidSyllable) {
-      const bad = w.syllables.find((s) => !this.isValidSyllable(s));
+      const isValidSyllable = this.isValidSyllable;
+      const bad = w.syllables.find((s) => !isValidSyllable(s));
       if (bad) throw new Error(`"${bad}" không có trong từ điển tiếng Việt`);
     }
     // Từ ghép phải có trong từ điển (chế độ chặt); chế độ thoáng chỉ gắn cờ để mọi người dễ phản đối
@@ -162,7 +202,7 @@ export class WordChainGame {
     this.objections = new Set();
     // Nối từ (có trong từ điển) mà không còn từ nào nối tiếp được → thắng luôn
     if (next === 0 && known !== false) {
-      const others: unknown[] = [];
+      const others: string[] = [];
       const n = this.players.length;
       for (let k = 1; k < n; k++) {
         const p = this.players[(this.turn + k) % n];
@@ -176,7 +216,7 @@ export class WordChainGame {
   }
 
   /** Người chơi khác phản đối từ vừa nối. Trả về true nếu từ bị gỡ. */
-  object(id: any) {
+  object(id: string) {
     if (this.result) throw new Error('Ván đã kết thúc');
     const last = this.last;
     if (!last) throw new Error('Chưa có từ nào để phản đối');
@@ -196,12 +236,12 @@ export class WordChainGame {
   /** Số phiếu phản đối cần để gỡ từ: quá nửa số người còn lại (trừ người nối từ đó và máy — máy không bỏ phiếu). */
   objectionsNeeded() {
     const last = this.last;
-    const voters = this.active.filter((p: any) => !p.bot && (!last || p.id !== last.by)).length;
+    const voters = this.active.filter((p) => !p.bot && (!last || p.id !== last.by)).length;
     return Math.floor(voters / 2) + 1;
   }
 
   _revoke() {
-    const w = this.chain.pop();
+    const w = this.chain.pop()!;
     this.used.delete(w.keys.join(' '));
     this.objections = new Set();
     const i = this.indexOf(w.by);
@@ -217,13 +257,13 @@ export class WordChainGame {
   }
 
   /** Bỏ cuộc / rời bàn: bị loại ngay. */
-  eliminate(id: any) {
+  eliminate(id: string) {
     const p = this.players[this.indexOf(id)];
     if (!p || p.out || this.result) return;
     this._loseLife(p, true);
   }
 
-  _loseLife(p: any, all: any) {
+  _loseLife(p: WordChainPlayer, all: boolean) {
     const wasTurn = this.current === p;
     p.lives = all ? 0 : p.lives - 1;
     if (p.lives <= 0) {

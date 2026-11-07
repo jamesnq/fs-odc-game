@@ -86,7 +86,7 @@ export function createGame(): ChessState {
     enPassant: null, // chỉ số ô mục tiêu bắt qua đường (ví dụ tốt trắng đi e2->e4 thì enPassant là ô e3)
     halfMoveClock: 0,
     fullMoveNumber: 1,
-    history: [] as any[],
+    history: [],
     positionCounts: {},
     result: null,
   };
@@ -402,7 +402,7 @@ export function hasAnyLegalMove(state: ChessPosition) {
 
 /** Kiểm tra hòa do không đủ quân chiếu bí (K vs K, K+B vs K, K+N vs K, K+B vs K+B cùng màu ô) */
 export function isInsufficientMaterial(board: string[]) {
-  const pieces: any[] = [];
+  const pieces: { p: string; color: ReturnType<typeof colorOf>; type: ReturnType<typeof typeOf>; idx: number }[] = [];
   for (let i = 0; i < board.length; i++) {
     const p = board[i];
     if (p !== '.') pieces.push({ p, color: colorOf(p), type: typeOf(p), idx: i });
@@ -593,7 +593,7 @@ export function makeMove(state: ChessState, from: number, to: number, promotion:
     enPassant: nextEnPassant,
     halfMoveClock,
     fullMoveNumber,
-    history: [] as any[],
+    history: [],
     positionCounts: { ...state.positionCounts },
     result: null,
   };

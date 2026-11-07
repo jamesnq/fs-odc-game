@@ -17,7 +17,7 @@ export const other = (c: string) => (c === 'x' ? 'o' : 'x');
 
 export function createGame({ size = 15, blockTwoEnds = true }: {size?: number; blockTwoEnds?: boolean} = {}): CaroState {
   const n = Math.min(MAX_SIZE, Math.max(MIN_SIZE, Math.floor(Number(size)) || 15));
-  return { size: n, blockTwoEnds: !!blockTwoEnds, board: Array(n * n).fill('.'), turn: 'x', history: [] as any[] };
+  return { size: n, blockTwoEnds: !!blockTwoEnds, board: Array(n * n).fill('.'), turn: 'x', history: [] };
 }
 
 const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
@@ -80,4 +80,4 @@ const LETTERS = 'ABCDEFGHJKLMNOPQRSTU';
 export function coord(size: number, i: number) {
   return LETTERS[i % size] + (size - Math.floor(i / size));
 }
-export const colLabel = (c: any) => LETTERS[c];
+export const colLabel = (c: number) => LETTERS[c];
