@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { classify, beats, instantWin, SamLocGame, SAM_RULES, valueOf } from '../src/samloc.js';
 
-const t = (s: any) => s.split(' ');
-const C = (s: any) => classify(t(s));
+const t = (s: string) => s.split(' ');
+const C = (s: string) => classify(t(s));
 
 test('phân loại bộ bài', () => {
   assert.equal(C('2S')!.top, 15);
@@ -47,11 +47,11 @@ test('tới trắng', () => {
 });
 
 /** Tạo ván với bài chỉ định: hands[i] là 10 lá của người i, phần còn lại của bộ bài bỏ vào cuối. */
-function rigged(hands: any, leader = 0) {
+function rigged(hands: string[], leader = 0) {
   const all = hands.flatMap(t);
   const deck = [...all];
   for (const s of 'SCDH') for (const r of 'A23456789TJQK') if (!all.includes(r + s)) deck.push(r + s);
-  const players = hands.map((_: any, i: any) => ({ id: 'p' + i, name: 'P' + i }));
+  const players = hands.map((_, i) => ({ id: 'p' + i, name: 'P' + i }));
   return new SamLocGame(players, leader, deck);
 }
 
@@ -105,12 +105,12 @@ test('kết thúc thường: trả theo số lá, cóng, thối heo, chặt heo'
   g.pass('p1');
   assert.equal(g.turn, 0, 'p2 đã bỏ vòng này → p0 đi vòng mới');
   g.play('p0', t('5H 6D 7C 8S 9H'));
-  const r: any = g.result;
+  const r = (g as SamLocGame).result;
   assert.equal(r!.winner, 0);
   assert.equal(r!.type, 'normal');
   // p1: 9 lá + bị chặt heo 10 = 19; p2: cóng 20 + thối 2 heo × 5 = 30
   assert.deepEqual(r!.scores, [49, -19, -30]);
-  assert.equal(r!.scores.reduce((a: any, b: any) => a + b, 0), 0);
+  assert.equal(r!.scores.reduce((a, b) => a + b, 0), 0);
   assert.ok(g.view('p2').players[0].hand, 'kết thúc thì lật bài mọi người');
 });
 

@@ -5,10 +5,14 @@ import { Lobby } from '../src/lobby.js';
 import { BotPool } from '../src/botPool.js';
 import { createGame, makeMove } from '@game/shared/caro';
 import { LIMITS } from '../src/config.js';
+import type { RoomState, RoomSummary } from '@game/shared/contracts';
+
+/** Sự kiện phát ra qua io giả; `data` là payload của sự kiện tương ứng. */
+interface Emitted { target: string | string[]; event: string; data: unknown }
 
 function setup(t: import('node:test').TestContext) {
-  const events: any[] = [];
-  const io = { to: (target: any) => ({ emit: (event: any, data: any) => events.push({ target, event, data }) }) };
+  const events: Emitted[] = [];
+  const io = { to: (target: string | string[]) => ({ emit: (event: string, data: unknown) => events.push({ target, event, data }) }) };
   const lobby = new Lobby(io as unknown as ConstructorParameters<typeof Lobby>[0]);
   const owner = lobby.createUser('Owner', 'default');
   owner.sockets.add('owner-socket');
@@ -28,14 +32,14 @@ test('gameplay and chat do not rebroadcast unchanged lobby lists; private views 
   room.changed();
   await wait(130);
   assert.equal(events.filter((e) => e.event.startsWith('lobby:')).length, 0);
-  const views = events.filter((e) => e.event === 'room:state');
+  const views = events.filter((e) => e.event === 'room:state').map((e) => e.data as RoomState);
   assert.equal(views.length, 2);
-  assert.equal(views[0].data.state.myColor, 'x');
-  assert.equal(views[1].data.state.myColor, null);
+  assert.equal(views[0].game === 'caro' && views[0].state.myColor, 'x');
+  assert.equal(views[1].game === 'caro' && views[1].state.myColor, null);
   room.name = 'Renamed';
   room.changed();
   await wait(130);
-  assert.ok(events.some((e) => e.event === 'lobby:rooms' && e.data[0].name === 'Renamed'));
+  assert.ok(events.some((e) => e.event === 'lobby:rooms' && (e.data as RoomSummary[])[0].name === 'Renamed'));
   assert.ok(events.some((e) => e.event === 'lobby:online'));
 });
 

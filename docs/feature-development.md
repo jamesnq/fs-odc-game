@@ -26,11 +26,11 @@
 ## Ví dụ: thêm một game
 
 1. Thêm engine TS trong `shared/src/`, type options/state/action rõ ràng, PRNG có seed/state khi cần replay hoặc recovery. Unit test luật, input sai, kết thúc ván và determinism; thêm export ESM `types`/`import` vào `shared/package.json`.
-2. Thêm game action/query/view contract dùng chung. Tên action phân biệt bằng `type`, không mở rộng bằng index signature `any`.
-3. Thêm handler trong `server/src/games/` theo API registry: `options`, `maxPlayers`, `playerIds`, `isPlaying`, `sit`, `stand`, `onLeave`, `rename`, `action`, `view`, `dispose`; query/stream chỉ nếu cần. Kiểm tra quyền/người chơi/tần suất ở boundary và quyền từng action trong handler.
+2. Thêm game action/query contract dùng chung trong `contracts.ts` và kiểu view trong `shared/src/views.ts` (thêm vào `GameViews`). Tên action phân biệt bằng `type`, không mở rộng bằng index signature `any`.
+3. Thêm handler trong `server/src/games/` theo interface `GameHandler` (`server/src/games/types.ts`): `options`, `maxPlayers`, `playerIds`, `isPlaying`, `sit`, `stand`, `onLeave`, `rename`, `action`, `view(): XView`, `dispose`; query/stream chỉ nếu cần. Kiểm tra quyền/người chơi/tần suất ở boundary và quyền từng action trong handler.
 4. Đăng ký `GAMES` trong `server/src/games/index.ts`. View chỉ chứa dữ liệu người xem được phép biết; score do server xác minh. Với client simulation như Rắn, server replay inputs thay vì tin điểm client.
-5. Đăng ký prototype engine vào `snapshot.ts` nếu dùng class; handler registry được lấy từ `GAMES`. Thêm khôi phục timer trong `resumeRoom.ts` bằng absolute deadline. Không gọi constructor/start để khôi phục vì sẽ chia lại bài/đổi đáp án. Runtime handles và back-reference được rebuild.
-6. Thêm UI trong `client/src/games/`; đăng ký ở `RoomView.tsx`, `Lobby.tsx` (metadata/group), `CreateRoomDialog.tsx` (options) và `Turn.tsx` nếu cần chỉ báo lượt. Tái sử dụng StartBar, GameInfo, GameOverDialog, hotkeys và voice shell.
+5. Đăng ký prototype engine vào `snapshot.ts` nếu dùng class; handler registry được lấy từ `GAMES`. Thêm khôi phục timer trong `resumeRoom.ts` bằng absolute deadline (nhánh `instanceof` của handler mới). Không gọi constructor/start để khôi phục vì sẽ chia lại bài/đổi đáp án. Runtime handles và back-reference được rebuild.
+6. Thêm UI trong `client/src/games/` với props `{ room: ClientRoom; state: XView }`; đăng ký ở `GameScreen` trong `RoomView.tsx`, `Lobby.tsx` (metadata/group), `CreateRoomDialog.tsx` (options) và `Turn.tsx` nếu cần chỉ báo lượt. Tái sử dụng StartBar, GameInfo, GameOverDialog, hotkeys và voice shell.
 7. Thêm integration test flow tạo/vào/ready/start/action/watch/leave; snapshot recovery test cho game mới. Nếu thêm worker hoặc shard flow, chạy tests tương ứng. Cập nhật README/architecture khi thiết kế đổi.
 
 ## Phân biệt các lớp kiểm thử

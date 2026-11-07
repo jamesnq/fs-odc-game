@@ -6,6 +6,9 @@ import { setTimeout as wait } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { io } from 'socket.io-client';
 import { createClient } from 'redis';
+import { request, send } from './socketClient.js';
+import type { TestSocket } from './socketClient.js';
+import type { RoomState } from '@game/shared/contracts';
 
 test('two real nodes route rooms and recover a committed move after owner crash', { skip: !process.env.TEST_REDIS_URL, timeout: 60_000 }, async (t) => {
   const namespace = `integration:${process.pid}:${Date.now()}`;
@@ -44,15 +47,12 @@ test('two real nodes route rooms and recover a committed move after owner crash'
     throw new Error(`Node ${id} did not become ready: ${output}`);
   }
   async function connect(id: keyof typeof ports) {
-    const socket = io(`http://localhost:${ports[id]}`, { transports: ['websocket'], reconnection: false, auth: { password: 'integration-only' } }) as import('socket.io-client').Socket & {latest?: import('@game/shared/contracts').RoomState};
+    const socket: TestSocket & {latest?: RoomState} = io(`http://localhost:${ports[id]}`, { transports: ['websocket'], reconnection: false, auth: { password: 'integration-only' } });
     sockets.push(socket);
     socket.on('room:state', (state) => { socket.latest = state; });
     await new Promise<void>((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
     return socket;
   }
-  const request = (socket: any, event: any, payload = {}) => new Promise<Record<string, any>>((resolve, reject) => {
-    socket.timeout(5000).emit(event, payload, (error: any, result: any) => error || !result?.ok ? reject(error || new Error(result?.error)) : resolve(result));
-  });
   const a = await start('a');
   await start('b');
   await wait(2200);
@@ -62,8 +62,8 @@ test('two real nodes route rooms and recover a committed move after owner crash'
   const guest = await connect('b');
   const guestIdentity = await request(guest, 'hello', { name: 'Guest' });
   await wait(2200);
-  const redirect = await request(guest, 'room:join', { roomId, mode: 'play' });
-  assert.equal(redirect.redirect.nodeId, 'a');
+  const redirect = await send(guest, 'room:join', { roomId, mode: 'play' });
+  assert.equal(redirect.redirect?.nodeId, 'a');
   guest.disconnect();
   const player = await connect('a');
   await request(player, 'hello', { token: guestIdentity.token });

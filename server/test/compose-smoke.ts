@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import { io } from 'socket.io-client';
+import { request, send } from './socketClient.js';
+import type { TestSocket } from './socketClient.js';
 
 const url = process.argv[2] || 'http://127.0.0.1:3001';
-const sockets: import('socket.io-client').Socket[] & {roomId?: string} = [];
+const sockets: TestSocket[] = [];
 const connect = async (node?: string) => {
-  const socket = io(url, { path: node ? `/nodes/${node}/socket.io` : '/socket.io',
+  const socket: TestSocket = io(url, { path: node ? `/nodes/${node}/socket.io` : '/socket.io',
     transports: ['websocket'], reconnection: false, auth: { password: process.env.APP_PASSWORD } });
   sockets.push(socket);
   await new Promise<void>((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
   return socket;
 };
-const request = (socket: import('socket.io-client').Socket, event: string, payload = {}) => new Promise<Record<string, any>>((resolve, reject) => {
-  socket.timeout(5000).emit(event, payload, (error: any, result: any) => error || !result?.ok ? reject(error || new Error(result?.error)) : resolve(result));
-});
 try {
   const owner = await connect();
   await request(owner, 'hello', { name: 'Compose owner' });
@@ -21,8 +20,8 @@ try {
   const guest = await connect('b');
   const identity = await request(guest, 'hello', { name: 'Compose guest' });
   await new Promise((resolve) => setTimeout(resolve, 2500));
-  const result = await request(guest, 'room:join', { roomId, mode: 'play' });
-  assert.equal(result.redirect.nodeId, 'a');
+  const result = await send(guest, 'room:join', { roomId, mode: 'play' });
+  assert.equal(result.redirect?.nodeId, 'a');
   guest.disconnect();
   const player = await connect('a');
   await request(player, 'hello', { token: identity.token });

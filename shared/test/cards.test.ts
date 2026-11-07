@@ -28,7 +28,7 @@ test('shuffle: mọi hoán vị có xác suất như nhau (kiểm định chi b�
   }
   assert.equal(counts.size, 24);
   const expected = N / 24;
-  const chi2 = [...counts.values()].reduce((a: any, c: any) => a + (c - expected) ** 2 / expected, 0);
+  const chi2 = [...counts.values()].reduce((a, c) => a + (c - expected) ** 2 / expected, 0);
   // 23 bậc tự do: ngưỡng p = 0.001 là 49.7 → xác suất test lỗi oan ≈ 0.1%
   assert.ok(chi2 < 49.7, `chi2 = ${chi2.toFixed(1)}`);
 });
@@ -42,7 +42,7 @@ test('shuffle: mỗi lá có xác suất như nhau ở vị trí chia đầu ti�
   }
   assert.equal(counts.size, 52);
   const expected = N / 52;
-  const chi2 = [...counts.values()].reduce((a: any, c: any) => a + (c - expected) ** 2 / expected, 0);
+  const chi2 = [...counts.values()].reduce((a, c) => a + (c - expected) ** 2 / expected, 0);
   // 51 bậc tự do: ngưỡng p = 0.001 là 87.0
   assert.ok(chi2 < 87, `chi2 = ${chi2.toFixed(1)}`);
 });

@@ -3,39 +3,43 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { transformSync } from 'esbuild';
+import type { AppContextValue } from '../../client/src/store.js';
+
+type Handler = (payload?: unknown) => unknown;
+type Provider = (props: { children: null }) => { props: { value: AppContextValue } };
 
 function appHarness({ restoredRoom = null, joinFails = false }: {restoredRoom?: string | null; joinFails?: boolean} = {}) {
-  const handlers = new Map();
-  const values: any[] = [];
+  const handlers = new Map<string, Handler>();
+  const values: unknown[] = [];
   let cursor = 0;
   let mounted = false;
-  const calls: any[] = [];
+  const calls: string[] = [];
   const room = { id: 'old-room', state: {} };
   const location = { hash: '#/room/old-room' };
-  const context: Record<string, any> = {
+  const context: Record<string, unknown> = {
     createContext: () => ({ Provider: 'provider' }),
     useContext() {},
-    useState(initial: any) {
+    useState(initial: unknown) {
       const i = cursor++;
       if (!mounted) values[i] = initial;
-      return [values[i], (next: any) => { values[i] = typeof next === 'function' ? next(values[i]) : next; }];
+      return [values[i], (next: unknown) => { values[i] = typeof next === 'function' ? next(values[i]) : next; }];
     },
-    useRef(initial: any) {
+    useRef(initial: unknown) {
       const i = cursor++;
       if (!mounted) values[i] = { current: initial };
       return values[i];
     },
-    useCallback: (f: any) => f,
-    useMemo: (f: any) => f(),
-    useEffect: (f: any) => { if (!mounted) f(); },
-    h: (type: any, props: any, ...children: any[]) => ({ type, props, children }),
-    socket: { on: (event: any, f: any) => handlers.set(event, f), off() {}, connect() {} },
-    request: async (event: any) => {
+    useCallback: <F>(f: F) => f,
+    useMemo: <T>(f: () => T) => f(),
+    useEffect: (f: () => void) => { if (!mounted) f(); },
+    h: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props, children }),
+    socket: { on: (event: string, f: Handler) => handlers.set(event, f), off() {}, connect() {} },
+    request: async (event: string) => {
       calls.push(event);
       if (event === 'hello') return { server: { id: 'server' }, user: { id: 'new-user', name: 'An' }, roomId: restoredRoom, rooms: [] };
       if (event === 'room:join') {
         if (joinFails) throw new Error('Phòng không tồn tại');
-        handlers.get('room:state')(room);
+        handlers.get('room:state')?.(room);
       }
       return {};
     },
@@ -47,11 +51,13 @@ function appHarness({ restoredRoom = null, joinFails = false }: {restoredRoom?: 
     .replace(/^import .*;\r?\n/gm, '').replace(/export /g, '');
   source = transformSync(source, { loader: 'tsx', jsxFactory: 'h', target: 'es2022' }).code;
   vm.runInNewContext(`${source}\nthis.provider = AppProvider;`, context);
-  const render = () => { cursor = 0; const node = context.provider({ children: null }); mounted = true; return node.props.value; };
+  const render = () => { cursor = 0; const node = (context.provider as Provider)({ children: null }); mounted = true; return node.props.value; };
   render();
-  handlers.get('room:state')(room);
+  const onState = handlers.get('room:state');
+  assert.ok(onState, 'AppProvider phải lắng nghe room:state');
+  onState(room);
   const before = render();
-  assert.equal(before.room.id, 'old-room');
+  assert.equal(before.room?.id, 'old-room');
   return { render, before, location, calls, room };
 }
 
@@ -66,13 +72,13 @@ test('server restart: missing room returns to lobby instead of leaving stale gam
 test('reconnect to live room retains state and does not rejoin', async () => {
   const h = appHarness({ restoredRoom: 'old-room' });
   await h.before.hello();
-  assert.equal(h.render().room.id, 'old-room');
+  assert.equal(h.render().room?.id, 'old-room');
   assert.deepEqual(h.calls, ['hello']);
 });
 
 test('successful URL join keeps newly received room state', async () => {
   const h = appHarness();
   await h.before.hello();
-  assert.equal(h.render().room.id, 'old-room');
+  assert.equal(h.render().room?.id, 'old-room');
   assert.deepEqual(h.calls, ['hello', 'room:join']);
 });

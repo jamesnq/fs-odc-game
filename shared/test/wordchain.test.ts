@@ -99,7 +99,7 @@ test('từ điển từ ghép: chế độ chặt chặn từ vô nghĩa, chế 
   loose.submit('a', 'học tập');
   loose.submit('b', 'tập tành');
   loose.submit('c', 'tành mui');
-  assert.deepEqual(loose.chain.map((w: any) => w.known), [true, true, false], 'từ lạ được gắn cờ');
+  assert.deepEqual(loose.chain.map((w) => w.known), [true, true, false], 'từ lạ được gắn cờ');
 });
 
 test('từ điển có chỉ mục: bỏ mục không phải tiếng Việt, đếm từ nối tiếp', () => {

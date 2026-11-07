@@ -56,7 +56,7 @@ sequenceDiagram
   L-->>C: room:state with viewFor(userId)
 ```
 
-Wire events/payloads/acks nằm ở `shared/src/contracts.ts`; compiler kiểm tra hai chiều và negative type tests. Request không đáng tin dù có kiểu ở client; validation runtime vẫn bắt buộc. Một số game state/view/React context cũ còn explicit `any`, được ratchet theo file, chưa phải fully typed end-to-end.
+Wire events/payloads/acks nằm ở `shared/src/contracts.ts`; compiler kiểm tra hai chiều và negative type tests. View của từng game nằm ở `shared/src/views.ts`: handler server khai báo `view(): XView`, `RoomState` là union phân biệt theo `game` nên client thu hẹp `room.state` bằng `switch (room.game)`, và kết quả `game:query` có kiểu theo loại truy vấn. Request không đáng tin dù có kiểu ở client; validation runtime vẫn bắt buộc.
 
 Room xây phần public envelope một lần cho mỗi thay đổi, nhưng gọi `handler.view(uid)` riêng cho từng người. Private cards/secret word không đi vào shared public envelope. `changed()` gộp trong microtask; lobby broadcast gộp 100 ms và chỉ gửi room list/presence khi summary hoặc membership liên quan đổi. Drawing stream dùng đường riêng để không phát lại toàn room cho mỗi nét.
 

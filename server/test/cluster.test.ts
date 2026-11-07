@@ -63,8 +63,8 @@ test('lease renewal proceeds while a metadata tick is blocked on identity storag
 
 test('duplicate shard owners are rejected by Redis; identities and transfer use compare-and-set', { skip: !process.env.TEST_REDIS_URL }, async (t) => {
   const namespace = `test:${Date.now()}:${process.pid}`;
-  const make = (id: any) => new Cluster({ url: process.env.TEST_REDIS_URL!, nodeId: id, nodes: ['a', 'b'], namespace });
-  const lobby = () => ({ rooms: new Map(), users: new Map(), localOnlineList: () => [], broadcast() {}, leave(user: any) { user.roomId = null; } });
+  const make = (id: string) => new Cluster({ url: process.env.TEST_REDIS_URL!, nodeId: id, nodes: ['a', 'b'], namespace });
+  const lobby = () => ({ rooms: new Map(), users: new Map(), localOnlineList: () => [], broadcast() {}, leave(user: { roomId: string | null }) { user.roomId = null; } });
   const a = make('a'), b = make('b'), duplicate = make('a');
   t.after(async () => { for (const node of [duplicate, b, a]) await node.close(); });
   await a.start(lobby() as unknown as import('../src/lobby.js').Lobby);

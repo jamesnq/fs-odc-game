@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseWord } from '@game/shared/wordchain';
 import { isKnownWord, isValidSyllable } from '../src/games/wordchain.js';
 
-const known = (w: any) => isKnownWord(parseWord(w));
+const known = (w: string) => isKnownWord(parseWord(w));
 
 test('loaded syllable dictionary accepts common Vietnamese syllables on LF and CRLF checkouts', () => {
   for (const syllable of ['con', 'mèo', 'cây', 'học', 'nhà']) assert.ok(isValidSyllable(syllable), syllable);
