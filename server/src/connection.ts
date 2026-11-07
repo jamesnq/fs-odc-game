@@ -7,6 +7,10 @@ import { GAMES, isGame } from './games/index.js';
 import { cleanSignal } from './voice.js';
 import type { GameSocket } from './socketTypes.js';
 import type { ClientToServerEvents, RequestEvent, Requests, Response, RouteRedirect } from '@game/shared/contracts';
+import type { User } from './lobby.js';
+
+type RateKind = 'chat' | 'create' | 'signal' | 'draw';
+type HandlerResult<E extends RequestEvent> = Response<E> | RouteRedirect | void | Promise<Response<E> | RouteRedirect | void>;
 
 const newUsersByIp = new WindowCounter(3600_000);
 const isPlainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -20,13 +24,12 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> => v !== null &
 export function handleConnection(socket: GameSocket, { lobby, voice, connections }: { lobby: import('./lobby.js').Lobby; voice: import('./voice.js').Voice; connections: import('./rateLimit.js').ConnectionCounter }) {
   const srv = socket.data.server;
   const ip = socket.data.ip;
-  /** @type {import('./lobby.js').User|null} */
-  let user: any = null;
+  let user: User | null = null;
   connections.inc(ip);
   socket.emit('app:version', { version: APP_VERSION });
 
   // Giới hạn tần suất theo từng loại sự kiện. Mọi sự kiện (trừ tín hiệu WebRTC) dùng chung bucket "events".
-  const buckets: Record<string, any> = {
+  const buckets = {
     events: tokenBucket(LIMITS.events),
     chat: tokenBucket(LIMITS.chat),
     create: tokenBucket(LIMITS.create),
@@ -34,7 +37,7 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
     draw: tokenBucket(LIMITS.draw),
   };
   let blocked = 0;
-  const tooFast = (kind: any) => {
+  const tooFast = (kind: RateKind | null) => {
     // Tín hiệu WebRTC và nét vẽ đến dồn dập: dùng bucket riêng, không tính vào "events"
     const ok = kind === 'signal' || kind === 'draw' ? buckets[kind]() : buckets.events() && (!kind || buckets[kind]());
     if (ok) return false;
@@ -46,7 +49,7 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
    * Đăng ký sự kiện: giới hạn tần suất, kiểm tra dữ liệu, bắt lỗi và trả kết quả qua ack.
    * @param {{ auth?: boolean, kind?: 'chat'|'create'|'signal'|'draw' }} opts auth=false: không cần đăng nhập
    */
-  const on = <E extends RequestEvent>(event: E, fn: (payload: Requests[E]) => Response<E> | RouteRedirect | void | Promise<Response<E> | RouteRedirect | void>, { auth = true, kind = null }: { auth?: boolean; kind?: 'chat'|'create'|'signal'|'draw'|null } = {}) => {
+  const register = <E extends RequestEvent>(event: E, fn: (payload: Requests[E]) => HandlerResult<E>, { auth = true, kind = null }: { auth?: boolean; kind?: RateKind | null } = {}) => {
     const listener = async (payload: unknown, ack: unknown) => {
       const reply = typeof ack === 'function' ? ack : () => {};
       try {
@@ -59,22 +62,28 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
         if (user) user.lastSeen = Date.now();
         const res = await fn((payload || {}) as Requests[E]);
         reply({ ok: true, ...res });
-      } catch (e: any) {
-        reply({ ok: false, error: e.message || 'Lỗi' });
+      } catch (e) {
+        reply({ ok: false, error: (e instanceof Error && e.message) || 'Lỗi' });
       }
     };
     // Socket.IO also accepts reserved events; registration here is restricted to our wire map.
     socket.on(event as RequestEvent, listener as ClientToServerEvents[RequestEvent]);
   };
-  const ownedRoom = (message: any) => {
-    const room = lobby.currentRoom(user);
-    if (room.ownerId !== user.id) throw new Error(message);
+  /** Sự kiện cần đăng nhập: handler nhận người dùng đã xác thực. */
+  const on = <E extends RequestEvent>(event: E, fn: (payload: Requests[E], me: User) => HandlerResult<E>, opts: { kind?: RateKind | null } = {}) =>
+    register(event, (payload) => {
+      if (!user) throw new Error('Chưa đăng nhập');
+      return fn(payload, user);
+    }, opts);
+  const ownedRoom = (me: User, message: string) => {
+    const room = lobby.currentRoom(me);
+    if (room.ownerId !== me.id) throw new Error(message);
     return room;
   };
 
   // ---------- Danh tính ----------
 
-  on('hello', async ({ token, tokens, name }) => {
+  register('hello', async ({ token, tokens, name }) => {
     // Mỗi server một danh tính riêng: tokens = { [serverId]: token }
     const identityToken = (isPlainObject(tokens) && tokens[srv.id]) || token;
     let u = lobby.findUser(identityToken, srv.id);
@@ -118,66 +127,66 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
     };
   }, { auth: false });
 
-  on('user:rename', ({ name }) => {
+  on('user:rename', ({ name }, me) => {
     const nm = cleanName(name);
     if (!nm) throw new Error('Tên không hợp lệ');
-    const old = user.name;
-    user.name = nm;
-    const room = user.roomId && lobby.rooms.get(user.roomId);
+    const old = me.name;
+    me.name = nm;
+    const room = me.roomId && lobby.rooms.get(me.roomId);
     if (room) {
-      room.handler.rename(user.id, nm);
+      room.handler.rename(me.id, nm);
       room.system(`${old} đổi tên thành ${nm}`);
       room.changed();
     }
-    lobby.broadcast(user.server);
-    return { user: { id: user.id, name: nm } };
+    lobby.broadcast(me.server);
+    return { user: { id: me.id, name: nm } };
   });
 
   // ---------- Sảnh & phòng ----------
 
-  on('lobby:list', () => ({ rooms: lobby.roomList(user.server), online: lobby.onlineList(user.server) }));
+  on('lobby:list', (_payload, me) => ({ rooms: lobby.roomList(me.server), online: lobby.onlineList(me.server) }));
 
-  on('room:create', async ({ name, game, options }) => {
+  on('room:create', async ({ name, game, options }, me) => {
     if (!isGame(game)) throw new Error('Trò chơi không hợp lệ');
     if (lobby.draining) throw new Error('Máy chủ đang cập nhật, hãy thử lại sau');
     if (lobby.cluster) {
       await lobby.cluster.tick();
       const nodeId = lobby.cluster.placement();
-      if (nodeId !== lobby.cluster.nodeId) return lobby.cluster.transfer(user, nodeId);
+      if (nodeId !== lobby.cluster.nodeId) return lobby.cluster.transfer(me, nodeId);
     }
-    const room = lobby.createRoom(user, {
-      name: cleanName(name, 40) || `Bàn ${(GAMES as Record<string, any>)[game].name} của ${user.name}`,
+    const room = lobby.createRoom(me, {
+      name: cleanName(name, 40) || `Bàn ${GAMES[game].name} của ${me.name}`,
       game,
       options: isPlainObject(options) ? options : {},
     });
-    const warning = lobby.join(user, room, 'play');
+    const warning = lobby.join(me, room, 'play');
     if (lobby.cluster) await lobby.cluster.tick();
     return { roomId: room.id, warning };
   }, { kind: 'create' });
 
-  on('room:join', async ({ roomId, mode }) => {
+  on('room:join', async ({ roomId, mode }, me) => {
     if (lobby.cluster && !lobby.rooms.has(roomId)) {
       await lobby.cluster.tick();
-      const nodeId = lobby.cluster.ownerOfRoom(roomId, user.server);
-      if (nodeId && nodeId !== lobby.cluster.nodeId) return lobby.cluster.transfer(user, nodeId);
+      const nodeId = lobby.cluster.ownerOfRoom(roomId, me.server);
+      if (nodeId && nodeId !== lobby.cluster.nodeId) return lobby.cluster.transfer(me, nodeId);
     }
-    const room = lobby.roomFor(user, roomId);
+    const room = lobby.roomFor(me, roomId);
     if (!room) throw new Error('Phòng không tồn tại');
-    const warning = lobby.join(user, room, mode === 'watch' ? 'watch' : 'play');
+    const warning = lobby.join(me, room, mode === 'watch' ? 'watch' : 'play');
     return { roomId: room.id, warning };
   });
 
-  on('room:leave', () => { lobby.leave(user); });
+  on('room:leave', (_payload, me) => { lobby.leave(me); });
 
-  on('room:delete', ({ roomId }) => {
-    const room = lobby.roomFor(user, roomId || user.roomId);
+  on('room:delete', ({ roomId }, me) => {
+    const room = lobby.roomFor(me, roomId || me.roomId);
     if (!room) throw new Error('Phòng không tồn tại');
-    if (room.ownerId !== user.id) throw new Error('Chỉ chủ phòng mới được xóa');
-    lobby.close(room, `Chủ phòng ${user.name} đã xóa phòng`);
+    if (room.ownerId !== me.id) throw new Error('Chỉ chủ phòng mới được xóa');
+    lobby.close(room, `Chủ phòng ${me.name} đã xóa phòng`);
   });
 
-  on('room:rename', ({ name }) => {
-    const room = ownedRoom('Chỉ chủ phòng mới được đổi tên');
+  on('room:rename', ({ name }, me) => {
+    const room = ownedRoom(me, 'Chỉ chủ phòng mới được đổi tên');
     const nm = cleanName(name, 40);
     if (!nm) throw new Error('Tên phòng không hợp lệ');
     room.name = nm;
@@ -185,105 +194,105 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
     room.changed();
   });
 
-  on('room:sit', ({ seat }) => {
-    const room = lobby.currentRoom(user);
-    room.handler.sit(user, seat);
-    room.system(`${user.name} ngồi vào bàn`);
+  on('room:sit', ({ seat }, me) => {
+    const room = lobby.currentRoom(me);
+    room.handler.sit(me, seat);
+    room.system(`${me.name} ngồi vào bàn`);
     room.changed();
   });
 
-  on('room:stand', () => {
-    const room = lobby.currentRoom(user);
-    room.handler.stand(user.id);
-    room.system(`${user.name} đứng dậy xem`);
+  on('room:stand', (_payload, me) => {
+    const room = lobby.currentRoom(me);
+    room.handler.stand(me.id);
+    room.system(`${me.name} đứng dậy xem`);
     room.changed();
   });
 
-  on('room:kick', ({ userId }) => {
-    const room = ownedRoom('Chỉ chủ phòng mới được mời ra');
+  on('room:kick', ({ userId }, me) => {
+    const room = ownedRoom(me, 'Chỉ chủ phòng mới được mời ra');
     const target = lobby.users.get(userId);
-    if (!target || target.roomId !== room.id || target.id === user.id) throw new Error('Không tìm thấy người chơi');
+    if (!target || target.roomId !== room.id || target.id === me.id) throw new Error('Không tìm thấy người chơi');
     lobby.toUser(target.id).emit('room:closed', { roomId: room.id, reason: 'Bạn bị chủ phòng mời ra' });
     lobby.leave(target);
   });
 
-  on('room:chat', ({ text }) => {
-    const room = lobby.currentRoom(user);
+  on('room:chat', ({ text }, me) => {
+    const room = lobby.currentRoom(me);
     const t = String(text || '').trim().slice(0, 300);
     if (!t) return;
-    room.handler.censorChat?.(user.id, t);
-    room.addChat({ from: user.id, name: user.name, text: t });
+    room.handler.censorChat?.(me.id, t);
+    room.addChat({ from: me.id, name: me.name, text: t });
     room.changed();
   }, { kind: 'chat' });
 
   // ---------- Trò chơi ----------
 
-  on('game:action', (a) => {
-    const room = lobby.currentRoom(user);
+  on('game:action', (a, me) => {
+    const room = lobby.currentRoom(me);
     try {
-      room.handler.action(user.id, a);
+      room.handler.action(me.id, a);
     } finally {
       room.changed();
     }
   });
 
   // Truy vấn dữ liệu lớn của game theo yêu cầu (vd: Hands log của Poker) thay vì gửi kèm mỗi lần cập nhật
-  on('game:query', (q) => {
-    const room = lobby.currentRoom(user);
+  on('game:query', (q, me) => {
+    const room = lobby.currentRoom(me);
     if (typeof room.handler.query !== 'function') throw new Error('Trò chơi không hỗ trợ');
-    return { data: room.handler.query(user.id, q) };
+    return { data: room.handler.query(me.id, q) };
   });
 
   // Dữ liệu gửi liên tục của game (nét vẽ): chuyển thẳng cho các thành viên khác, không phát lại cả trạng thái phòng
-  on('game:stream', (p) => {
-    const room = lobby.currentRoom(user);
-    const out = typeof room.handler.stream === 'function' && room.handler.stream(user.id, p);
+  on('game:stream', (p, me) => {
+    const room = lobby.currentRoom(me);
+    const out = typeof room.handler.stream === 'function' && room.handler.stream(me.id, p);
     if (!out) return;
-    const others = [...room.members].filter((id) => id !== user.id).map((id) => 'u:' + id);
+    const others = [...room.members].filter((id) => id !== me.id).map((id) => 'u:' + id);
     if (others.length) lobby.io.to(others).emit('game:stream', out);
   }, { kind: 'draw' });
 
   // ---------- Voice chat ----------
 
-  on('voice:join', async ({ muted }) => {
-    const room = lobby.currentRoom(user);
+  on('voice:join', async ({ muted }, me) => {
+    const room = lobby.currentRoom(me);
     const st = voice.status(srv.name);
     if (!st.enabled) throw new Error(st.reason || 'Voice chat không bật cho server này');
-    if (!room.voice.has(user.id) && room.voice.size >= st.maxPerRoom) throw new Error(`Kênh thoại đã đủ ${st.maxPerRoom} người`);
+    if (!room.voice.has(me.id) && room.voice.size >= st.maxPerRoom) throw new Error(`Kênh thoại đã đủ ${st.maxPerRoom} người`);
     const iceServers = await voice.iceServers(srv.name);
-    if (!lobby.rooms.has(room.id) || user.roomId !== room.id) throw new Error('Bạn đã rời phòng');
-    const fresh = !room.voice.has(user.id);
-    room.voice.set(user.id, { muted: !!muted, sid: socket.id });
-    if (fresh) room.system(`${user.name} vào kênh thoại`);
+    if (!lobby.rooms.has(room.id) || me.roomId !== room.id) throw new Error('Bạn đã rời phòng');
+    const fresh = !room.voice.has(me.id);
+    room.voice.set(me.id, { muted: !!muted, sid: socket.id });
+    if (fresh) room.system(`${me.name} vào kênh thoại`);
     room.changed();
-    return { iceServers, peers: [...room.voice.keys()].filter((id) => id !== user.id) };
+    return { iceServers, peers: [...room.voice.keys()].filter((id) => id !== me.id) };
   });
 
-  on('voice:leave', () => {
-    const room = user.roomId && lobby.rooms.get(user.roomId);
-    if (!room || !room.voice.has(user.id)) return;
-    room.voice.delete(user.id);
-    room.system(`${user.name} rời kênh thoại`);
+  on('voice:leave', (_payload, me) => {
+    const room = me.roomId && lobby.rooms.get(me.roomId);
+    if (!room || !room.voice.has(me.id)) return;
+    room.voice.delete(me.id);
+    room.system(`${me.name} rời kênh thoại`);
     room.changed();
   });
 
-  on('voice:mute', ({ muted }) => {
-    const room = lobby.currentRoom(user);
-    const v = room.voice.get(user.id);
+  on('voice:mute', ({ muted }, me) => {
+    const room = lobby.currentRoom(me);
+    const v = room.voice.get(me.id);
     if (!v) throw new Error('Bạn chưa vào kênh thoại');
     v.muted = !!muted;
     room.changed();
   });
 
   // Chuyển tiếp SDP / ICE giữa hai người cùng kênh thoại của một phòng (tới đúng tab đang nói chuyện)
-  on('voice:signal', ({ to, data }) => {
-    const room = lobby.currentRoom(user);
-    const me = room.voice.get(user.id);
+  on('voice:signal', ({ to, data }, me) => {
+    const room = lobby.currentRoom(me);
+    const mine = room.voice.get(me.id);
     const peer = typeof to === 'string' && room.voice.get(to);
-    if (!me || me.sid !== socket.id || !peer) return;
+    if (!mine || mine.sid !== socket.id || !peer) return;
     const clean = cleanSignal(data);
     if (!clean) throw new Error('Tín hiệu không hợp lệ');
-    lobby.io.to(peer.sid).emit('voice:signal', { from: user.id, data: clean });
+    lobby.io.to(peer.sid).emit('voice:signal', { from: me.id, data: clean });
   }, { kind: 'signal' });
 
   // ---------- Mất kết nối ----------
@@ -305,7 +314,7 @@ export function handleConnection(socket: GameSocket, { lobby, voice, connections
     lobby.broadcast(u.server); // báo cho sảnh: người này vừa offline
     // Giữ chỗ một lúc để tải lại trang / mạng chập chờn không bị đưa ra khỏi phòng.
     // Danh tính (token) vẫn giữ để lần sau vào lại vẫn giữ tên; dọn sau LIMITS.userIdleMs không hoạt động.
-    clearTimeout(u.graceTimer);
+    clearTimeout(u.graceTimer ?? undefined);
     u.graceTimer = setTimeout(() => {
       if (!u.sockets.size) lobby.leave(u);
     }, RECONNECT_GRACE_MS);

@@ -16,7 +16,7 @@ export default function App() {
   return (
     <div className={`app ${ready && room ? 'in-room' : ''}`}>
       <header className="topbar">
-        <a className="brand" href="#" onClick={(e: any) => { e.preventDefault(); if (room) location.hash = ''; }}>
+        <a className="brand" href="#" onClick={(e) => { e.preventDefault(); if (room) location.hash = ''; }}>
           <span className="brand-logo" aria-hidden><Dices size={20} /></span>
           <span className="brand-name">Sảnh Trò Chơi</span>
         </a>

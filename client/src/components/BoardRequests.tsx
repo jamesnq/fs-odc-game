@@ -3,8 +3,11 @@ import { Undo2, Handshake, Loader2, X, Check, Trophy, Eye, Flag } from 'lucide-r
 import ConfirmDialog from './ConfirmDialog.js';
 import StartBar from './StartBar.js';
 import { useApp } from '../store.js';
+import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import type { DuelState } from './DuelPanels.js';
 
-const KIND: Record<string, any> = {
+const KIND: Record<'undo' | 'draw', { icon: LucideIcon; ask: string; noun: string; detail: string }> = {
   undo: { icon: Undo2, ask: 'xin đi lại', noun: 'xin đi lại', detail: 'Nếu đồng ý, bàn cờ lùi lại nước vừa đi để người đó đi lại.' },
   draw: { icon: Handshake, ask: 'xin cầu hòa', noun: 'cầu hòa', detail: 'Nếu đồng ý, ván kết thúc hòa — mỗi bên được ½ điểm.' },
 };
@@ -15,11 +18,11 @@ const KIND: Record<string, any> = {
  *  - Người gửi: dải "Đang chờ … đồng ý" trên đầu bàn cờ, có nút Hủy; khi bị từ chối / được đồng ý có thông báo.
  *  - Người xem: dải thông tin nhỏ.
  */
-export function RequestOverlay({ s, my, opp }: any) {
+export function RequestOverlay({ s, my, opp }: { s: DuelState; my: string | null; opp: string }) {
   const { act, toast } = useApp();
   const p = s.pending;
   const cancelled = useRef(false);
-  const prev = useRef<any>(null);
+  const prev = useRef<{ type: 'undo' | 'draw'; moves: number } | null>(null);
   const incoming = p && my && p.from === opp;
 
   useEffect(() => {
@@ -76,7 +79,9 @@ export function RequestOverlay({ s, my, opp }: any) {
 }
 
 /** Kết quả ván hiện đè lên giữa bàn cờ; bấm "Xem bàn cờ" để thu gọn thành dải nhỏ. */
-export function ResultOverlay({ over, resetKey, title, detail, children, peek = 'Xem bàn cờ' }: any) {
+export function ResultOverlay({ over, resetKey, title, detail, children, peek = 'Xem bàn cờ' }: {
+  over: boolean; resetKey: unknown; title: ReactNode; detail?: ReactNode; children?: ReactNode; peek?: string;
+}) {
   const [min, setMin] = useState(false);
   useEffect(() => { setMin(false); }, [resetKey]);
   if (!over) return null;
@@ -104,15 +109,17 @@ export function ResultOverlay({ over, resetKey, title, detail, children, peek = 
  * Hàng nút gọn ngay dưới bàn cờ (Cờ tướng / Caro): Sẵn sàng / Bắt đầu (chủ phòng) · Xin đi lại · Cầu hòa · Xin thua.
  * Xin thua hỏi lại bằng hộp xác nhận trong app. `extra`: nút riêng của từng trò (vd. lật bàn).
  */
-export function BoardActions({ s, my, opp, sitLabel, rematchLabel, extra }: any) {
+export function BoardActions({ s, my, opp, sitLabel, rematchLabel, extra }: {
+  s: DuelState; my: string | null; opp: string; sitLabel: string; rematchLabel: string; extra?: ReactNode;
+}) {
   const { act, call } = useApp();
   const [resign, setResign] = useState(false);
   const pending = s.pending;
-  let main: any;
-  const players = Object.values(s.seats).filter(Boolean);
-  const ready = Object.entries(s.ready).filter(([, v]) => v).map(([c]) => s.seats[c]?.id);
+  let main: ReactNode;
+  const players = Object.values(s.seats).filter((x) => x != null);
+  const ready = Object.entries(s.ready).filter(([, v]) => v).map(([c]) => s.seats[c]?.id).filter((id) => id != null);
   const over = s.status === 'over';
-  const stand = <button className="btn ghost" onClick={() => call('room:stand')}><span className="hide-sm">Đứng dậy xem</span><span className="show-sm">Đứng dậy</span></button>;
+  const stand = <button className="btn ghost" onClick={() => call('room:stand', {})}><span className="hide-sm">Đứng dậy xem</span><span className="show-sm">Đứng dậy</span></button>;
   if (s.status === 'playing') {
     main = my ? (
       <>

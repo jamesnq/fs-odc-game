@@ -1,4 +1,6 @@
 import type { Room } from '../lobby.js';
+import type { GameAction, Identity } from '@game/shared/contracts';
+import type { CardTableConfig, CardTableView } from '@game/shared/views';
 // Khung chung cho game bài đánh theo lượt quanh bàn (Tá lả, Sâm lốc):
 // ghế, điểm tích lũy, người rời bàn giữa ván được máy đánh hộ, đồng hồ lượt, cam kết bộ bài.
 import { randInt } from '@game/shared/cards';
@@ -16,28 +18,39 @@ const AUTO_PLAY_MS = 2000; // người rời bàn / mất kết nối: máy đá
  *   _resetTimer(force)           (tùy chọn) ghi đè nếu có pha đặc biệt; mặc định là đồng hồ lượt
  *   _onFinish(game)              (tùy chọn) khi ván kết thúc
  */
-export abstract class CardTableHandler {
-  abstract _createGame(players: any, first: any): any;
-  abstract _startMessage(players: any, first: any): string;
-  abstract _play(game: any, id: any, action: any): void;
-  abstract _turnKey(game: any): string | number;
+export interface CardGame<V> {
+  players: Identity[];
+  turn: number;
+  initialDeck: string[];
+  result: { winner: number; scores: number[] } | null;
+  indexOf(id: string): number;
+  autoPlay(id: string): void;
+  view(viewerId: string): V;
+}
+export type CardTableOptions = CardTableConfig;
+
+export abstract class CardTableHandler<G extends CardGame<V>, V> {
+  abstract _createGame(players: Identity[], first: number): G;
+  abstract _startMessage(players: Identity[], first: number): string;
+  abstract _play(game: G, id: string, action: GameAction): void;
+  abstract _turnKey(game: G): string | number;
   declare room: Room;
-  declare options: any;
-  declare fair: any;
-  declare seats: any;
-  declare totals: any;
-  declare game: any;
-  declare gameSeats: any;
-  declare left: any;
-  declare ready: any;
-  declare lastWinnerId: any;
-  declare timer: any;
+  declare options: CardTableOptions;
+  declare fair: DeckCommitments;
+  declare seats: (Identity | null)[];
+  declare totals: Map<string, number>;
+  declare game: G | null;
+  declare gameSeats: number[];
+  declare left: Set<string>;
+  declare ready: ReadyGate;
+  declare lastWinnerId: string | null;
+  declare timer: ReturnType<typeof setTimeout> | null;
   declare deadline: number;
   declare deadlineTotal: number;
   declare turnKey: string | number;
   declare gameNo: number;
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: CardTableOptions) {
     this.room = room;
     this.options = options; // ít nhất { maxSeats, unit, turnSeconds }
     this.fair = new DeckCommitments();
@@ -56,33 +69,33 @@ export abstract class CardTableHandler {
   }
 
   get maxPlayers() { return this.options.maxSeats; }
-  playerIds() { return this.seats.filter(Boolean).map((s: any) => s.id); }
+  playerIds() { return this._seated().map((s) => s.id); }
   isPlaying() { return !!this.game && !this.game.result; }
-  seatOf(id: any) { return this.seats.findIndex((s: any) => s && s.id === id); }
-  _isAway(id: any) { return this.left.has(id) || !this.room.isOnline(id); }
-  _onFinish(_game?: any) {}
+  seatOf(id: string) { return this.seats.findIndex((s) => s && s.id === id); }
+  _isAway(id: string) { return this.left.has(id) || !this.room.isOnline(id); }
+  _onFinish(_game: G) {}
 
-  rename(id: any, name: any) {
-    const s = this.seats.find((x: any) => x && x.id === id);
+  rename(id: string, name: string) {
+    const s = this.seats.find((x) => x && x.id === id);
     if (s) s.name = name;
     if (this.game) for (const p of this.game.players) if (p.id === id) p.name = name;
   }
 
   /** Ngồi vào ghế trống — kể cả khi ván đang diễn ra (ngồi chờ, vào chơi từ ván sau). */
-  sit(user: any, seat: any) {
+  sit(user: Identity, seat?: string | number) {
     if (this.seatOf(user.id) >= 0) throw new Error('Bạn đã ngồi rồi');
-    const s = Number.isInteger(seat) ? seat : this.seats.findIndex((x: any) => !x);
+    const s = typeof seat === 'number' && Number.isInteger(seat) ? seat : this.seats.findIndex((x) => !x);
     if (s < 0 || s >= this.seats.length || this.seats[s]) throw new Error('Không còn ghế trống');
     this.seats[s] = { id: user.id, name: user.name };
     if (!this.totals.has(user.id)) this.totals.set(user.id, 0);
   }
 
-  stand(id: any) {
+  stand(id: string) {
     const s = this.seatOf(id);
     if (s < 0) return;
-    if (this.isPlaying() && this.game.indexOf(id) >= 0) {
+    if (this.isPlaying() && this.game!.indexOf(id) >= 0) {
       this.left.add(id);
-      this.room.system(`${this.seats[s].name} rời bàn, máy sẽ đánh hộ đến hết ván`);
+      this.room.system(`${this.seats[s]?.name} rời bàn, máy sẽ đánh hộ đến hết ván`);
       this._resetTimer(true);
       return; // giữ ghế đến hết ván
     }
@@ -91,16 +104,16 @@ export abstract class CardTableHandler {
   }
 
   /** Người đang ngồi bàn (theo thứ tự ghế). */
-  _seated() { return this.seats.filter(Boolean); }
+  _seated() { return this.seats.filter((s) => s != null); }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
   _start() {
-    const seated = this.seats.map((s: any, i: any) => (s ? i : -1)).filter((i: any) => i >= 0);
+    const seated = this.seats.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
     if (seated.length < 2) throw new Error('Cần ít nhất 2 người');
     this.gameSeats = seated;
-    const players = seated.map((i: any) => this.seats[i]);
-    let first = players.findIndex((p: any) => p.id === this.lastWinnerId);
+    const players = this._seated();
+    let first = players.findIndex((p) => p.id === this.lastWinnerId);
     if (first < 0) first = randInt(players.length);
     this.game = this._createGame(players, first);
     this.left.clear();
@@ -111,7 +124,7 @@ export abstract class CardTableHandler {
     this._afterAction();
   }
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     if (a.type === 'start') {
       if (this.isPlaying()) throw new Error('Ván đang diễn ra');
       this.ready.check(id, this._seated());
@@ -119,7 +132,7 @@ export abstract class CardTableHandler {
     }
     if (a.type === 'ready') {
       if (this.seatOf(id) < 0) throw new Error('Bạn đang ở chế độ xem');
-      if (this.isPlaying() && this.game.indexOf(id) >= 0) throw new Error('Ván đang diễn ra');
+      if (this.isPlaying() && this.game!.indexOf(id) >= 0) throw new Error('Ván đang diễn ra');
       return this.ready.toggle(id);
     }
     const g = this.game;
@@ -131,13 +144,14 @@ export abstract class CardTableHandler {
 
   _afterAction() {
     const g = this.game;
-    if (!g.result) return this._resetTimer();
-    clearTimeout(this.timer);
+    if (!g?.result) return this._resetTimer();
+    const result = g.result;
+    clearTimeout(this.timer ?? undefined);
     this.deadline = 0;
-    g.players.forEach((p: any, k: any) => {
-      this.totals.set(p.id, (this.totals.get(p.id) || 0) + g.result.scores[k] * this.options.unit);
+    g.players.forEach((p, k) => {
+      this.totals.set(p.id, (this.totals.get(p.id) || 0) + result.scores[k] * this.options.unit);
     });
-    this.lastWinnerId = g.players[g.result.winner].id;
+    this.lastWinnerId = g.players[result.winner].id;
     this._onFinish(g);
     // Giải phóng ghế người đã rời
     for (const id of this.left) {
@@ -164,26 +178,26 @@ export abstract class CardTableHandler {
   }
 
   /** Hẹn giờ cho lượt hiện tại; xong thì phát trạng thái mới. */
-  _setTimer(ms: any, fn: any) {
-    clearTimeout(this.timer);
+  _setTimer(ms: number, fn: () => void) {
+    clearTimeout(this.timer ?? undefined);
     this.deadline = Date.now() + ms;
     this.deadlineTotal = ms;
     this.timer = setTimeout(() => {
       try {
         fn();
-      } catch (e: any) {
+      } catch (e) {
         console.error(`${this.constructor.name} timer`, e);
       }
       this.room.changed();
     }, ms);
   }
 
-  view(viewerId: any) {
+  view(viewerId: string): CardTableView<V> {
     this.fair.track(this.game?.initialDeck);
     return {
       fair: this.fair.view(!this.isPlaying()),
       config: this.options,
-      seats: this.seats.map((s: any) => s && { ...s, total: this.totals.get(s.id) || 0, left: this.left.has(s.id), online: this.room.isOnline(s.id) }),
+      seats: this.seats.map((s) => s && { ...s, total: this.totals.get(s.id) || 0, left: this.left.has(s.id), online: this.room.isOnline(s.id) }),
       gameSeats: this.gameSeats,
       game: this.game ? this.game.view(viewerId) : null,
       playing: this.isPlaying(),
@@ -191,9 +205,9 @@ export abstract class CardTableHandler {
       turnTotal: this.deadlineTotal || this.options.turnSeconds * 1000,
       mySeat: this.seatOf(viewerId),
       gameNo: this.gameNo,
-      ...this.ready.view(this._seated().map((x: any) => x.id)),
+      ...this.ready.view(this.playerIds()),
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer ?? undefined); }
 }

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Check, X, Timer, Trophy, Flame, ChevronRight, BookOpen, PencilLine, Clock } from 'lucide-react';
 import { QUIZ_CATEGORIES } from '@game/shared/quiz';
-import { useApp } from '../store.js';
+import { useApp, useRoomApp } from '../store.js';
+import type { AppContextValue, ClientRoom } from '../store.js';
+import type { GameAction } from '@game/shared/contracts';
+import type { QuizGameView, QuizHistoryView, QuizScoreView, QuizView } from '@game/shared/views';
+
+type Act = AppContextValue['act'];
 import { useCountdown, useHotkeys } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import GameInfo from '../components/GameInfo.js';
@@ -12,8 +17,8 @@ import QuizEditor from '../components/QuizEditor.js';
 // 4 màu + hình cho 4 đáp án (người mù màu vẫn phân biệt được bằng hình)
 const SHAPES = [['▲', 'qz-red'], ['◆', 'qz-blue'], ['●', 'qz-yellow'], ['■', 'qz-green']];
 
-export default function QuizGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+export default function QuizGame({ room, state: s }: { room: ClientRoom; state: QuizView }) {
+  const { act, call, user } = useRoomApp();
   const [editor, setEditor] = useState(false);
   const g = s.game;
   const me = s.myId;
@@ -22,7 +27,7 @@ export default function QuizGame({ room, state: s }: any) {
   const canEdit = !playing && (!!me || room.ownerId === user.id);
   const canNext = !!me || room.ownerId === user.id;
   // Phím tắt: 1–4 chọn đáp án, Enter / → sang câu tiếp khi đang xem đáp án
-  const pick = (i: any) => () => {
+  const pick = (i: number) => () => {
     if (playing && g?.phase === 'question' && g.me && g.myChoice === null && i < (g.question?.choices.length || 0)) act({ type: 'answer', choice: i });
   };
   const next = () => { if (playing && g?.phase === 'reveal' && canNext) act({ type: 'next' }); };
@@ -37,11 +42,11 @@ export default function QuizGame({ room, state: s }: any) {
       <div className="qz-main">
         <GameOverDialog over={over} icon={<Trophy size={26} />}
           title={solo ? `${lb[0].score.toLocaleString('vi-VN')} điểm` : lb[0] ? <>{lb[0].id === me ? 'Bạn' : lb[0].name} thắng!</> : 'Hết ván!'}
-          detail={solo ? `Đúng ${lb[0].correct}/${g.total} câu` : g ? `${g.total} câu · ${g.title}` : null}
+          detail={solo ? `Đúng ${lb[0].correct}/${g?.total} câu` : g ? `${g.total} câu · ${g.title}` : null}
           seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} min={1} reviewLabel="Xem kết quả"
-          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
             : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
-          {!solo && <GoRanking me={me} rows={lb.map((p: any) => ({ id: p.id, name: p.name, value: p.score.toLocaleString('vi-VN'), note: `đúng ${p.correct}/${g.total}` }))} />}
+          {!solo && <GoRanking me={me} rows={lb.map((p) => ({ id: p.id, name: p.name, value: p.score.toLocaleString('vi-VN'), note: `đúng ${p.correct}/${g?.total}` }))} />}
         </GameOverDialog>
         {g && s.status !== 'waiting' && (
           <div className="qz-top">
@@ -78,7 +83,7 @@ export default function QuizGame({ room, state: s }: any) {
               <>
                 <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
                   startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />
-                <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+                <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
               </>
             )
           ) : (
@@ -107,16 +112,16 @@ export default function QuizGame({ room, state: s }: any) {
         </div>
       </GameInfo>
 
-      {editor && <QuizEditor onClose={() => setEditor(false)} onLoad={(text: any) => act({ type: 'loadQuiz', text })} />}
+      {editor && <QuizEditor onClose={() => setEditor(false)} onLoad={(text) => act({ type: 'loadQuiz', text })} />}
     </div>
   );
 }
 
-function Lobby({ s, room, canEdit, onEdit }: any) {
+function Lobby({ s, room, canEdit, onEdit }: { s: QuizView; room: ClientRoom; canEdit: boolean; onEdit: () => void }) {
   const { act } = useApp();
   const src = s.source;
   const o = s.options;
-  const set = (patch: any) => act({ type: 'useBuiltin', ...patch });
+  const set = (patch: Omit<Extract<GameAction, { type: 'useBuiltin' }>, 'type'>) => act({ type: 'useBuiltin', ...patch });
   return (
     <div className="qz-lobby">
       <div className="wc-big">❓ Đố vui</div>
@@ -145,14 +150,14 @@ function Lobby({ s, room, canEdit, onEdit }: any) {
             <>
               <label>
                 <span className="small muted">Chủ đề</span>
-                <select value={o.category} onChange={(e: any) => set({ category: e.target.value })}>
+                <select value={o.category} onChange={(e) => set({ category: e.target.value })}>
                   <option value="all">Tất cả chủ đề</option>
                   {QUIZ_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </label>
               <label>
                 <span className="small muted">Số câu</span>
-                <select value={o.questions} onChange={(e: any) => set({ questions: Number(e.target.value) })}>
+                <select value={o.questions} onChange={(e) => set({ questions: Number(e.target.value) })}>
                   {[5, 10, 15, 20, 30].map((n) => <option key={n} value={n}>{n} câu</option>)}
                 </select>
               </label>
@@ -160,7 +165,7 @@ function Lobby({ s, room, canEdit, onEdit }: any) {
           )}
           <label>
             <span className="small muted">Thời gian</span>
-            <select value={o.seconds} onChange={(e: any) => act({ type: 'setSeconds', seconds: Number(e.target.value) })}>
+            <select value={o.seconds} onChange={(e) => act({ type: 'setSeconds', seconds: Number(e.target.value) })}>
               {[10, 15, 20, 30, 45, 60].map((n) => <option key={n} value={n}>{n} giây/câu</option>)}
             </select>
           </label>
@@ -171,7 +176,7 @@ function Lobby({ s, room, canEdit, onEdit }: any) {
         </div>
       )}
       <div className="qz-seated">
-        {s.seats.length === 0 ? <span className="muted small">Chưa có ai ngồi — bấm "Vào chơi"</span> : s.seats.map((p: any) => (
+        {s.seats.length === 0 ? <span className="muted small">Chưa có ai ngồi — bấm "Vào chơi"</span> : s.seats.map((p) => (
           <span key={p.id} className={`qz-chip ${s.ready.includes(p.id) ? 'ready' : ''}`}>{s.ready.includes(p.id) && <Check size={12} aria-hidden />}{p.name}</span>
         ))}
       </div>
@@ -180,7 +185,7 @@ function Lobby({ s, room, canEdit, onEdit }: any) {
   );
 }
 
-function Question({ g, me, left, act, canNext }: any) {
+function Question({ g, me, left, act, canNext }: { g: QuizGameView; me: string | null; left: number; act: Act; canNext: boolean }) {
   const q = g.question;
   const reveal = g.reveal;
   const total = g.totalMs;
@@ -189,6 +194,8 @@ function Question({ g, me, left, act, canNext }: any) {
   const counts = reveal?.counts;
   const maxCount = counts ? Math.max(1, ...counts) : 1;
   const last = g.me?.last;
+  if (!q) return null;
+  const answerText = reveal ? q.choices[reveal.answer] : '';
   return (
     <div className="qz-q">
       {q.c && <div className="qz-cat small muted">{q.c}</div>}
@@ -200,14 +207,14 @@ function Question({ g, me, left, act, canNext }: any) {
         </div>
       ) : (
         <div className={`qz-verdict ${last ? (last.correct ? 'ok' : 'bad') : ''}`} role="status">
-          {!g.me ? <>Đáp án đúng: <b>{q.choices[reveal.answer]}</b></>
+          {!g.me ? <>Đáp án đúng: <b>{answerText}</b></>
             : last?.correct ? <><Check size={18} aria-hidden /> Chính xác! <b>+{last.points}</b>{last.bonus > 0 && <span className="qz-bonus"> +{last.bonus} chuỗi 🔥</span>}</>
-              : last?.answered ? <><X size={18} aria-hidden /> Sai rồi — đáp án là <b>{q.choices[reveal.answer]}</b></>
-                : <><Clock size={18} aria-hidden /> Hết giờ — đáp án là <b>{q.choices[reveal.answer]}</b></>}
+              : last?.answered ? <><X size={18} aria-hidden /> Sai rồi — đáp án là <b>{answerText}</b></>
+                : <><Clock size={18} aria-hidden /> Hết giờ — đáp án là <b>{answerText}</b></>}
         </div>
       )}
       <div className={`qz-choices n${q.choices.length}`}>
-        {q.choices.map((c: any, i: any) => {
+        {q.choices.map((c, i) => {
           const [shape, color] = SHAPES[i];
           const cls = ['qz-choice', color];
           if (answered && g.myChoice === i) cls.push('picked');
@@ -217,7 +224,7 @@ function Question({ g, me, left, act, canNext }: any) {
             <button key={i} className={cls.join(' ')} disabled={!canAnswer} onClick={() => act({ type: 'answer', choice: i })}>
               <span className="qz-shape" aria-hidden>{shape}</span>
               <span className="qz-label">{c}</span>
-              {reveal && <span className="qz-count-bar" style={{ '--w': `${(counts[i] / maxCount) * 100}%` }}><b>{counts[i]}</b></span>}
+              {reveal && <span className="qz-count-bar" style={{ '--w': `${(reveal.counts[i] / maxCount) * 100}%` }}><b>{reveal.counts[i]}</b></span>}
               {reveal && i === reveal.answer && <Check size={20} className="qz-tick" aria-label="Đáp án đúng" />}
             </button>
           );
@@ -240,15 +247,15 @@ function Question({ g, me, left, act, canNext }: any) {
   );
 }
 
-function MiniBoard({ g, me }: any) {
+function MiniBoard({ g, me }: { g: QuizGameView; me: string | null }) {
   const top = g.leaderboard.slice(0, 5);
   return (
     <ol className="qz-mini">
-      {top.map((p: any, i: any) => (
+      {top.map((p, i) => (
         <li key={p.id} className={p.id === me ? 'me' : ''}>
           <span className="qz-rank">{i + 1}</span>
           <span className="qz-name">{p.name}</span>
-          {p.gained > 0 && <span className="qz-gain">+{p.gained}</span>}
+          {(p.gained ?? 0) > 0 && <span className="qz-gain">+{p.gained}</span>}
           <b>{p.score.toLocaleString('vi-VN')}</b>
         </li>
       ))}
@@ -256,16 +263,16 @@ function MiniBoard({ g, me }: any) {
   );
 }
 
-function Podium({ g, me }: any) {
+function Podium({ g, me }: { g: QuizGameView; me: string | null }) {
   const lb = g.leaderboard;
   const [p1, p2, p3] = lb;
-  const mine = lb.findIndex((p: any) => p.id === me);
+  const mine = lb.findIndex((p) => p.id === me);
   return (
     <div className="qz-over">
       <div className="wc-big"><Trophy size={26} aria-hidden /> Kết quả</div>
       {lb.length > 1 ? (
         <div className="qz-podium">
-          {[[p2, 2], [p1, 1], [p3, 3]].map(([p, rank]) => p && (
+          {([[p2, 2], [p1, 1], [p3, 3]] as const).map(([p, rank]) => p && (
             <div key={p.id} className={`qz-step s${rank} ${p.id === me ? 'me' : ''}`}>
               <div className="qz-pname">{p.name}</div>
               <div className="small">{p.score.toLocaleString('vi-VN')} điểm · {p.correct}/{g.total}</div>
@@ -284,14 +291,14 @@ function Podium({ g, me }: any) {
   );
 }
 
-function Leaderboard({ g, me }: any) {
+function Leaderboard({ g, me }: { g: QuizGameView; me: string | null }) {
   return (
     <div className="panel">
       <h4>Bảng xếp hạng</h4>
       <table className="sb-table">
         <thead><tr><th>#</th><th>Người chơi</th><th>Đúng</th><th>Điểm</th></tr></thead>
         <tbody>
-          {g.leaderboard.map((p: any, i: any) => (
+          {g.leaderboard.map((p, i) => (
             <tr key={p.id} className={p.id === me ? 'me' : ''}>
               <td>{i + 1}</td>
               <td className="sb-name">{p.name}{p.left && <span className="muted"> (đã rời)</span>}{p.streak >= 2 && <span className="qz-streak"> 🔥{p.streak}</span>}</td>
@@ -305,7 +312,7 @@ function Leaderboard({ g, me }: any) {
   );
 }
 
-function Wins({ wins, me }: any) {
+function Wins({ wins, me }: { wins: QuizScoreView[]; me: string }) {
   if (!wins.length) return null;
   return (
     <div className="panel">
@@ -313,7 +320,7 @@ function Wins({ wins, me }: any) {
       <table className="sb-table">
         <thead><tr><th>#</th><th>Người chơi</th><th>Ván</th><th>Thắng</th><th>Cao nhất</th></tr></thead>
         <tbody>
-          {wins.map((w: any, i: any) => (
+          {wins.map((w, i) => (
             <tr key={w.id} className={w.id === me ? 'me' : ''}>
               <td>{i === 0 && w.wins > 0 ? '🏆' : i + 1}</td>
               <td className="sb-name">{w.name}</td>
@@ -328,12 +335,12 @@ function Wins({ wins, me }: any) {
   );
 }
 
-function History({ history, me }: any) {
+function History({ history, me }: { history: QuizHistoryView[]; me: string }) {
   if (!history.length) return null;
   return (
     <div className="panel">
       <h4>Các ván trước</h4>
-      {history.map((h: any) => (
+      {history.map((h) => (
         <details key={h.no} className="wf-game">
           <summary>
             <b>Ván {h.no}</b>
@@ -341,7 +348,7 @@ function History({ history, me }: any) {
           </summary>
           <div className="muted small">{h.title} · {h.total} câu</div>
           <ol className="qz-mini">
-            {h.ranking.map((p: any, i: any) => (
+            {h.ranking.map((p, i) => (
               <li key={p.id} className={p.id === me ? 'me' : ''}>
                 <span className="qz-rank">{i + 1}</span><span className="qz-name">{p.name}</span>
                 <span className="muted small">{p.correct}/{h.total}</span><b>{p.score.toLocaleString('vi-VN')}</b>

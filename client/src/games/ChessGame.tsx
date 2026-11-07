@@ -1,23 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Undo2, Handshake, Flag, RotateCcw, ArrowUpDown } from 'lucide-react';
 import { legalMovesFrom, colorOf, typeOf, rowOf, colOf } from '@game/shared/chess';
-import { useApp } from '../store.js';
+import { useApp, useRoomApp } from '../store.js';
+import type { ClientRoom } from '../store.js';
+import type { ChessColor, ChessMoveView, ChessView } from '@game/shared/views';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import Scoreboard, { ScoreLine, pointsOf, fmtPts } from '../components/Scoreboard.js';
 
 const CELL = 60;
 const PAD = 22; // chỗ cho nhãn tọa độ a-h, 1-8
 const SIZE = CELL * 8 + PAD * 2;
-const COLOR_NAME: Record<string, any> = { w: 'Trắng', b: 'Đen' };
+const COLOR_NAME: Record<string, string> = { w: 'Trắng', b: 'Đen' };
 
-const PIECE_VALUES: Record<string, any> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
-const STARTING_COUNTS: Record<string, any> = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
+const PIECE_VALUES: Record<string, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
+const STARTING_COUNTS: Record<string, number> = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
 
-export default function ChessGame({ room, state: s }: any) {
+type Captured = { pieces: string[]; lead: number };
+
+export default function ChessGame({ room, state: s }: { room: ClientRoom; state: ChessView }) {
   const { act, call } = useApp();
-  const [sel, setSel] = useState<any>(null);
+  const [sel, setSel] = useState<number | null>(null);
   const [manualFlip, setManualFlip] = useState(false);
-  const [promo, setPromo] = useState<any>(null); // { from, to } nếu đang chờ chọn quân phong cấp
+  const [promo, setPromo] = useState<{ from: number; to: number } | null>(null); // { from, to } nếu đang chờ chọn quân phong cấp
 
   const my = s.myColor;
   const flipped = (my === 'b') !== manualFlip;
@@ -47,7 +51,7 @@ export default function ChessGame({ room, state: s }: any) {
     f: () => setManualFlip((f) => !f),
   });
 
-  const clickSquare = (i: any) => {
+  const clickSquare = (i: number) => {
     if (!myTurn || promo) return;
     const p = s.board[i];
 
@@ -70,14 +74,14 @@ export default function ChessGame({ room, state: s }: any) {
     }
   };
 
-  const choosePromo = (pieceType: any) => {
+  const choosePromo = (pieceType: string) => {
     if (!promo) return;
     act({ type: 'move', from: promo.from, to: promo.to, promotion: pieceType });
     setPromo(null);
     setSel(null);
   };
 
-  const pos = (i: any) => {
+  const pos = (i: number) => {
     let r = rowOf(i), c = colOf(i);
     if (flipped) {
       r = 7 - r;
@@ -86,16 +90,16 @@ export default function ChessGame({ room, state: s }: any) {
     return [PAD + c * CELL, PAD + r * CELL];
   };
 
-  const topColor = flipped ? 'w' : 'b';
-  const bottomColor = flipped ? 'b' : 'w';
+  const topColor: ChessColor = flipped ? 'w' : 'b';
+  const bottomColor: ChessColor = flipped ? 'b' : 'w';
   const opp = my === 'w' ? 'b' : 'w';
   const pending = s.pending;
   const checkedKing = s.inCheck ? s.board.indexOf(s.turn === 'w' ? 'K' : 'k') : -1;
 
   // Tính quân bị bắt và chênh lệch điểm
-  const captured = useMemo(() => {
-    const curW: Record<string, any> = { P: 0, N: 0, B: 0, R: 0, Q: 0 };
-    const curB: Record<string, any> = { P: 0, N: 0, B: 0, R: 0, Q: 0 };
+  const captured = useMemo((): Record<ChessColor, Captured> => {
+    const curW: Record<string, number> = { P: 0, N: 0, B: 0, R: 0, Q: 0 };
+    const curB: Record<string, number> = { P: 0, N: 0, B: 0, R: 0, Q: 0 };
     for (const p of s.board) {
       if (p !== '.') {
         const c = colorOf(p);
@@ -106,8 +110,8 @@ export default function ChessGame({ room, state: s }: any) {
         }
       }
     }
-    const capByWhite: any[] = [];
-    const capByBlack: any[] = [];
+    const capByWhite: string[] = [];
+    const capByBlack: string[] = [];
     let scoreW = 0, scoreB = 0;
 
     for (const t of ['Q', 'R', 'B', 'N', 'P']) {
@@ -218,7 +222,7 @@ export default function ChessGame({ room, state: s }: any) {
             <CoordinateLabels flipped={flipped} />
 
             {/* Quân cờ và điểm nhấp */}
-            {s.board.map((p: any, i: any) => {
+            {s.board.map((p, i) => {
               const [x, y] = pos(i);
               const isTarget = targets.includes(i);
               const hasPiece = p !== '.';
@@ -276,7 +280,7 @@ export default function ChessGame({ room, state: s }: any) {
                       key={type}
                       className="promo-btn"
                       onClick={() => choosePromo(type)}
-                      title={`Phong thành ${COLOR_NAME[my]} ${type}`}
+                      title={`Phong thành ${my ? COLOR_NAME[my] : ''} ${type}`}
                     >
                       <svg width="44" height="44" viewBox="0 0 44 44">
                         <g transform="translate(22, 22)">
@@ -378,7 +382,7 @@ export default function ChessGame({ room, state: s }: any) {
                 </button>
               )}
               {s.status !== 'playing' && (
-                <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+                <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy xem</button>
               )}
             </div>
           )}
@@ -404,14 +408,14 @@ export default function ChessGame({ room, state: s }: any) {
   );
 }
 
-function PlayerBar({ color, s, room, captured }: any) {
-  const { call, user } = useApp();
+function PlayerBar({ color, s, room, captured }: { color: ChessColor; s: ChessView; room: ClientRoom; captured: Captured }) {
+  const { call, user } = useRoomApp();
   const my = s.myColor;
   const seat = s.seats[color];
   const running = s.running && s.turn === color;
   const ms = useCountdown(s.clocks[color], room.receivedAt, running);
   const low = ms < 60000;
-  const member = seat && room.members.find((m: any) => m.id === seat.id);
+  const member = seat && room.members.find((m) => m.id === seat.id);
 
   return (
     <div className={`chess-player ${running ? 'active' : ''}`}>
@@ -432,7 +436,7 @@ function PlayerBar({ color, s, room, captured }: any) {
           {/* Quân cờ đã ăn */}
           {captured && (captured.pieces.length > 0 || captured.lead > 0) && (
             <div className="chess-captured">
-              {captured.pieces.map((t: any, idx: any) => (
+              {captured.pieces.map((t, idx) => (
                 <span key={idx} className="cap-icon">
                   {color === 'w' ? UNICODE_BLACK[t] : UNICODE_WHITE[t]}
                 </span>
@@ -457,13 +461,13 @@ function PlayerBar({ color, s, room, captured }: any) {
   );
 }
 
-function MoveList({ moves }: any) {
-  const ref = useRef<any>(null);
+function MoveList({ moves }: { moves: ChessView['moves'] }) {
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [moves.length]);
 
-  const rows: any[] = [];
+  const rows: [number, ChessMoveView | undefined, ChessMoveView | undefined][] = [];
   for (let i = 0; i < moves.length; i += 2) {
     rows.push([i / 2 + 1, moves[i], moves[i + 1]]);
   }
@@ -485,7 +489,7 @@ function MoveList({ moves }: any) {
   );
 }
 
-function CoordinateLabels({ flipped }: any) {
+function CoordinateLabels({ flipped }: { flipped: boolean }) {
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
   const displayFiles = flipped ? files.slice().reverse() : files;
@@ -533,11 +537,11 @@ function BoardDefs() {
   );
 }
 
-const UNICODE_WHITE: Record<string, any> = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' };
-const UNICODE_BLACK: Record<string, any> = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+const UNICODE_WHITE: Record<string, string> = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' };
+const UNICODE_BLACK: Record<string, string> = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
 
 /** Component vẽ quân cờ sắc nét với SVG */
-function ChessPiece({ piece, size = 44 }: any) {
+function ChessPiece({ piece, size = 44 }: { piece: string; size?: number }) {
   const color = colorOf(piece);
   const type = typeOf(piece);
   const isWhite = color === 'w';
@@ -553,7 +557,7 @@ function ChessPiece({ piece, size = 44 }: any) {
   );
 }
 
-function renderPieceShape(type: any, isWhite: any, size: any) {
+function renderPieceShape(type: string | null, isWhite: boolean, size: number) {
   const s = size / 45; // Tỉ lệ theo chuẩn viewbox 45x45
   const fill = isWhite ? '#ffffff' : '#1f2937';
   const stroke = isWhite ? '#1e293b' : '#f8fafc';

@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { QuizView } from '@game/shared/views';
 // Đố vui (kiểu Kahoot): cả phòng cùng trả lời câu hỏi trắc nghiệm có giờ, chơi được cả một mình.
 // Câu hỏi lấy ngẫu nhiên từ bộ có sẵn (data/quiz-vi.json) hoặc từ bộ câu hỏi người chơi tự soạn.
 // Server giữ đáp án và tự đo thời gian trả lời: client không biết đáp án trước khi hết giờ.
@@ -7,12 +8,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseQuizText, scoreAnswer, streakBonus, shuffle, shuffleChoices, QUIZ_CATEGORIES } from '@game/shared/quiz';
 import { clampInt } from './options.js';
+import type { Question } from '@game/shared/quiz';
+import type { GameAction, Identity } from '@game/shared/contracts';
+import type { ActionOf } from './types.js';
 import { ReadyGate } from './ready.js';
 
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/quiz-vi.json');
 /** Bộ câu hỏi có sẵn: [{ c: chủ đề, q, a: đáp án đúng, w: [đáp án sai] }] */
-export const BANK: {id: number; q: string; c: string; a: string; w: string[]}[] = JSON.parse(fs.readFileSync(DATA, 'utf8')).map((x: any, id: any) => ({ ...x, id }));
-export const CATEGORIES = QUIZ_CATEGORIES.filter((c) => BANK.some((x: any) => x.c === c));
+interface BankQuestion { id: number; q: string; c: string; a: string; w: string[] }
+export const BANK: BankQuestion[] = (JSON.parse(fs.readFileSync(DATA, 'utf8')) as Omit<BankQuestion, 'id'>[]).map((x, id) => ({ ...x, id }));
+export const CATEGORIES = QUIZ_CATEGORIES.filter((c) => BANK.some((x) => x.c === c));
 for (const x of BANK) if (!QUIZ_CATEGORIES.includes(x.c)) throw new Error(`quiz-vi.json: chủ đề lạ "${x.c}"`);
 
 const INTRO_MS = 3000; // đếm ngược trước câu đầu tiên
@@ -20,27 +25,50 @@ const REVEAL_MS = 6000; // thời gian xem đáp án + bảng xếp hạng giữ
 const HISTORY_MAX = 10;
 const TF = ['Đúng', 'Sai'];
 
+interface QuizOptions { maxSeats: number; questions: number; seconds: number; category: string }
+interface QuizQuestion extends Question { c?: string }
+interface LastAnswer { answered: boolean; choice: number | null; correct: boolean; points: number; bonus: number; ms: number | null }
+interface QuizPlayer extends Identity { score: number; streak: number; correct: number; last: LastAnswer | null; left: boolean }
+interface QuizGame {
+  title: string;
+  questions: QuizQuestion[];
+  index: number;
+  phase: 'intro' | 'question' | 'reveal' | 'over';
+  startAt: number;
+  deadline: number;
+  answers: Map<string, { choice: number; ms: number }>;
+  reveal: { answer: number; counts: number[] } | null;
+  players: Map<string, QuizPlayer>;
+}
+interface QuizScore extends Identity { games: number; wins: number; best: number }
+interface QuizHistory {
+  no: number; endedAt: number; title: string; total: number;
+  ranking: Pick<QuizPlayer, 'id' | 'name' | 'score' | 'correct'>[];
+}
+
+const validCategory = (c: unknown) => (typeof c === 'string' && CATEGORIES.includes(c) ? c : 'all');
+
 export class QuizHandler {
   declare room: Room;
-  declare options: any;
-  declare seats: any;
-  declare ready: any;
+  declare options: QuizOptions;
+  declare seats: Identity[];
+  declare ready: ReadyGate;
   declare status: string;
-  declare custom: any;
-  declare seen: any;
-  declare game: any;
-  declare timer: any;
+  declare custom: { title: string; questions: Question[]; by: string } | null;
+  declare seen: Set<number>;
+  declare game: QuizGame | null;
+  declare timer: ReturnType<typeof setTimeout> | null;
   declare gameNo: number;
-  declare wins: any;
-  declare history: any;
+  declare wins: Map<string, QuizScore>;
+  declare history: QuizHistory[];
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: Record<string, unknown>) {
     this.room = room;
     this.options = {
       maxSeats: clampInt(options.maxSeats, 1, 30, 20),
       questions: clampInt(options.questions, 3, 30, 10),
       seconds: clampInt(options.seconds, 5, 60, 20),
-      category: CATEGORIES.includes(options.category) ? options.category : 'all',
+      category: validCategory(options.category),
     };
     this.seats = []; // [{ id, name }]
     this.ready = new ReadyGate(room); // sẵn sàng → chủ phòng bấm Bắt đầu
@@ -55,11 +83,16 @@ export class QuizHandler {
   }
 
   get maxPlayers() { return this.options.maxSeats; }
-  playerIds() { return this.seats.map((s: any) => s.id); }
+  playerIds() { return this.seats.map((s) => s.id); }
   isPlaying() { return this.status === 'playing'; }
-  seated(id: any) { return this.seats.some((s: any) => s.id === id); }
+  seated(id: string) { return this.seats.some((s) => s.id === id); }
+  /** Ván đang diễn ra; chỉ gọi khi status === 'playing'. */
+  _game() {
+    if (!this.game) throw new Error('Chưa có ván nào');
+    return this.game;
+  }
 
-  rename(id: any, name: any) {
+  rename(id: string, name: string) {
     for (const s of this.seats) if (s.id === id) s.name = name;
     const p = this.game?.players.get(id);
     if (p) p.name = name;
@@ -67,29 +100,30 @@ export class QuizHandler {
     if (w) w.name = name;
   }
 
-  sit(user: any) {
+  sit(user: Identity) {
     if (this.seated(user.id)) throw new Error('Bạn đã ngồi rồi');
     if (this.status === 'playing') throw new Error('Ván đang diễn ra, đợi ván sau nhé');
     if (this.seats.length >= this.options.maxSeats) throw new Error('Bàn đã đủ người');
     this.seats.push({ id: user.id, name: user.name });
   }
 
-  stand(id: any) {
+  stand(id: string) {
     if (!this.seated(id)) return;
-    this.seats = this.seats.filter((s: any) => s.id !== id);
+    this.seats = this.seats.filter((s) => s.id !== id);
     this.ready.delete(id);
     if (this.status !== 'playing') return;
-    const p = this.game.players.get(id);
+    const g = this._game();
+    const p = g.players.get(id);
     if (p) p.left = true;
     if (!this.seats.length) return this._finish();
-    if (this.game.phase === 'question' && this._allAnswered()) this._reveal();
+    if (g.phase === 'question' && this._allAnswered()) this._reveal();
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
   // ---------- Hành động ----------
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     switch (a.type) {
       case 'loadQuiz': return this._loadQuiz(id, a);
       case 'useBuiltin': return this._useBuiltin(id, a);
@@ -120,25 +154,26 @@ export class QuizHandler {
     }
   }
 
-  _canEdit(id: any) {
+  _canEdit(id: string) {
     if (!this.seated(id) && this.room.ownerId !== id) throw new Error('Chỉ người đang chơi hoặc chủ phòng mới được đổi bộ câu hỏi');
     if (this.status === 'playing') throw new Error('Ván đang diễn ra');
   }
 
-  _loadQuiz(id: any, a: any) {
+  _loadQuiz(id: string, a: ActionOf<'loadQuiz'>) {
     this._canEdit(id);
     const text = String(a.text || '');
     if (text.length > 30000) throw new Error('Bộ câu hỏi quá dài');
     const { title, questions } = parseQuizText(text);
-    const by = this.seats.find((s: any) => s.id === id)?.name || this.room.nameOf(id);
-    this.custom = { title: title || `Bộ câu hỏi của ${by}`, questions, by };
+    const by = this.seats.find((s) => s.id === id)?.name || this.room.nameOf(id);
+    const custom = { title: title || `Bộ câu hỏi của ${by}`, questions, by };
+    this.custom = custom;
     this.ready.clear();
-    this.room.system(`${by} đã nạp bộ câu hỏi "${this.custom.title}" (${questions.length} câu)`);
+    this.room.system(`${by} đã nạp bộ câu hỏi "${custom.title}" (${questions.length} câu)`);
   }
 
-  _useBuiltin(id: any, a: any) {
+  _useBuiltin(id: string, a: ActionOf<'useBuiltin'>) {
     this._canEdit(id);
-    if (a.category !== undefined) this.options.category = CATEGORIES.includes(a.category) ? a.category : 'all';
+    if (a.category !== undefined) this.options.category = validCategory(a.category);
     if (a.questions !== undefined) this.options.questions = clampInt(a.questions, 3, 30, this.options.questions);
     if (a.seconds !== undefined) this.options.seconds = clampInt(a.seconds, 5, 60, this.options.seconds);
     const wasCustom = !!this.custom;
@@ -149,15 +184,15 @@ export class QuizHandler {
   }
 
   /** Chủ phòng bấm "Câu tiếp" để bỏ qua thời gian xem đáp án. */
-  _next(id: any) {
+  _next(id: string) {
     if (this.room.ownerId !== id && !this.seated(id)) throw new Error('Bạn đang ở chế độ xem');
-    if (this.status !== 'playing' || this.game.phase !== 'reveal') throw new Error('Chưa thể sang câu tiếp');
+    if (this.status !== 'playing' || this.game?.phase !== 'reveal') throw new Error('Chưa thể sang câu tiếp');
     this._advance();
   }
 
-  _answer(id: any, choice: any) {
+  _answer(id: string, choice: unknown) {
     const g = this.game;
-    if (this.status !== 'playing' || g.phase !== 'question') throw new Error('Chưa tới lúc trả lời');
+    if (this.status !== 'playing' || !g || g.phase !== 'question') throw new Error('Chưa tới lúc trả lời');
     const p = g.players.get(id);
     if (!p || p.left) throw new Error('Bạn không tham gia ván này');
     if (g.answers.has(id)) throw new Error('Bạn đã trả lời câu này rồi');
@@ -170,11 +205,11 @@ export class QuizHandler {
 
   // ---------- Diễn biến ván ----------
 
-  _pickQuestions() {
+  _pickQuestions(): QuizQuestion[] {
     // Bộ tự soạn: hỏi hết các câu, thứ tự ngẫu nhiên
-    if (this.custom) return shuffle(this.custom.questions.map((q: any) => shuffleChoices(q)));
-    const pool = BANK.filter((x: any) => this.options.category === 'all' || x.c === this.options.category);
-    let fresh = pool.filter((x: any) => !this.seen.has(x.id));
+    if (this.custom) return shuffle(this.custom.questions.map((q) => shuffleChoices(q)));
+    const pool = BANK.filter((x) => this.options.category === 'all' || x.c === this.options.category);
+    let fresh = pool.filter((x) => !this.seen.has(x.id));
     if (fresh.length < this.options.questions) {
       for (const x of pool) this.seen.delete(x.id); // đã hỏi gần hết: cho lặp lại từ đầu
       fresh = pool;
@@ -193,7 +228,7 @@ export class QuizHandler {
     this.status = 'playing';
     this.ready.clear();
     this.gameNo++;
-    this.game = {
+    const game: QuizGame = {
       title: this.custom ? this.custom.title : `Bộ có sẵn · ${this.options.category === 'all' ? 'Tất cả chủ đề' : this.options.category}`,
       questions,
       index: -1,
@@ -202,14 +237,15 @@ export class QuizHandler {
       deadline: Date.now() + INTRO_MS,
       answers: new Map(),
       reveal: null,
-      players: new Map(this.seats.map((s: any) => [s.id, { id: s.id, name: s.name, score: 0, streak: 0, correct: 0, last: null, left: false }])),
+      players: new Map(this.seats.map((s) => [s.id, { id: s.id, name: s.name, score: 0, streak: 0, correct: 0, last: null, left: false }])),
     };
-    this.room.system(`Ván ${this.gameNo} bắt đầu: ${this.game.title} — ${questions.length} câu, ${this.options.seconds} giây/câu`);
+    this.game = game;
+    this.room.system(`Ván ${this.gameNo} bắt đầu: ${game.title} — ${questions.length} câu, ${this.options.seconds} giây/câu`);
     this._after(INTRO_MS, () => this._ask(0));
   }
 
-  _after(ms: any, fn: any) {
-    clearTimeout(this.timer);
+  _after(ms: number, fn: () => void) {
+    clearTimeout(this.timer ?? undefined);
     this.timer = setTimeout(() => {
       if (this.status !== 'playing') return;
       fn();
@@ -217,8 +253,8 @@ export class QuizHandler {
     }, ms);
   }
 
-  _ask(i: any) {
-    const g = this.game;
+  _ask(i: number) {
+    const g = this._game();
     g.index = i;
     g.phase = 'question';
     g.answers = new Map();
@@ -229,11 +265,11 @@ export class QuizHandler {
     this._after(ms + 300, () => this._reveal()); // 300ms bù trễ mạng cho câu trả lời sát giờ
   }
 
-  _active() { return [...this.game.players.values()].filter((p) => !p.left); }
-  _allAnswered() { return this._active().every((p) => this.game.answers.has(p.id)); }
+  _active() { return [...this._game().players.values()].filter((p) => !p.left); }
+  _allAnswered() { return this._active().every((p) => this._game().answers.has(p.id)); }
 
   _reveal() {
-    const g = this.game;
+    const g = this._game();
     if (g.phase !== 'question') return;
     const q = g.questions[g.index];
     const total = this.options.seconds * 1000;
@@ -256,18 +292,18 @@ export class QuizHandler {
   }
 
   _advance() {
-    const g = this.game;
+    const g = this._game();
     if (g.index + 1 < g.questions.length) this._ask(g.index + 1);
     else this._finish();
   }
 
   _ranking() {
-    return [...this.game.players.values()].sort((a, b) => b.score - a.score || b.correct - a.correct);
+    return [...this._game().players.values()].sort((a, b) => b.score - a.score || b.correct - a.correct);
   }
 
   _finish() {
-    clearTimeout(this.timer);
-    const g = this.game;
+    clearTimeout(this.timer ?? undefined);
+    const g = this._game();
     this.status = 'over';
     g.phase = 'over';
     g.deadline = 0;
@@ -297,39 +333,40 @@ export class QuizHandler {
 
   // ---------- Hiển thị ----------
 
-  view(viewerId: any) {
-    const g = this.game;
+  /** Phần ván đang chơi: câu hỏi chỉ hiện trong lúc hỏi / xem đáp án, đáp án chỉ hiện khi đã chốt. */
+  _gameView(g: QuizGame, viewerId: string, playing: boolean) {
+    const q = g.index >= 0 ? g.questions[g.index] : null;
+    const showQ = g.phase === 'question' || g.phase === 'reveal';
+    const me = g.players.get(viewerId);
+    const mine = g.answers.get(viewerId);
+    return {
+      title: g.title,
+      index: g.index,
+      total: g.questions.length,
+      phase: g.phase,
+      timeLeft: playing ? Math.max(0, g.deadline - Date.now()) : 0,
+      totalMs: g.phase === 'question' ? this.options.seconds * 1000 : g.phase === 'reveal' ? REVEAL_MS : INTRO_MS,
+      question: q && showQ ? { q: q.q, c: q.c || null, choices: q.choices } : null,
+      answered: g.answers.size,
+      players: this._active().length,
+      myChoice: mine ? mine.choice : null,
+      reveal: g.phase === 'reveal' || g.phase === 'over' ? g.reveal : null,
+      me: me ? { score: me.score, streak: me.streak, correct: me.correct, last: g.phase === 'reveal' ? me.last : null } : null,
+      leaderboard: this._ranking().map(({ id, name, score, streak, correct, last, left }) => ({
+        id, name, score, streak, correct, left, gained: g.phase === 'reveal' && last ? last.points + last.bonus : null,
+      })),
+    };
+  }
+
+  view(viewerId: string): QuizView {
     const playing = this.status === 'playing';
-    let game: any = null;
-    if (g) {
-      const q = g.index >= 0 ? g.questions[g.index] : null;
-      const showQ = q && (g.phase === 'question' || g.phase === 'reveal');
-      const me = g.players.get(viewerId);
-      const mine = g.answers.get(viewerId);
-      game = {
-        title: g.title,
-        index: g.index,
-        total: g.questions.length,
-        phase: g.phase,
-        timeLeft: playing ? Math.max(0, g.deadline - Date.now()) : 0,
-        totalMs: g.phase === 'question' ? this.options.seconds * 1000 : g.phase === 'reveal' ? REVEAL_MS : INTRO_MS,
-        question: showQ ? { q: q.q, c: q.c || null, choices: q.choices } : null,
-        answered: g.answers.size,
-        players: this._active().length,
-        myChoice: mine ? mine.choice : null,
-        reveal: g.phase === 'reveal' || g.phase === 'over' ? g.reveal : null,
-        me: me ? { score: me.score, streak: me.streak, correct: me.correct, last: g.phase === 'reveal' ? me.last : null } : null,
-        leaderboard: this._ranking().map(({ id, name, score, streak, correct, last, left }) => ({
-          id, name, score, streak, correct, left, gained: g.phase === 'reveal' && last ? last.points + last.bonus : null,
-        })),
-      };
-    }
+    const game = this.game ? this._gameView(this.game, viewerId, playing) : null;
     return {
       options: this.options,
       categories: CATEGORIES,
       bankSize: BANK.length,
       seats: this.seats,
-      ...this.ready.view(this.seats.map((x: any) => x.id)),
+      ...this.ready.view(this.playerIds()),
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,
@@ -342,5 +379,5 @@ export class QuizHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer ?? undefined); }
 }

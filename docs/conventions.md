@@ -30,4 +30,4 @@ Quy ước này ưu tiên code dễ đọc và khớp repo hiện tại, không 
 
 `npm run check` = policy TS-only/nợ kiểu + ESLint + strict typecheck. ESLint dùng [flat config](https://eslint.org/docs/latest/use/configure/configuration-files) và [recommended TypeScript rules](https://typescript-eslint.io/getting-started/), thêm Rules of Hooks. Typecheck bắt cú pháp/kiểu, lint bắt lỗi cấu trúc/unused/dead assignment, tests xác nhận hành vi.
 
-Baseline `config/typescript-debt.json` chỉ ghi nhận `any` còn lại từ migration. File mới không được có `any`; file cũ không được tăng số lượng. Không tăng baseline để chữa check đỏ. Khi giảm nợ, hạ budget tương ứng trong cùng PR. Không đồng nghĩa code cũ đã typed end-to-end.
+Baseline `config/typescript-debt.json` hiện rỗng: không file nào được có `any` tường minh. Không thêm mục vào baseline để chữa check đỏ; CI cũng chặn tăng budget so với base commit.

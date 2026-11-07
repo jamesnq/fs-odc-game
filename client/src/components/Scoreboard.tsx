@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { ScoreboardView } from '@game/shared/views';
+import type { Identity } from '@game/shared/contracts';
 import { fmtTime } from '../format.js';
 
-export const fmtPts = (n: any) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
+export const fmtPts = (n: number) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
 
 /**
  * Bảng điểm cho game 2 người. `sides` = { r: { label, cls }, b: {...} } để hiển thị màu quân trong lịch sử.
  */
 /** Điểm của một người trong phòng (null nếu chưa có ván nào). */
-export const pointsOf = (score: any, id: any) => {
-  const r = score?.rows?.find((x: any) => x.id === id);
+export const pointsOf = (score: ScoreboardView | null | undefined, id: string) => {
+  const r = score?.rows?.find((x) => x.id === id);
   return r ? r.points : null;
 };
 
 /** Dòng tỉ số ngắn "An 2 – 1 Bình" cho hai ghế (theo thứ tự truyền vào). */
-export function ScoreLine({ score, a, b }: any) {
+export function ScoreLine({ score, a, b }: { score: ScoreboardView | null | undefined; a: Identity | null | undefined; b: Identity | null | undefined }) {
   if (!a || !b || !score?.gameNo) return null;
   return (
     <div className="score-line" aria-label={`Tỉ số: ${a.name} ${fmtPts(pointsOf(score, a.id) ?? 0)}, ${b.name} ${fmtPts(pointsOf(score, b.id) ?? 0)}`}>
@@ -25,8 +27,10 @@ export function ScoreLine({ score, a, b }: any) {
   );
 }
 
-export default function Scoreboard({ room, score, sides, playing }: any) {
-  const { user, act } = useApp();
+export default function Scoreboard({ room, score, sides, playing }: {
+  room: { ownerId: string }; score: ScoreboardView; sides: Record<string, { label: string; cls: string }>; playing: boolean;
+}) {
+  const { user, act } = useRoomApp();
   const [tab, setTab] = useState('table');
   const isOwner = room.ownerId === user.id;
   const { rows, history } = score;
@@ -49,7 +53,7 @@ export default function Scoreboard({ room, score, sides, playing }: any) {
             <tr><th>#</th><th>Người chơi</th><th title="Số ván">V</th><th title="Thắng">T</th><th title="Hòa">H</th><th title="Thua">B</th><th>Điểm</th></tr>
           </thead>
           <tbody>
-            {rows.map((r: any, i: any) => (
+            {rows.map((r, i) => (
               <tr key={r.id} className={r.id === user.id ? 'me' : ''}>
                 <td>{i === 0 && r.points > 0 ? '🏆' : i + 1}</td>
                 <td className="sb-name">{r.name}</td>
@@ -64,13 +68,13 @@ export default function Scoreboard({ room, score, sides, playing }: any) {
         </table>
       ) : (
         <ul className="sb-history">
-          {history.map((h: any) => {
-            const winner = h.players.find((p: any) => p.id === h.winnerId);
+          {history.map((h) => {
+            const winner = h.players.find((p) => p.id === h.winnerId);
             return (
               <li key={h.no}>
                 <span className="muted">#{h.no} · {fmtTime(h.ts)}</span>
                 <div>
-                  {h.players.map((p: any, k: any) => (
+                  {h.players.map((p, k) => (
                     <span key={p.id}>
                       {k > 0 && <span className="muted"> vs </span>}
                       <span className={sides[p.side]?.cls}>{p.name}</span>

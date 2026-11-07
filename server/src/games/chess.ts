@@ -1,8 +1,15 @@
 import type { Room } from '../lobby.js';
 import { Scoreboard } from './scoreboard.js';
 import { createGame, makeMove, undoMoves, isInCheck, other } from '@game/shared/chess';
+import type { ChessState } from '@game/shared/chess';
+import type { GameAction, Identity } from '@game/shared/contracts';
+import type { ChessView } from '@game/shared/views';
 
-const REASON: Record<string, any> = {
+type Color = 'w' | 'b';
+interface ChessRequest { type: 'draw' | 'undo'; from: Color }
+interface ChessResult { winner: string | null; reason: string; text: string }
+
+const REASON: Record<string, string> = {
   checkmate: 'Chiếu bí',
   stalemate: 'Hòa pat (hết nước đi)',
   timeout: 'Hết giờ',
@@ -14,25 +21,27 @@ const REASON: Record<string, any> = {
   leave: 'Rời bàn',
 };
 
+const asColor = (c: string | null): Color | null => (c === 'w' || c === 'b' ? c : null);
+
 export class ChessHandler {
   declare room: Room;
-  declare options: any;
-  declare seats: any;
-  declare ready: any;
-  declare rematch: any;
+  declare options: { minutes: number };
+  declare seats: Record<Color, Identity | null>;
+  declare ready: Record<Color, boolean>;
+  declare rematch: Record<Color, boolean>;
   declare status: string;
-  declare game: any;
-  declare clocks: any;
+  declare game: ChessState;
+  declare clocks: Record<string, number>;
   declare turnStart: number;
-  declare pending: any;
-  declare result: any;
-  declare timer: any;
+  declare pending: ChessRequest | null;
+  declare result: ChessResult | null;
+  declare timer: ReturnType<typeof setTimeout> | null;
   declare gameNo: number;
-  declare score: any;
+  declare score: Scoreboard;
 
   static maxPlayers = 2;
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: Record<string, unknown>) {
     this.room = room;
     const minutes = Math.min(60, Math.max(1, Number(options.minutes) || 10));
     this.options = { minutes };
@@ -51,16 +60,16 @@ export class ChessHandler {
   }
 
   get maxPlayers() { return 2; }
-  playerIds() { return Object.values(this.seats as Record<string, {id: string; name: string} | null>).filter((s): s is NonNullable<typeof s> => !!s).map((s) => s.id); }
+  playerIds() { return Object.values(this.seats).filter((s) => s != null).map((s) => s.id); }
   isPlaying() { return this.status === 'playing'; }
-  colorOf(id: any) { return this.seats.w?.id === id ? 'w' : this.seats.b?.id === id ? 'b' : null; }
+  colorOf(id: string): Color | null { return this.seats.w?.id === id ? 'w' : this.seats.b?.id === id ? 'b' : null; }
 
-  rename(id: any, name: any) {
-    for (const c of ['w', 'b']) if (this.seats[c]?.id === id) this.seats[c].name = name;
+  rename(id: string, name: string) {
+    for (const c of ['w', 'b'] as const) { const seat = this.seats[c]; if (seat?.id === id) seat.name = name; }
     this.score.rename(id, name);
   }
 
-  sit(user: any, seat: any) {
+  sit(user: Identity, seat?: string | number) {
     if (this.colorOf(user.id)) throw new Error('Bạn đã ngồi rồi');
     const color = seat === 'w' || seat === 'b' ? seat : !this.seats.w ? 'w' : !this.seats.b ? 'b' : null;
     if (!color || this.seats[color]) throw new Error('Bàn đã đủ người');
@@ -70,7 +79,7 @@ export class ChessHandler {
     this.rematch = { w: false, b: false };
   }
 
-  stand(id: any) {
+  stand(id: string) {
     const c = this.colorOf(id);
     if (!c) return;
     if (this.status === 'playing') this._end(other(c), 'leave');
@@ -80,7 +89,7 @@ export class ChessHandler {
     if (this.status === 'over' && !this.seats.w && !this.seats.b) this.status = 'waiting';
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
   _start() {
     const ms = this.options.minutes * 60000;
@@ -93,7 +102,7 @@ export class ChessHandler {
     this.ready = { w: false, b: false };
     this.rematch = { w: false, b: false };
     this.gameNo++;
-    this.room.system(`Ván ${this.gameNo} bắt đầu: ${this.seats.w.name} (Trắng) – ${this.seats.b.name} (Đen)`);
+    this.room.system(`Ván ${this.gameNo} bắt đầu: ${this.seats.w?.name} (Trắng) – ${this.seats.b?.name} (Đen)`);
     this._schedule();
   }
 
@@ -105,7 +114,7 @@ export class ChessHandler {
   }
 
   _schedule() {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     if (this.status !== 'playing') return;
     const left = this.clocks[this.game.turn] - (Date.now() - this.turnStart);
     this.timer = setTimeout(() => {
@@ -118,23 +127,24 @@ export class ChessHandler {
     }, Math.max(0, left) + 50);
   }
 
-  _end(winner: any, reason: any) {
+  _end(winner: Color | null, reason: string) {
     if (this.status === 'playing') this._chargeClock();
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     const started = this.status === 'playing';
     this.status = 'over';
     this.pending = null;
-    this.result = { winner, reason, text: REASON[reason] || reason };
+    const text = REASON[reason] || reason;
+    this.result = { winner, reason, text };
     const who = winner ? `${this.seats[winner]?.name || (winner === 'w' ? 'Trắng' : 'Đen')} thắng` : 'Hòa';
-    this.room.system(`Kết thúc: ${who} — ${this.result.text}`);
-    const [a, b] = ['w', 'b'].map((c) => this.seats[c] && { ...this.seats[c], side: c });
+    this.room.system(`Kết thúc: ${who} — ${text}`);
+    const [a, b] = (['w', 'b'] as const).map((c) => this.seats[c] && { ...this.seats[c], side: c });
     if (started && a && b) {
-      this.score.record([a, b], winner ? this.seats[winner].id : null, this.result.text, this.game.history.length);
+      this.score.record([a, b], winner ? this.seats[winner]?.id ?? null : null, text, this.game.history.length);
       this.room.system(`Tỉ số: ${this.score.line(a, b)}`);
     }
   }
 
-  action(id: any, a: any): void {
+  action(id: string, a: GameAction): void {
     if (a.type === 'resetScore') {
       if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đặt lại bảng điểm');
       if (this.status === 'playing') throw new Error('Không thể đặt lại khi ván đang diễn ra');
@@ -160,7 +170,7 @@ export class ChessHandler {
         if (this.rematch.w && this.rematch.b) {
           [this.seats.w, this.seats.b] = [this.seats.b, this.seats.w]; // đổi màu
           this._start();
-        } else this.room.system(`${this.seats[c].name} muốn chơi lại`);
+        } else this.room.system(`${this.seats[c]?.name} muốn chơi lại`);
         return;
       }
       case 'move': {
@@ -170,10 +180,11 @@ export class ChessHandler {
           this.clocks[c] = 0;
           return this._end(opp, 'timeout');
         }
-        this.game = makeMove(this.game, Number(a.from), Number(a.to), a.promotion || 'Q');
+        const move = 'from' in a ? a : { from: undefined, to: undefined, promotion: undefined };
+        this.game = makeMove(this.game, Number(move.from), Number(move.to), move.promotion || 'Q');
         this.turnStart = Date.now();
         this.pending = null;
-        if (this.game.result) return this._end(this.game.result.winner, this.game.result.reason);
+        if (this.game.result) return this._end(asColor(this.game.result.winner), this.game.result.reason);
         this._schedule();
         return;
       }
@@ -189,7 +200,7 @@ export class ChessHandler {
           if (!n) throw new Error('Không có nước nào để đi lại');
         }
         this.pending = { type: a.type === 'offerDraw' ? 'draw' : 'undo', from: c };
-        this.room.system(`${this.seats[c].name} ${a.type === 'offerDraw' ? 'cầu hòa' : 'xin đi lại'}`);
+        this.room.system(`${this.seats[c]?.name} ${a.type === 'offerDraw' ? 'cầu hòa' : 'xin đi lại'}`);
         return;
       }
       case 'cancelRequest':
@@ -200,7 +211,7 @@ export class ChessHandler {
         if (!p || p.from !== opp) throw new Error('Không có yêu cầu nào');
         this.pending = null;
         if (!a.accept) {
-          this.room.system(`${this.seats[c].name} từ chối ${p.type === 'draw' ? 'cầu hòa' : 'đi lại'}`);
+          this.room.system(`${this.seats[c]?.name} từ chối ${p.type === 'draw' ? 'cầu hòa' : 'đi lại'}`);
           return;
         }
         if (p.type === 'draw') return this._end(null, 'draw');
@@ -209,7 +220,7 @@ export class ChessHandler {
         this._chargeClock();
         this.game = undoMoves(this.game, n);
         this.turnStart = Date.now();
-        this.room.system(`${this.seats[c].name} đồng ý cho đi lại`);
+        this.room.system(`${this.seats[c]?.name} đồng ý cho đi lại`);
         this._schedule();
         return;
       }
@@ -219,13 +230,13 @@ export class ChessHandler {
   }
 
   /** Số nước cần lùi để quay về lượt của `color` */
-  _undoCount(color: any) {
+  _undoCount(color: Color) {
     const h = this.game.history.length;
     if (this.game.turn === color) return h >= 2 ? 2 : 0; // đối thủ vừa đi: lùi 2 nước
     return h >= 1 ? 1 : 0; // mình vừa đi: lùi 1 nước
   }
 
-  view(viewerId: any) {
+  view(viewerId: string): ChessView {
     const now = Date.now();
     const clocks = { ...this.clocks };
     if (this.status === 'playing') clocks[this.game.turn] = Math.max(0, clocks[this.game.turn] - (now - this.turnStart));
@@ -238,7 +249,7 @@ export class ChessHandler {
       status: this.status,
       board: this.game.board,
       turn: this.game.turn,
-      moves: this.game.history.map((m: any) => ({
+      moves: this.game.history.map((m) => ({
         san: m.san,
         from: m.from,
         to: m.to,
@@ -259,5 +270,5 @@ export class ChessHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer ?? undefined); }
 }

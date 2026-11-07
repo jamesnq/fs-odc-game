@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Palette, MessagesSquare, PawPrint, Worm, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, ChevronLeft, ChevronRight, Lightbulb, SpellCheck } from 'lucide-react';
 import { useApp } from '../store.js';
 import CreateRoomDialog from './CreateRoomDialog.js';
+import type { LucideIcon } from 'lucide-react';
+import type { OnlineUser, RoomSummary } from '@game/shared/contracts';
 
 const SNAKE_MAZE: Record<string, string> = { none: 'Không tường', box: 'Hộp kín', tunnel: 'Đường hầm', rooms: 'Bốn phòng', rails: 'Đường ray' };
 
-export const GAME_META: Record<string, any> = {
+export const GAME_META: Record<string, { name: string; Icon: LucideIcon; desc: string }> = {
   chess: { name: 'Cờ vua', Icon: Crown, desc: '2 người, chuẩn FIDE, phong cấp, nhập thành, bắt qua đường' },
   tala: { name: 'Tá lả', Icon: Layers, desc: 'Phỏm 2–4 người, ăn – hạ – gửi – Ù' },
   samloc: { name: 'Sâm lốc', Icon: Club, desc: '2–5 người, 10 lá, báo Sâm – chặt heo' },
@@ -34,7 +36,7 @@ const GROUP_KEY = 'gl_lobby_group';
 const fold = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 
 /** Icon SVG của trò chơi (bộ Lucide), màu theo từng trò. */
-export function GameIcon({ game, size = 24 }: any) {
+export function GameIcon({ game, size = 24 }: { game: string; size?: number }) {
   const I = GAME_META[game]?.Icon || Layers;
   return <I size={size} strokeWidth={2} aria-hidden />;
 }
@@ -118,11 +120,11 @@ function GamePicker({ count, onCreate }: {count: (game: string) => number; onCre
 export default function Lobby() {
   const { rooms, user, call } = useApp();
   const [filter, setFilter] = useState('all');
-  const [creating, setCreating] = useState<any>(null);
+  const [creating, setCreating] = useState<string | null>(null);
   const [q, setQ] = useState('');
 
-  const count = (k: any) => rooms.filter((r: any) => r.game === k).length;
-  const list = rooms.filter((r: any) => (filter === 'all' || r.game === filter) && (!q || r.name.toLowerCase().includes(q.toLowerCase())));
+  const count = (k: string) => rooms.filter((r) => r.game === k).length;
+  const list = rooms.filter((r) => (filter === 'all' || r.game === filter) && (!q || r.name.toLowerCase().includes(q.toLowerCase())));
 
   return (
     <div className="lobby">
@@ -139,7 +141,7 @@ export default function Lobby() {
         </div>
         <div className="room-list-head">
           <div className="tabs" role="tablist">
-            {[['all', 'Tất cả', rooms.length], ...Object.entries(GAME_META).filter(([k]) => count(k) > 0 || filter === k).map(([k, g]) => [k, g.name, count(k)])].map(([k, label, n]) => (
+            {[['all', 'Tất cả', rooms.length] as const, ...Object.entries(GAME_META).filter(([k]) => count(k) > 0 || filter === k).map(([k, g]) => [k, g.name, count(k)] as const)].map(([k, label, n]) => (
               <button key={k} role="tab" aria-selected={filter === k} className={`tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>
                 {label} <span className="tab-count">{n}</span>
               </button>
@@ -147,7 +149,7 @@ export default function Lobby() {
           </div>
           <label className="search">
             <Search size={16} aria-hidden />
-            <input type="search" placeholder="Tìm phòng…" aria-label="Tìm phòng" value={q} onChange={(e: any) => setQ(e.target.value)} />
+            <input type="search" placeholder="Tìm phòng…" aria-label="Tìm phòng" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
         </div>
 
@@ -159,7 +161,7 @@ export default function Lobby() {
           </div>
         ) : (
           <div className="rooms">
-            {list.map((r: any) => {
+            {list.map((r) => {
               const full = r.players >= r.maxPlayers;
               return (
                 <div key={r.id} className="room-item">
@@ -184,7 +186,7 @@ export default function Lobby() {
                       {full ? 'Đủ người' : 'Vào chơi'}
                     </button>
                     <button className="btn" onClick={() => call('room:join', { roomId: r.id, mode: 'watch' })} title="Vào xem" aria-label={`Vào xem phòng ${r.name}`}><Eye size={18} aria-hidden /><span className="hide-lg">Xem</span></button>
-                    {r.ownerId === user.id && (
+                    {r.ownerId === user?.id && (
                       <button className="btn danger" title="Xóa phòng" aria-label={`Xóa phòng ${r.name}`} onClick={() => confirm(`Xóa phòng "${r.name}"?`) && call('room:delete', { roomId: r.id })}><Trash2 size={18} aria-hidden /></button>
                     )}
                   </div>
@@ -201,10 +203,10 @@ export default function Lobby() {
 }
 
 /** Màu avatar cố định theo id để dễ phân biệt từng người. */
-const hueOf = (id: any) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
-const initial = (name: any) => name.trim().charAt(0).toUpperCase() || '?';
+const hueOf = (id: string) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
+const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?';
 
-function Avatar({ p, size = 34 }: any) {
+function Avatar({ p, size = 34 }: { p: OnlineUser; size?: number }) {
   return (
     <span className="op-avatar" aria-hidden style={{ '--h': hueOf(p.id), width: size, height: size }}>{initial(p.name)}</span>
   );
@@ -227,18 +229,19 @@ function OnlinePanel() {
     } catch { /* không có localStorage */ }
     return !!window.matchMedia?.('(min-width: 1100px)').matches;
   });
-  const setOpen = (f: any) => setOpenState((v) => {
+  const setOpen = (f: (open: boolean) => boolean) => setOpenState((v) => {
     const next = f(v);
     try { localStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* bỏ qua */ }
     return next;
   });
-  const others = online.filter((p: any) => p.id !== user.id);
-  const match = (p: any) => !q || p.name.toLowerCase().includes(q.toLowerCase());
-  const byName = (a: any, b: any) => a.name.localeCompare(b.name, 'vi');
-  const idle = others.filter((p: any) => !p.room && match(p)).sort(byName);
-  const busy = others.filter((p: any) => p.room && match(p)).sort((a: any, b: any) => b.room.playing - a.room.playing || byName(a, b));
+  const others = online.filter((p) => p.id !== user?.id);
+  const match = (p: OnlineUser) => !q || p.name.toLowerCase().includes(q.toLowerCase());
+  const byName = (a: OnlineUser, b: OnlineUser) => a.name.localeCompare(b.name, 'vi');
+  const idle = others.filter((p) => !p.room && match(p)).sort(byName);
+  const busy = others.filter((p) => p.room && match(p))
+    .sort((a, b) => Number(!!b.room?.playing) - Number(!!a.room?.playing) || byName(a, b));
 
-  const row = (p: any) => {
+  const row = (p: OnlineUser) => {
     const r = p.room;
     return (
       <li key={p.id}>
@@ -264,11 +267,11 @@ function OnlinePanel() {
 
   return (
     <aside className={`online-panel ${open ? 'open' : ''}`} aria-labelledby="online-title">
-      <button type="button" className="op-head" onClick={() => setOpen((v: any) => !v)} aria-expanded={open} aria-controls="online-content"
+      <button type="button" className="op-head" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="online-content"
         title={open ? 'Ẩn danh sách' : 'Hiện danh sách người đang online'}>
         <h2 id="online-title"><span className="dot on" aria-hidden />Đang online</h2>
         <span className="op-stack" aria-hidden>
-          {others.slice(0, 4).map((p: any) => <Avatar key={p.id} p={p} size={24} />)}
+          {others.slice(0, 4).map((p) => <Avatar key={p.id} p={p} size={24} />)}
           {others.length > 4 && <span className="op-more">+{others.length - 4}</span>}
         </span>
         <span className="tab-count" aria-label={`${others.length} người khác`}>{others.length}</span>
@@ -285,7 +288,7 @@ function OnlinePanel() {
             {others.length > 6 && (
               <label className="search">
                 <Search size={16} aria-hidden />
-                <input type="search" placeholder="Tìm người chơi…" aria-label="Tìm người chơi" value={q} onChange={(e: any) => setQ(e.target.value)} />
+                <input type="search" placeholder="Tìm người chơi…" aria-label="Tìm người chơi" value={q} onChange={(e) => setQ(e.target.value)} />
               </label>
             )}
             <div className="op-scroll">
@@ -306,7 +309,7 @@ function OnlinePanel() {
   );
 }
 
-function describeOptions(r: any) {
+function describeOptions(r: RoomSummary) {
   const o = r.options || {};
   if (r.game === 'xiangqi') return `${o.minutes} phút/bên`;
   if (r.game === 'caro') return `${o.size}×${o.size} · ${o.minutes} phút/bên${o.blockTwoEnds ? ' · chặn 2 đầu' : ''}`;
@@ -316,7 +319,7 @@ function describeOptions(r: any) {
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
   if (r.game === 'samloc') return `Cược ${o.unit}/đơn vị · ${o.turnSeconds} giây/lượt`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;
-  if (r.game === 'snake') return `Cấp ${o.level} · ${SNAKE_MAZE[o.maze] || ''}${o.minutes ? ` · ${o.minutes} phút` : ''}`;
+  if (r.game === 'snake') return `Cấp ${o.level} · ${SNAKE_MAZE[String(o.maze)] || ''}${o.minutes ? ` · ${o.minutes} phút` : ''}`;
   if (r.game === 'onet') return o.mode === 'classic' ? `Cổ điển · ${o.rows}×${o.cols} ô · ${o.minutes} phút/màn` : `${o.rows}×${o.cols} ô · ${o.minutes} phút${o.gravity ? ' · trọng lực' : ''}`;
   return '';
 }

@@ -42,7 +42,7 @@ test('Máy không bỏ phiếu và không tính vào số phiếu cần để g�
   const g = new WordChainGame([...P, { id: 'b', name: 'Bình' }], { lives: 1 });
   g.submit(g.current.id === 'bot:1' ? 'bot:1' : g.current.id, 'con mèo');
   const author = g.last.by;
-  const voters = g.players.filter((p: any) => !p.bot && p.id !== author).length;
+  const voters = g.players.filter((p) => !p.bot && p.id !== author).length;
   assert.equal(g.objectionsNeeded(), Math.floor(voters / 2) + 1);
   assert.throws(() => g.object('bot:1'), author === 'bot:1' ? /chính mình/ : /Máy không/);
 });

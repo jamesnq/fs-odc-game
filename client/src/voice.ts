@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { socket, request } from './socket.js';
 import { voiceNegotiation } from './voiceNegotiation.js';
-import type { IncomingSignal, VoiceSignal } from '@game/shared/contracts';
+import type { IncomingSignal, RoomState, VoiceSignal, VoiceStatus } from '@game/shared/contracts';
 
 interface Peer {
   pc: RTCPeerConnection; audio: HTMLAudioElement; createdAt: number;
@@ -25,19 +25,29 @@ interface VoiceRuntime {
  * hai bên đều có thể gửi offer, bên "polite" (id lớn hơn) nhường khi va chạm.
  */
 const VOL_KEY = 'gl_voice_vol';
-const loadVolumes = () => { try { return JSON.parse(localStorage.getItem(VOL_KEY) || '{}') || {}; } catch { return {}; } };
+type PeerState = 'connecting' | 'connected' | 'failed';
+const loadVolumes = (): Record<string, number> => {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(VOL_KEY) || '{}');
+    if (!saved || typeof saved !== 'object') return {};
+    return Object.fromEntries(Object.entries(saved).filter((e): e is [string, number] => typeof e[1] === 'number'));
+  } catch { return {}; }
+};
+const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const SPEAK_ON = 0.035; // ngưỡng RMS coi là đang nói (có trễ để không nhấp nháy)
 const SPEAK_OFF = 0.02;
 
-export function useVoice({ room, me, status, toast }: any) {
+export function useVoice({ room, me, status, toast }: {
+  room: Pick<RoomState, 'voice'> | null; me: string; status: VoiceStatus | null; toast: (text: string, type?: string) => void;
+}) {
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
   const [muted, setMuted] = useState(false);
   const [micOk, setMicOk] = useState(true); // false = không có micro → chỉ nghe
-  const [speaking, setSpeaking] = useState(() => new Set());
-  const [peerState, setPeerState] = useState({}); // id → 'connecting' | 'connected' | 'failed'
+  const [speaking, setSpeaking] = useState(() => new Set<string>());
+  const [peerState, setPeerState] = useState<Record<string, PeerState>>({}); // id → 'connecting' | 'connected' | 'failed'
   const [volumes, setVolumes] = useState(loadVolumes);
-  const R = useRef<VoiceRuntime>({ joined: false, joining: false, generation: 0, pending: [] as any[], joinedAt: 0, stream: null, ice: [] as any[], peers: new Map(), ctx: null, meters: new Map(), timer: null, unlock: null });
+  const R = useRef<VoiceRuntime>({ joined: false, joining: false, generation: 0, pending: [], joinedAt: 0, stream: null, ice: [], peers: new Map(), ctx: null, meters: new Map(), timer: null, unlock: null });
   const meRef = useRef(me);
   meRef.current = me;
   const toastRef = useRef(toast);
@@ -46,7 +56,7 @@ export function useVoice({ room, me, status, toast }: any) {
   const send = (to: string, data: VoiceSignal) => request('voice:signal', { to, data }).catch(() => {});
 
   // ---------- Đo âm lượng để biết ai đang nói ----------
-  const meter = useCallback((id: any, stream: any) => {
+  const meter = useCallback((id: string, stream: MediaStream) => {
     const r = R.current;
     try {
       if (!r.ctx) r.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -61,14 +71,14 @@ export function useVoice({ room, me, status, toast }: any) {
     if (!r.timer) {
       r.timer = setInterval(() => {
         let changed = false;
-        const next = new Set();
+        const next = new Set<string>();
         for (const [mid, m] of r.meters) {
           m.an.getFloatTimeDomainData(m.buf);
           let sum = 0;
           for (let i = 0; i < m.buf.length; i++) sum += m.buf[i] * m.buf[i];
           const rms = Math.sqrt(sum / m.buf.length);
           const live = mid !== meRef.current || r.stream?.getAudioTracks()[0]?.enabled;
-          const on = live && (m.on ? rms > SPEAK_OFF : rms > SPEAK_ON);
+          const on = !!live && (m.on ? rms > SPEAK_OFF : rms > SPEAK_ON);
           if (on !== m.on) { m.on = on; changed = true; }
           if (on) next.add(mid);
         }
@@ -77,14 +87,14 @@ export function useVoice({ room, me, status, toast }: any) {
     }
   }, []);
 
-  const unmeter = (id: any) => {
+  const unmeter = (id: string) => {
     const r = R.current;
     r.meters.get(id)?.src.disconnect();
     r.meters.delete(id);
   };
 
   // iOS/Safari có thể chặn tự phát âm thanh → chờ lần chạm kế tiếp rồi phát lại
-  const playSafe = (audio: any) => {
+  const playSafe = (audio: HTMLAudioElement) => {
     audio.play().catch(() => {
       const r = R.current;
       if (r.unlock) return;
@@ -99,7 +109,7 @@ export function useVoice({ room, me, status, toast }: any) {
   };
 
   // ---------- Kết nối với từng người ----------
-  const closePeer = useCallback((id: any) => {
+  const closePeer = useCallback((id: string) => {
     const r = R.current;
     const p = r.peers.get(id);
     if (!p) return;
@@ -108,10 +118,10 @@ export function useVoice({ room, me, status, toast }: any) {
     try { p.pc.close(); } catch { /* đã đóng */ }
     p.audio.srcObject = null;
     unmeter(id);
-    setPeerState((s) => { const n: Record<string, any> = { ...s }; delete n[id]; return n; });
+    setPeerState((s) => { const n = { ...s }; delete n[id]; return n; });
   }, []);
 
-  const createPeer = useCallback((id: any) => {
+  const createPeer = useCallback((id: string) => {
     const r = R.current;
     const pc = new RTCPeerConnection({ iceServers: r.ice });
     const audio = new Audio() as HTMLAudioElement & { playsInline: boolean };
@@ -130,12 +140,12 @@ export function useVoice({ room, me, status, toast }: any) {
       if (!pc.remoteDescription && meRef.current > id) return;
       try {
         await p.negotiation.negotiate();
-      } catch (e: any) {
+      } catch (e) {
         console.warn('voice offer', e);
       }
     };
-    pc.onicecandidate = ({ candidate }: any) => send(id, { candidate: candidate ? candidate.toJSON() : null });
-    pc.ontrack = ({ track, streams }: any) => {
+    pc.onicecandidate = ({ candidate }) => send(id, { candidate: candidate ? candidate.toJSON() : null });
+    pc.ontrack = ({ track, streams }) => {
       const stream = streams[0] || new MediaStream([track]);
       audio.srcObject = stream;
       playSafe(audio);
@@ -158,7 +168,7 @@ export function useVoice({ room, me, status, toast }: any) {
 
   // Tín hiệu từ người khác
   useEffect(() => {
-    const onSignal = async (signal: any) => {
+    const onSignal = async (signal: IncomingSignal) => {
       const { from, data } = signal;
       const r = R.current;
       if (!from || from === meRef.current) return;
@@ -169,7 +179,7 @@ export function useVoice({ room, me, status, toast }: any) {
       const p = r.peers.get(from) || createPeer(from);
       try {
         await p.negotiation.receive(data);
-      } catch (e: any) {
+      } catch (e) {
         console.warn('voice signal', e);
       }
     };
@@ -206,7 +216,7 @@ export function useVoice({ room, me, status, toast }: any) {
   }, [teardown]);
 
   // Đồng bộ danh sách kết nối với danh sách người trong kênh thoại của phòng
-  const voiceIds: string = (room?.voice || []).map((v: any) => v.id).join(',');
+  const voiceIds: string = (room?.voice || []).map((v) => v.id).join(',');
   useEffect(() => {
     const r = R.current;
     if (!r.joined) return;
@@ -237,16 +247,16 @@ export function useVoice({ room, me, status, toast }: any) {
     const generation = ++r.generation;
     // Tạo AudioContext ngay trong lần bấm (iOS chỉ cho phát âm thanh sau thao tác của người dùng)
     try { r.ctx = r.ctx || new (window.AudioContext || window.webkitAudioContext)(); r.ctx.resume?.(); } catch { /* bỏ qua */ }
-    let stream: any = null;
+    let stream: MediaStream | null = null;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
     } catch {
       toastRef.current?.('Không dùng được micro — bạn vẫn nghe được mọi người', 'error');
     }
-    if (generation !== r.generation) { stream?.getTracks().forEach((t: any) => t.stop()); return; }
+    if (generation !== r.generation) { stream?.getTracks().forEach((t) => t.stop()); return; }
     try {
       const res = await request('voice:join', { muted: !stream });
-      if (generation !== r.generation) { stream?.getTracks().forEach((t: any) => t.stop()); return; }
+      if (generation !== r.generation) { stream?.getTracks().forEach((t) => t.stop()); return; }
       r.ice = res.iceServers || [];
       r.stream = stream;
       r.joined = true;
@@ -254,8 +264,9 @@ export function useVoice({ room, me, status, toast }: any) {
       setJoined(true);
       setMicOk(!!stream);
       setMuted(!stream);
-      if (stream) stream.getAudioTracks()[0].onended = () => {
-        if (r.stream !== stream || !r.joined) return;
+      const mic = stream;
+      if (mic) mic.getAudioTracks()[0].onended = () => {
+        if (r.stream !== mic || !r.joined) return;
         setMicOk(false);
         setMuted(true);
         request('voice:mute', { muted: true }).catch(() => {});
@@ -264,11 +275,11 @@ export function useVoice({ room, me, status, toast }: any) {
       if (stream) meter(meRef.current, stream);
       for (const id of res.peers || []) if (!r.peers.has(id)) createPeer(id);
       for (const signal of r.pending.splice(0)) r.onSignal?.(signal);
-    } catch (e: any) {
-      stream?.getTracks().forEach((t: any) => t.stop());
+    } catch (e) {
+      stream?.getTracks().forEach((t) => t.stop());
       if (generation !== r.generation) return;
       teardown();
-      toastRef.current?.(e.message, 'error');
+      toastRef.current?.(errorMessage(e), 'error');
     } finally {
       if (generation === r.generation) { r.joining = false; setJoining(false); }
     }
@@ -311,9 +322,9 @@ export function useVoice({ room, me, status, toast }: any) {
         setMicOk(true);
         setMuted(false);
         await request('voice:mute', { muted: false });
-      } catch (e: any) {
+      } catch (e) {
         if (stream && r.stream !== stream) stream.getTracks().forEach((t) => t.stop());
-        toastRef.current?.(`Không bật được micro: ${e.message}`, 'error');
+        toastRef.current?.(`Không bật được micro: ${errorMessage(e)}`, 'error');
       } finally {
         r.micPending = false;
         if (generation === r.generation) setJoining(false);
@@ -326,10 +337,10 @@ export function useVoice({ room, me, status, toast }: any) {
     request('voice:mute', { muted: m }).catch(() => {});
   }, [muted, meter]);
 
-  const setVolume = useCallback((id: any, v: any) => {
+  const setVolume = useCallback((id: string, v: number) => {
     const p = R.current.peers.get(id);
     if (p) p.audio.volume = v;
-    setVolumes((all: any) => {
+    setVolumes((all) => {
       const next = { ...all, [id]: v };
       try { localStorage.setItem(VOL_KEY, JSON.stringify(next)); } catch { /* bộ nhớ đầy / chặn */ }
       return next;

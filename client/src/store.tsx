@@ -1,12 +1,47 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { socket, request, storage, AUTH_ERRORS } from './socket.js';
-import type { Identity, RoomSummary, RoomState, OnlineUser, ServerInfo, VoiceStatus } from '@game/shared/contracts';
-import type { ReactNode } from 'react';
+import { socket, request, send, storage, AUTH_ERRORS } from './socket.js';
+import type { GameAction, Identity, RequestEvent, Requests, Response, RoomSummary, RoomState, OnlineUser, ServerInfo, VoiceStatus } from '@game/shared/contracts';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 interface Toast { id: string; text: string; type: string }
 
+/** Trạng thái phòng kèm thời điểm nhận (performance.now()) để tính đồng hồ đếm ngược. */
+export type ClientRoom = RoomState & { receivedAt: number };
+/** Gọi server, tự hiện lỗi dạng toast; lỗi thì trả về null. */
+export type Call = <E extends RequestEvent>(event: E, payload: Requests[E]) => Promise<Response<E> | null>;
 
-const Ctx = createContext<any>(null);
-export const useApp = () => useContext(Ctx);
+export interface AppContextValue {
+  connected: boolean;
+  user: Identity | null;
+  setUser: Dispatch<SetStateAction<Identity | null>>;
+  rooms: RoomSummary[];
+  online: OnlineUser[];
+  room: ClientRoom | null;
+  toast: (text: string, type?: string) => void;
+  phase: string;
+  hello: (name?: string) => Promise<Response<'hello'>>;
+  call: Call;
+  act: (payload: GameAction) => Promise<Response<'game:action'> | null>;
+  authError: string | null;
+  login: (password: string) => void;
+  newVersion: string | null;
+  server: ServerInfo | null;
+  switchServer: () => Promise<void>;
+  voiceStatus: VoiceStatus | null;
+}
+
+const AUTH_MESSAGES: Record<string, string> = AUTH_ERRORS;
+const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** Thao tác chờ chuyển máy chủ, lưu trước khi tải lại trang. */
+const isPendingRoute = (v: unknown): v is { event: 'room:create'; payload: Requests['room:create'] } | { event: 'room:join'; payload: Requests['room:join'] } =>
+  !!v && typeof v === 'object' && 'event' in v && (v.event === 'room:create' || v.event === 'room:join')
+  && 'payload' in v && !!v.payload && typeof v.payload === 'object';
+
+const Ctx = createContext<AppContextValue | null>(null);
+export const useApp = () => {
+  const value = useContext(Ctx);
+  if (!value) throw new Error('useApp() cần nằm trong <AppProvider>');
+  return value;
+};
 // Dữ liệu đổi liên tục (số yêu cầu đang chờ, danh sách toast) để ở context riêng:
 // chỉ thanh tiến trình / khung toast vẽ lại, không kéo cả app vẽ lại mỗi lần bấm nút.
 const BusyCtx = createContext(0);
@@ -24,7 +59,7 @@ export function AppProvider({ children }: {children: ReactNode}) {
   const [user, setUser] = useState<Identity | null>(null);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [online, setOnline] = useState<OnlineUser[]>([]); // người đang kết nối cùng server
-  const [room, setRoom] = useState<(RoomState & {receivedAt: number}) | null>(null); // trạng thái phòng hiện tại
+  const [room, setRoom] = useState<ClientRoom | null>(null); // trạng thái phòng hiện tại
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Luồng vào app — một trạng thái duy nhất để các màn hình không giành nhau (tránh nhấp nháy):
   //   connecting → (auth → checking) → (name | entering) → ready
@@ -55,13 +90,13 @@ export function AppProvider({ children }: {children: ReactNode}) {
     setOnline(res.online || []);
     setPhase('ready');
     // Resume the one operation that caused a shard redirect after authentication.
-    let pending;
+    let pending: unknown = null;
     try {
       pending = JSON.parse(sessionStorage.getItem('gl_pending_route') || 'null');
       sessionStorage.removeItem('gl_pending_route');
     } catch {}
-    if (pending && ['room:create', 'room:join'].includes(pending.event)) {
-      const result = await request(pending.event, pending.payload);
+    if (isPendingRoute(pending)) {
+      const result = pending.event === 'room:create' ? await request('room:create', pending.payload) : await request('room:join', pending.payload);
       if (result.warning) toast(result.warning);
       return res;
     }
@@ -73,8 +108,8 @@ export function AppProvider({ children }: {children: ReactNode}) {
       try {
         const r = await request('room:join', { roomId: wanted, mode: 'watch' });
         if (r.warning) toast(r.warning);
-      } catch (e: any) {
-        toast(e.message, 'error');
+      } catch (e) {
+        toast(errorMessage(e), 'error');
         location.hash = '';
       }
     }
@@ -94,9 +129,9 @@ export function AppProvider({ children }: {children: ReactNode}) {
     };
     const onDisconnect = () => setConnected(false);
     // Middleware auth từ chối: socket.io không tự thử lại, phải nhập mật khẩu rồi connect lại
-    const onConnectError = (err: any) => {
-      if (!(AUTH_ERRORS as Record<string, any>)[err.message]) return;
-      if (err.message === 'TOO_MANY_CONNECTIONS') return toast((AUTH_ERRORS as Record<string, any>)[err.message], 'error');
+    const onConnectError = (err: Error) => {
+      if (!AUTH_MESSAGES[err.message]) return;
+      if (err.message === 'TOO_MANY_CONNECTIONS') return toast(AUTH_MESSAGES[err.message], 'error');
       storage.session = ''; // phiên hết hạn / đổi mật khẩu → phải nhập lại
       if (err.message === 'AUTH_REQUIRED' || err.message === 'AUTH_FAILED') storage.password = '';
       setAuthError(err.message);
@@ -108,7 +143,7 @@ export function AppProvider({ children }: {children: ReactNode}) {
       setRoom({ ...s, receivedAt: receivedAt.current });
       if (roomFromHash() !== s.id) location.hash = `#/room/${s.id}`;
     };
-    const onClosed = ({ reason }: any) => {
+    const onClosed = ({ reason }: { reason: string }) => {
       setRoom(null);
       location.hash = '';
       if (reason) toast(reason, 'error');
@@ -118,7 +153,7 @@ export function AppProvider({ children }: {children: ReactNode}) {
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
     // Server báo phiên bản client nó đang phục vụ; khác bản đang chạy → có bản deploy mới
-    const onVersion = ({ version }: any) => {
+    const onVersion = ({ version }: { version: string | null }) => {
       if (version && __APP_VERSION__ && version !== __APP_VERSION__) setNewVersion(version);
     };
     socket.on('app:version', onVersion);
@@ -157,19 +192,20 @@ export function AppProvider({ children }: {children: ReactNode}) {
    * Gọi server, tự hiện lỗi dạng toast.
    * Bấm lặp lại cùng một hành động khi yêu cầu trước chưa xong thì dùng chung kết quả (chống bấm đúp).
    */
-  const inflight = useRef(new Map());
-  const call = useCallback((event: any, payload: any) => {
+  const inflight = useRef(new Map<string, Promise<unknown>>());
+  const call: Call = useCallback(<E extends RequestEvent>(event: E, payload: Requests[E]) => {
     const key = event + JSON.stringify(payload ?? null);
-    const running = inflight.current.get(key);
+    // Cùng khóa = cùng sự kiện và payload, nên kết quả đang chờ có đúng kiểu của E.
+    const running = inflight.current.get(key) as Promise<Response<E> | null> | undefined;
     if (running) return running;
     setBusy((n) => n + 1);
-    const p = request(event, payload)
+    const p = send(event, payload)
       .then((res) => {
         if (res.warning) toast(res.warning);
         return res;
       })
-      .catch((e) => {
-        toast(e.message, 'error');
+      .catch((e: unknown) => {
+        toast(errorMessage(e), 'error');
         return null;
       })
       .finally(() => {
@@ -180,9 +216,9 @@ export function AppProvider({ children }: {children: ReactNode}) {
     return p;
   }, [toast]);
 
-  const act = useCallback((payload: any) => call('game:action', payload), [call]);
+  const act = useCallback((payload: GameAction) => call('game:action', payload), [call]);
 
-  const login = useCallback((password: any) => {
+  const login = useCallback((password: string) => {
     storage.password = password;
     setPhase('checking');
     socket.connect();
@@ -204,7 +240,7 @@ export function AppProvider({ children }: {children: ReactNode}) {
     setPhase('auth');
   }, [room]);
 
-  const value = useMemo(() => ({
+  const value = useMemo((): AppContextValue => ({
     connected, user, setUser, rooms, online, room, toast, phase, hello, call, act, authError, login, newVersion, server, switchServer, voiceStatus,
   }), [newVersion, server, switchServer, connected, user, rooms, online, room, toast, phase, hello, call, act, authError, login, voiceStatus]);
 
@@ -215,4 +251,12 @@ export function AppProvider({ children }: {children: ReactNode}) {
       </BusyCtx.Provider>
     </Ctx.Provider>
   );
+}
+
+/** Dùng trong cây phòng chơi (RoomView chỉ hiện khi đã có phòng và người dùng). */
+export function useRoomApp() {
+  const app = useApp();
+  const { room, user } = app;
+  if (!room || !user) throw new Error('useRoomApp() chỉ dùng khi đang ở trong phòng');
+  return { ...app, room, user };
 }

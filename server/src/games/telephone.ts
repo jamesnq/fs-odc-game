@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { ChainEntryView, QueryResults, TelephoneTaskView, TelephoneView } from '@game/shared/views';
 // Tam sao thất bản (vẽ): viết câu → vẽ → đoán lại → vẽ… tất cả cùng làm một lúc, mỗi người một câu chuyện.
 // Bức vẽ được gửi dần từng nét (gói tin lên server có giới hạn kích thước) và lưu làm bản nháp,
 // hết giờ thì lấy luôn bản nháp. Cuối ván chủ phòng lật từng câu chuyện cho cả bàn xem.
@@ -6,6 +7,8 @@ import { randInt } from '@game/shared/cards';
 import { cleanOps } from '@game/shared/scribble';
 import { chainOf, stepKind, cleanText } from '@game/shared/telephone';
 import { bool, clampInt } from './options.js';
+import type { DrawOp } from '@game/shared/scribble';
+import type { GameAction, GameQuery, Identity, Requests } from '@game/shared/contracts';
 import { ReadyGate } from './ready.js';
 import { WORDS } from './scribble.js';
 
@@ -13,27 +16,32 @@ const GRACE_MS = 1500; // bù độ trễ mạng: bản nháp gửi sát giờ v
 const MAX_POINTS = 30_000; // giới hạn bộ nhớ của một bức vẽ
 const MIN_PLAYERS = 3;
 
+interface TelephoneOptions { mode: 'relay' | 'classic'; maxSeats: number; writeSeconds: number; drawSeconds: number; suggest: boolean }
+interface TelephonePlayer extends Identity { gone: boolean }
+type ChainEntry = ChainEntryView;
+interface Draft { text: string; ops: DrawOp[]; points: number }
+
 export class TelephoneHandler {
   declare room: Pick<Room, 'ownerId' | 'system' | 'changed'>;
-  declare options: any;
-  declare seats: any;
-  declare ready: any;
+  declare options: TelephoneOptions;
+  declare seats: Identity[];
+  declare ready: ReadyGate;
   declare status: string;
   declare gameNo: number;
   declare turnNo: number;
-  declare players: any;
-  declare chains: any;
+  declare players: TelephonePlayer[];
+  declare chains: ChainEntry[][];
   declare step: number;
-  declare drafts: any;
-  declare done: any;
-  declare drawings: any;
-  declare suggestions: any;
-  declare reveal: any;
-  declare timer: any;
+  declare drafts: Map<string, Draft>;
+  declare done: Set<string>;
+  declare drawings: Map<string, DrawOp[]>;
+  declare suggestions: Map<string, string[]>;
+  declare reveal: { album: number; shown: number };
+  declare timer: ReturnType<typeof setTimeout> | null;
   declare deadline: number;
   declare phaseTotal: number;
 
-  constructor(room: Pick<Room, 'ownerId' | 'system' | 'changed'>, options: any) {
+  constructor(room: Pick<Room, 'ownerId' | 'system' | 'changed'>, options: Record<string, unknown>) {
     this.room = room;
     this.options = {
       mode: options.mode === 'relay' ? 'relay' : 'classic',
@@ -61,46 +69,46 @@ export class TelephoneHandler {
   }
 
   get maxPlayers() { return this.options.maxSeats; }
-  playerIds() { return this.seats.map((s: any) => s.id); }
+  playerIds() { return this.seats.map((s) => s.id); }
   isPlaying() { return this.status === 'playing' || this.status === 'reveal'; }
-  seated(id: any) { return this.seats.some((s: any) => s.id === id); }
-  idx(id: any) { return this.players.findIndex((p: any) => p.id === id); }
+  seated(id: string) { return this.seats.some((s) => s.id === id); }
+  idx(id: string) { return this.players.findIndex((p) => p.id === id); }
   get relay() { return this.options.mode === 'relay'; }
   get kind() { return this.relay ? (this.step === this.players.length - 1 ? 'text' : 'draw') : stepKind(this.step); }
-  chainIndex(i: any) { return this.relay ? 0 : chainOf(i, this.step, this.players.length); }
-  previous(i: any) { return this.chains[this.chainIndex(i)]?.[this.relay ? this.step : this.step - 1] || null; }
+  chainIndex(i: number) { return this.relay ? 0 : chainOf(i, this.step, this.players.length); }
+  previous(i: number): ChainEntry | null { return this.chains[this.chainIndex(i)]?.[this.relay ? this.step : this.step - 1] || null; }
 
-  rename(id: any, name: any) {
+  rename(id: string, name: string) {
     for (const s of this.seats) if (s.id === id) s.name = name;
     for (const p of this.players) if (p.id === id) p.name = name;
   }
 
   /** Ngồi được cả khi ván đang chơi — chờ ván sau. */
-  sit(user: any) {
+  sit(user: Identity) {
     if (this.seated(user.id)) throw new Error('Bạn đã ngồi rồi');
     if (this.seats.length >= this.options.maxSeats) throw new Error('Bàn đã đủ người');
     this.seats.push({ id: user.id, name: user.name });
   }
 
-  stand(id: any) {
+  stand(id: string) {
     if (!this.seated(id)) return;
-    this.seats = this.seats.filter((s: any) => s.id !== id);
+    this.seats = this.seats.filter((s) => s.id !== id);
     this.ready.delete(id);
     const i = this.idx(id);
     if (this.status !== 'playing' || i < 0 || this.players[i].gone) return;
     // Rời giữa ván: phần còn lại của người đó để trống, câu chuyện vẫn đi tiếp
     this.players[i].gone = true;
     this.room.system(`${this.players[i].name} rời bàn — phần của họ sẽ để trống`);
-    if (this.players.filter((p: any) => !p.gone).length < 2) {
+    if (this.players.filter((p) => !p.gone).length < 2) {
       this.room.system('Còn dưới 2 người — kết thúc sớm, xem lại các câu chuyện');
       return this._toReveal();
     }
     this._checkAllDone();
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     switch (a.type) {
       case 'start':
         if (this.isPlaying()) throw new Error('Ván đang diễn ra');
@@ -113,7 +121,7 @@ export class TelephoneHandler {
       case 'text': { // bản nháp / nộp câu chữ ở bước viết
         this._requireTask(id);
         if (this.kind !== 'text') throw new Error('Bước này là bước vẽ');
-        this.drafts.get(id).text = cleanText(a.text);
+        this._draft(id).text = cleanText(a.text);
         return this._setDone(id, !!a.done);
       }
       case 'done': // nộp / sửa lại bức vẽ
@@ -131,7 +139,14 @@ export class TelephoneHandler {
     }
   }
 
-  _requireTask(id: any) {
+  /** Bản nháp của người chơi ở bước hiện tại (mỗi người chơi luôn có một bản). */
+  _draft(id: string) {
+    const d = this.drafts.get(id);
+    if (!d) throw new Error('Bạn không chơi ván này');
+    return d;
+  }
+
+  _requireTask(id: string) {
     if (this.status !== 'playing') throw new Error('Ván chưa bắt đầu');
     const i = this.idx(id);
     if (i < 0 || this.players[i].gone) throw new Error('Bạn không chơi ván này');
@@ -139,22 +154,22 @@ export class TelephoneHandler {
     return i;
   }
 
-  _setDone(id: any, done: any) {
+  _setDone(id: string, done: boolean) {
     if (done) {
-      if (this.kind === 'text' && !this.drafts.get(id).text) throw new Error(this.step === 0 ? 'Hãy viết một câu' : 'Hãy viết bạn đoán tranh vẽ gì');
+      if (this.kind === 'text' && !this._draft(id).text) throw new Error(this.step === 0 ? 'Hãy viết một câu' : 'Hãy viết bạn đoán tranh vẽ gì');
       this.done.add(id);
     } else this.done.delete(id);
     this._checkAllDone();
   }
 
   /** Nét vẽ của bước vẽ: lưu vào bản nháp của chính người vẽ, không chuyển cho ai. */
-  stream(id: any, payload: any) {
+  stream(id: string, payload: Requests['game:stream']) {
     if (this.status !== 'playing' || this.kind !== 'draw' || Number(payload.turn) !== this.turnNo) return null;
     const i = this.idx(id);
     if (i < 0 || this.players[i].gone || this.done.has(id) || (this.relay && i !== this.step)) return null;
-    const d = this.drafts.get(id);
+    const d = this._draft(id);
     for (const o of cleanOps(payload.ops)) {
-      if (o.k === 'c') { d.ops = []; d.points = 0; } else if (o.k === 'u') d.ops = d.ops.filter((x: any) => x.id !== o.id);
+      if (o.k === 'c') { d.ops = []; d.points = 0; } else if (o.k === 'u') d.ops = d.ops.filter((x) => !('id' in x) || x.id !== o.id);
       else {
         const n = o.p.length / 2;
         if (d.points + n > MAX_POINTS) break;
@@ -165,25 +180,26 @@ export class TelephoneHandler {
     return null;
   }
 
-  query(viewerId: any, q: any) {
+  query(viewerId: string, q: GameQuery): QueryResults['canvas'] | QueryResults['drawing'] {
     if (q.type === 'canvas') {
       const d = this.status === 'playing' && this.drafts.get(viewerId);
       return { turn: this.turnNo, ops: d ? d.ops : [] };
     }
     if (q.type === 'drawing') {
       const id = String(q.id || '');
-      if (!this.drawings.has(id) || !this._canSee(viewerId, id)) throw new Error('Không xem được bức vẽ này');
-      return { id, ops: this.drawings.get(id) };
+      const ops = this.drawings.get(id);
+      if (!ops || !this._canSee(viewerId, id)) throw new Error('Không xem được bức vẽ này');
+      return { id, ops };
     }
     throw new Error('Truy vấn không hợp lệ');
   }
 
   /** Bức vẽ chỉ lộ khi: ván xong, đã được lật, hoặc là đề bài của mình ở bước này. */
-  _canSee(viewerId: any, drawId: any) {
+  _canSee(viewerId: string, drawId: string) {
     if (this.status === 'over') return true;
     if (this.status === 'reveal') {
       const { album, shown } = this.reveal;
-      return this.chains.some((ch: any, c: any) => ch.some((e: any, k: any) => e.drawId === drawId && (c < album || (c === album && k < shown))));
+      return this.chains.some((ch, c) => ch.some((e, k) => e.drawId === drawId && (c < album || (c === album && k < shown))));
     }
     const i = this.idx(viewerId);
     return i >= 0 && !this.players[i].gone && (!this.relay || i === this.step) && this.previous(i)?.drawId === drawId;
@@ -192,7 +208,7 @@ export class TelephoneHandler {
   // ---------- Diễn biến ván ----------
 
   _start() {
-    this.players = this.seats.map((s: any) => ({ id: s.id, name: s.name, gone: false }));
+    this.players = this.seats.map((s) => ({ id: s.id, name: s.name, gone: false }));
     // Thứ tự ngẫu nhiên để không đoán được ai làm tiếp câu chuyện của mình
     for (let i = this.players.length - 1; i > 0; i--) {
       const j = randInt(i + 1);
@@ -201,7 +217,7 @@ export class TelephoneHandler {
     this.chains = this.players.map(() => []);
     if (this.relay) this.chains = [[{ by: null, name: 'Từ khóa', kind: 'text', text: this._suggest()[0] }]];
     this.drawings = new Map();
-    this.suggestions = new Map(this.players.map((p: any) => [p.id, this._suggest()]));
+    this.suggestions = new Map(this.players.map((p) => [p.id, this._suggest()]));
     this.step = 0;
     this.status = 'playing';
     this.ready.clear();
@@ -211,39 +227,39 @@ export class TelephoneHandler {
   }
 
   _suggest() {
-    const out = new Set();
+    const out = new Set<string>();
     while (out.size < 3 && out.size < WORDS.length) out.add(WORDS[randInt(WORDS.length)]);
     return [...out];
   }
 
   _beginStep() {
     this.turnNo++;
-    this.done = new Set(this.players.filter((p: any) => p.gone).map((p: any) => p.id));
-    this.drafts = new Map(this.players.map((p: any) => [p.id, { text: '', ops: [] as any[], points: 0 }]));
+    this.done = new Set(this.players.filter((p) => p.gone).map((p) => p.id));
+    this.drafts = new Map(this.players.map((p) => [p.id, { text: '', ops: [], points: 0 }]));
     const ms = (this.kind === 'text' ? this.options.writeSeconds : this.options.drawSeconds) * 1000;
     this.phaseTotal = ms;
     this.deadline = Date.now() + ms;
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.timer = setTimeout(() => {
       if (this.status !== 'playing') return;
-      try { this._endStep(); } catch (e: any) { console.error('telephone timer', e); }
+      try { this._endStep(); } catch (e) { console.error('telephone timer', e); }
       this.room.changed();
     }, ms + GRACE_MS);
     if (this.relay && this.players[this.step].gone) this._endStep();
   }
 
   _checkAllDone() {
-    if (this.status === 'playing' && (this.relay ? this.done.has(this.players[this.step].id) || this.players[this.step].gone : this.players.every((p: any) => this.done.has(p.id)))) this._endStep();
+    if (this.status === 'playing' && (this.relay ? this.done.has(this.players[this.step].id) || this.players[this.step].gone : this.players.every((p) => this.done.has(p.id)))) this._endStep();
   }
 
   /** Hết bước: ghi phần của mọi người (chưa nộp thì lấy bản nháp, bỏ trống nếu không có) vào câu chuyện. */
   _endStep() {
     const n = this.players.length;
-    this.players.forEach((p: any, i: any) => {
+    this.players.forEach((p, i) => {
       if (this.relay && i !== this.step) return;
       const c = this.chainIndex(i);
-      const d = this.drafts.get(p.id);
-      const entry: {by: string; name: string; kind: string; text?: string; drawId?: string} = { by: p.id, name: p.name, kind: this.kind };
+      const d = this._draft(p.id);
+      const entry: ChainEntry = { by: p.id, name: p.name, kind: this.kind };
       if (this.kind === 'text') entry.text = d.text;
       else {
         entry.drawId = `${this.gameNo}.${c}.${this.step}`;
@@ -257,7 +273,7 @@ export class TelephoneHandler {
   }
 
   _toReveal() {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.deadline = 0;
     if (!this.chains.length || !this.chains[0].length) {
       this.status = 'over';
@@ -269,7 +285,7 @@ export class TelephoneHandler {
   }
 
   /** Chủ phòng lật phần tiếp theo; hết câu chuyện thì sang câu chuyện sau; hết thì kết thúc. */
-  _next(id: any) {
+  _next(id: string) {
     if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được lật tiếp');
     if (this.status !== 'reveal') throw new Error('Chưa tới lúc xem lại');
     const r = this.reveal;
@@ -281,30 +297,36 @@ export class TelephoneHandler {
     }
   }
 
-  view(viewerId: any) {
+  /** Việc của người xem ở bước hiện tại (null nếu không có lượt). */
+  _task(viewerId: string): TelephoneTaskView | null {
+    const i = this.idx(viewerId);
+    if (this.status !== 'playing' || i < 0 || this.players[i].gone || (this.relay && i !== this.step)) return null;
+    const prev = this.previous(i);
+    return {
+      kind: this.kind,
+      // Đề bài từ người trước — không lộ tên để khỏi đoán theo người
+      prev: prev && (prev.kind === 'text' ? { kind: 'text', text: prev.text } : { kind: 'draw', drawId: prev.drawId }),
+      done: this.done.has(viewerId),
+      text: this.drafts.get(viewerId)?.text || '',
+      suggestions: !this.relay && this.step === 0 && this.options.suggest ? this.suggestions.get(viewerId) : null,
+    };
+  }
+
+  /** Các câu chuyện đã được lật (chỉ khi xem lại hoặc đã xong). */
+  _albums() {
+    if (this.status !== 'reveal' && this.status !== 'over') return null;
+    const { album, shown } = this.reveal;
+    return this.chains.map((ch, c) => ({
+      owner: this.players[c]?.name,
+      entries: this.status === 'over' ? ch : c < album ? ch : c === album ? ch.slice(0, shown) : [],
+    }));
+  }
+
+  view(viewerId: string): TelephoneView {
     const playing = this.status === 'playing';
     const n = this.players.length;
-    const i = this.idx(viewerId);
-    let task: any = null;
-    if (playing && i >= 0 && !this.players[i].gone && (!this.relay || i === this.step)) {
-      const prev = this.previous(i);
-      task = {
-        kind: this.kind,
-        // Đề bài từ người trước — không lộ tên để khỏi đoán theo người
-        prev: prev && (prev.kind === 'text' ? { kind: 'text', text: prev.text } : { kind: 'draw', drawId: prev.drawId }),
-        done: this.done.has(viewerId),
-        text: this.drafts.get(viewerId)?.text || '',
-        suggestions: !this.relay && this.step === 0 && this.options.suggest ? this.suggestions.get(viewerId) : null,
-      };
-    }
-    let albums: any = null;
-    if (this.status === 'reveal' || this.status === 'over') {
-      const { album, shown } = this.reveal;
-      albums = this.chains.map((ch: any, c: any) => ({
-        owner: this.players[c]?.name,
-        entries: this.status === 'over' ? ch : c < album ? ch : c === album ? ch.slice(0, shown) : [],
-      }));
-    }
+    const task = this._task(viewerId);
+    const albums = this._albums();
     return {
       options: this.options,
       seats: this.seats,
@@ -313,7 +335,7 @@ export class TelephoneHandler {
       status: this.status,
       gameNo: this.gameNo,
       myId: this.seated(viewerId) ? viewerId : null,
-      players: this.players.map((p: any) => ({ id: p.id, name: p.name, gone: p.gone, done: playing && this.done.has(p.id) })),
+      players: this.players.map((p) => ({ id: p.id, name: p.name, gone: p.gone, done: playing && this.done.has(p.id) })),
       step: this.step,
       activeId: playing && this.relay ? this.players[this.step].id : null,
       steps: n,
@@ -327,5 +349,5 @@ export class TelephoneHandler {
     };
   }
 
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer ?? undefined); }
 }

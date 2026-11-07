@@ -1,10 +1,12 @@
 import type { Room } from '../lobby.js';
 import { TalaGame } from '@game/shared/tala';
 import { CardTableHandler } from './cardTable.js';
+import type { GameAction, Identity } from '@game/shared/contracts';
+import type { TalaGameView } from '@game/shared/views';
 import { clampInt } from './options.js';
 
-export class TalaHandler extends CardTableHandler {
-  constructor(room: Room, options: any) {
+export class TalaHandler extends CardTableHandler<TalaGame, TalaGameView> {
+  constructor(room: Room, options: Record<string, unknown>) {
     super(room, {
       maxSeats: clampInt(options.maxSeats, 2, 4, 4),
       unit: clampInt(options.unit, 1, 1000000, 10),
@@ -12,11 +14,11 @@ export class TalaHandler extends CardTableHandler {
     });
   }
 
-  _createGame(players: any, first: any) { return new TalaGame(players, first); }
+  _createGame(players: Identity[], first: number) { return new TalaGame(players, first); }
   _startMessage() { return `Ván ${this.gameNo} bắt đầu`; }
-  _turnKey(g: any) { return `${g.turn}:${g.discardCount[g.turn]}`; }
+  _turnKey(g: TalaGame) { return `${g.turn}:${g.discardCount[g.turn]}`; }
 
-  _play(g: any, id: any, a: any) {
+  _play(g: TalaGame, id: string, a: GameAction) {
     switch (a.type) {
       case 'draw': return g.draw(id);
       case 'eat': return g.eat(id);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { Dices, Lock, UserRound, Eye, EyeOff } from 'lucide-react';
 import { useApp } from '../store.js';
 import { AUTH_ERRORS, storage } from '../socket.js';
@@ -44,14 +45,14 @@ function PasswordStep() {
   const { authError, login, phase } = useApp();
   const [pw, setPw] = useState('');
   const [show, setShow] = useState(false);
-  const ref = useRef<any>(null);
+  const ref = useRef<HTMLInputElement>(null);
   const checking = phase === 'checking';
   const locked = authError === 'AUTH_LOCKED';
-  const error = authError && authError !== 'AUTH_REQUIRED' ? (AUTH_ERRORS as Record<string, any>)[authError] : null;
+  const error = authError && authError !== 'AUTH_REQUIRED' ? (AUTH_ERRORS as Record<string, string>)[authError] : null;
   // Sai mật khẩu: giữ chữ đã gõ, chọn sẵn để gõ lại
   useEffect(() => { if (error && !checking) ref.current?.select(); }, [error, checking]);
 
-  const submit = (e: any) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (pw && !checking && !locked) login(pw);
   };
@@ -62,7 +63,7 @@ function PasswordStep() {
       <label className="sr-only" htmlFor="pw">Mật khẩu</label>
       <div className="pw-field">
         <input id="pw" ref={ref} type={show ? 'text' : 'password'} name="password" autoFocus autoComplete="current-password" value={pw}
-          aria-invalid={!!error} aria-describedby="pw-msg" onChange={(e: any) => setPw(e.target.value)} placeholder="Mật khẩu" readOnly={checking} />
+          aria-invalid={!!error} aria-describedby="pw-msg" onChange={(e) => setPw(e.target.value)} placeholder="Mật khẩu" readOnly={checking} />
         <button type="button" className="pw-toggle" onClick={() => setShow((v) => !v)} aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={show}>
           {show ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
         </button>
@@ -79,7 +80,7 @@ function NameStep() {
   const { hello, toast, connected } = useApp();
   const [name, setName] = useState(storage.name);
   const [busy, setBusy] = useState(false);
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const nm = name.trim();
     if (!nm || busy) return;
@@ -87,8 +88,8 @@ function NameStep() {
     storage.name = nm;
     try {
       await hello(nm);
-    } catch (err: any) {
-      toast(err.message, 'error');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : String(err), 'error');
       setBusy(false);
     }
   };
@@ -97,7 +98,7 @@ function NameStep() {
       <h2>Bạn tên gì?</h2>
       <p className="muted small">Tên hiển thị với mọi người trong phòng. Đổi lại được bất cứ lúc nào.</p>
       <label className="sr-only" htmlFor="nick">Tên hiển thị</label>
-      <input id="nick" autoFocus maxLength={24} autoComplete="nickname" value={name} onChange={(e: any) => setName(e.target.value)} placeholder="Tên hiển thị" readOnly={busy} />
+      <input id="nick" autoFocus maxLength={24} autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên hiển thị" readOnly={busy} />
       <div className="onboard-msg" />
       <button className="btn cta lg block" disabled={busy || !name.trim() || !connected}>
         {busy ? <><span className="spinner" /> Đang vào sảnh…</> : 'Vào sảnh'}

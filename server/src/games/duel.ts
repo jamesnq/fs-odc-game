@@ -1,11 +1,15 @@
 import type { Room } from '../lobby.js';
+import type { GameAction, Identity } from '@game/shared/contracts';
+import type { BotMove } from '../botPool.js';
+import type { MoveAction, Seat } from './types.js';
+import type { DuelView } from '@game/shared/views';
 // Khung chung cho game cờ đối kháng 2 người có đồng hồ (Cờ tướng, Cờ caro):
 // ngồi / sẵn sàng / chơi lại, đồng hồ mỗi bên, cầu hòa, xin đi lại, xin thua, bảng điểm.
 import { Scoreboard } from './scoreboard.js';
 import { ReadyGate } from './ready.js';
 import { BOT_LEVEL_NAMES, botLevel, isBot, requireBotManager, thinkMs } from './bots.js';
 
-const BASE_REASONS: Record<string, any> = {
+const BASE_REASONS: Record<string, string> = {
   timeout: 'Hết giờ',
   resign: 'Xin thua',
   draw: 'Hai bên đồng ý hòa',
@@ -27,34 +31,44 @@ const BASE_REASONS: Record<string, any> = {
  * Máy (bot) ngồi một ghế như người chơi, luôn sẵn sàng (chủ phòng bấm Bắt đầu là chơi), đồng ý cho đi lại,
  * từ chối cầu hòa (trừ khi bàn gần kín). Mỗi bàn tối đa một máy.
  */
-export abstract class DuelHandler {
+export interface DuelGame {
+  turn: string;
+  board: readonly unknown[];
+  history: readonly unknown[];
+  result?: { winner: string | null; reason: string } | null;
+}
+export interface DuelOptions { minutes: number }
+interface DuelRequest { type: 'draw' | 'undo'; from: string }
+export interface DuelResult { winner: string | null; winnerName: string | null; reason: string; text: string; line?: number[] }
+
+export abstract class DuelHandler<G extends DuelGame = DuelGame, O extends DuelOptions = DuelOptions, B extends object = object> {
   declare _botRevision: number | undefined;
-  abstract _newGame(): any;
-  abstract _move(game: any, action: any): any;
-  abstract _undo(game: any, n: number): any;
-  abstract _boardView(): any;
-  _botMove?(game: any, level: any): any;
+  abstract _newGame(): G;
+  abstract _move(game: G, action: MoveAction): G;
+  abstract _undo(game: G, n: number): G;
+  abstract _boardView(): B;
+  _botMove?(game: G, level: string): Promise<BotMove>;
   declare static SIDES: string[];
   declare static LABELS: Record<string, string>;
   declare static REASONS: Record<string, string>;
 
   declare room: Room;
-  declare options: any;
-  declare sides: any;
-  declare seats: Record<string, {id: string; name: string; bot?: any} | null>;
-  declare ready: any;
+  declare options: O;
+  declare sides: [string, string];
+  declare seats: Record<string, Seat | null>;
+  declare ready: ReadyGate;
   declare status: string;
-  declare game: any;
-  declare clocks: any;
+  declare game: G;
+  declare clocks: Record<string, number>;
   declare turnStart: number;
-  declare pending: any;
-  declare result: any;
-  declare timer: any;
+  declare pending: DuelRequest | null;
+  declare result: DuelResult | null;
+  declare timer: ReturnType<typeof setTimeout> | null;
   declare gameNo: number;
-  declare score: any;
-  declare botTimer: any;
+  declare score: Scoreboard;
+  declare botTimer: ReturnType<typeof setTimeout> | null;
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: O) {
     this.room = room;
     this.options = options; // ít nhất { minutes }
     const [a, b] = (this.constructor as typeof DuelHandler).SIDES;
@@ -74,34 +88,39 @@ export abstract class DuelHandler {
   }
 
   get supportsBots() { return typeof this._botMove === 'function'; }
-  botSide() { return this.sides.find((c: any) => isBot(this.seats[c]?.id)) || null; }
-  botName(id: any) { return isBot(id) ? Object.values(this.seats).find((s) => s?.id === id)?.name : undefined; }
+  botSide() { return this.sides.find((c) => isBot(this.seats[c]?.id)) || null; }
+  botName(id: string) { return isBot(id) ? Object.values(this.seats).find((s) => s?.id === id)?.name : undefined; }
 
   get maxPlayers() { return 2; }
   playerIds() { return Object.values(this.seats).filter((s): s is NonNullable<typeof s> => !!s).map((s) => s.id); }
   isPlaying() { return this.status === 'playing'; }
-  sideOf(id: any) { return this.sides.find((c: any) => this.seats[c]?.id === id) || null; }
-  other(side: any) { return side === this.sides[0] ? this.sides[1] : this.sides[0]; }
+  sideOf(id: string) { return this.sides.find((c) => this.seats[c]?.id === id) || null; }
+  other(side: string) { return side === this.sides[0] ? this.sides[1] : this.sides[0]; }
 
-  _fullClocks() { return Object.fromEntries(this.sides.map((c: any) => [c, this.options.minutes * 60000])); }
-  _label(side: any) { return this.seats[side]?.name || (this.constructor as typeof DuelHandler).LABELS[side]; }
-  _resultDetails(_result?: any) { return {}; }
+  _fullClocks(): Record<string, number> { return Object.fromEntries(this.sides.map((c) => [c, this.options.minutes * 60000])); }
+  _label(side: string) { return this.seats[side]?.name || (this.constructor as typeof DuelHandler).LABELS[side]; }
+  _resultDetails(_result: NonNullable<G['result']>): Partial<DuelResult> { return {}; }
 
-  rename(id: any, name: any) {
+  rename(id: string, name: string) {
     const c = this.sideOf(id);
     if (c) this.seats[c]!.name = name;
     this.score.rename(id, name);
   }
 
-  sit(user: any, seat: any) {
-    if (this.sideOf(user.id)) throw new Error('Bạn đã ngồi rồi');
-    const side = this.sides.includes(seat) ? seat : this.sides.find((c: any) => !this.seats[c]!);
-    if (!side || this.seats[side]!) throw new Error('Bàn đã đủ người');
-    if (this.status === 'playing') throw new Error('Ván đang diễn ra');
-    this.seats[side]! = { id: user.id, name: user.name };
+  /** Ghế được chọn nếu hợp lệ, nếu không thì ghế trống đầu tiên. */
+  _pickSide(seat: unknown) {
+    return typeof seat === 'string' && this.sides.includes(seat) ? seat : this.sides.find((c) => !this.seats[c]);
   }
 
-  stand(id: any) {
+  sit(user: Identity, seat?: string | number) {
+    if (this.sideOf(user.id)) throw new Error('Bạn đã ngồi rồi');
+    const side = this._pickSide(seat);
+    if (!side || this.seats[side]) throw new Error('Bàn đã đủ người');
+    if (this.status === 'playing') throw new Error('Ván đang diễn ra');
+    this.seats[side] = { id: user.id, name: user.name };
+  }
+
+  stand(id: string) {
     const c = this.sideOf(id);
     if (!c) return;
     if (this.status === 'playing') this._end(this.other(c), 'leave');
@@ -110,13 +129,13 @@ export abstract class DuelHandler {
     if (this.status === 'over' && !this.playerIds().length) this.status = 'waiting';
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
   _start() {
     // Chơi lại sau một ván: đổi bên đi trước
     if (this.status === 'over') {
       const [x, y] = this.sides;
-      [this.seats[x]!, this.seats[y]!] = [this.seats[y]!, this.seats[x]!];
+      [this.seats[x], this.seats[y]] = [this.seats[y], this.seats[x]];
     }
     this.game = this._newGame();
     this.clocks = this._fullClocks();
@@ -141,7 +160,7 @@ export abstract class DuelHandler {
   }
 
   _schedule() {
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     if (this.status !== 'playing') return;
     const left = this.clocks[this.game.turn] - (Date.now() - this.turnStart);
     this.timer = setTimeout(() => {
@@ -153,21 +172,21 @@ export abstract class DuelHandler {
     }, Math.max(0, left) + 50);
   }
 
-  _timeout(side: any) {
+  _timeout(side: string) {
     this.clocks[side] = 0;
     this._end(this.other(side), 'timeout');
   }
 
-  _end(winner: any, reason: any, details: any = {}) {
+  _end(winner: string | null, reason: string, details: Partial<DuelResult> = {}) {
     const started = this.status === 'playing';
     if (started) this._chargeClock();
-    clearTimeout(this.timer);
+    clearTimeout(this.timer ?? undefined);
     this.status = 'over';
     this.pending = null;
     const text = (this.constructor as typeof DuelHandler).REASONS[reason] || BASE_REASONS[reason] || reason;
     this.result = { winner, winnerName: winner ? this._label(winner) : null, reason, text, ...details };
     this.room.system(`Kết thúc: ${winner ? `${this._label(winner)} thắng` : 'Hòa'} — ${text}`);
-    const [a, b] = this.sides.map((c: any) => this.seats[c]! && { ...this.seats[c]!, side: c });
+    const [a, b] = this.sides.map((c) => this.seats[c] && { ...this.seats[c], side: c });
     if (started && a && b) {
       this.score.record([a, b], winner ? this.seats[winner]!.id : null, text, this.game.history.length);
       this.room.system(`Tỉ số: ${this.score.line(a, b)}`);
@@ -178,7 +197,7 @@ export abstract class DuelHandler {
     if (this.status !== 'playing') throw new Error('Ván chưa bắt đầu');
   }
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     try {
       return this._action(id, a);
     } finally {
@@ -186,14 +205,15 @@ export abstract class DuelHandler {
     }
   }
 
-  _action(id: any, a: any) {
+  _action(id: string, a: GameAction) {
     if (a.type === 'resetScore') return this._resetScore(id);
     if (a.type === 'addBot') return this._addBot(id, a);
     if (a.type === 'removeBot') return this._removeBot(id);
     if (a.type === 'start') {
       if (this.status === 'playing') throw new Error('Ván đang diễn ra');
-      if (!this.sides.every((s: any) => this.seats[s]!)) throw new Error('Cần đủ 2 người ngồi bàn');
-      this.ready.check(id, this.sides.map((s: any) => this.seats[s]!));
+      const players = this.sides.map((s) => this.seats[s]).filter((s) => s != null);
+      if (players.length < this.sides.length) throw new Error('Cần đủ 2 người ngồi bàn');
+      this.ready.check(id, players);
       return this._start();
     }
     const c = this.sideOf(id);
@@ -244,19 +264,20 @@ export abstract class DuelHandler {
 
   // ---------- Máy ----------
 
-  _addBot(id: any, a: any) {
+  _addBot(id: string, a: { level?: string; seat?: string }) {
     if (!this.supportsBots) throw new Error('Trò chơi này chưa có chế độ chơi với máy');
     requireBotManager(this, id);
     if (this.status === 'playing') throw new Error('Ván đang diễn ra');
     if (this.botSide()) throw new Error('Bàn đã có máy');
     const level = botLevel(a.level, 'medium');
-    const side = this.sides.includes(a.seat) ? a.seat : this.sides.find((c: any) => !this.seats[c]!);
-    if (!side || this.seats[side]!) throw new Error('Không còn ghế trống');
-    this.seats[side]! = { id: `bot:${level}`, name: `🤖 Máy (${(BOT_LEVEL_NAMES as Record<string, any>)[level]})`, bot: level };
-    this.room.system(`Đã thêm ${this.seats[side]!.name} vào bàn`);
+    const side = this._pickSide(a.seat);
+    if (!side || this.seats[side]) throw new Error('Không còn ghế trống');
+    const seat = { id: `bot:${level}`, name: `🤖 Máy (${(BOT_LEVEL_NAMES as Record<string, string>)[level]})`, bot: level };
+    this.seats[side] = seat;
+    this.room.system(`Đã thêm ${seat.name} vào bàn`);
   }
 
-  _removeBot(id: any) {
+  _removeBot(id: string) {
     requireBotManager(this, id);
     const side = this.botSide();
     if (!side) throw new Error('Bàn không có máy');
@@ -270,13 +291,13 @@ export abstract class DuelHandler {
   _botTick() {
     this._botRevision = (this._botRevision || 0) + 1;
     const revision = this._botRevision;
-    clearTimeout(this.botTimer);
+    clearTimeout(this.botTimer ?? undefined);
     this.botTimer = null;
     const side = this.botSide();
     if (!side || this.status !== 'playing') return;
     const id = this.seats[side]!.id;
     const p = this.pending;
-    let run: any = null, delay = 0;
+    let run: (() => void | Promise<void>) | null = null, delay = 0;
     if (p && p.from !== side) {
       delay = thinkMs(600, 1200);
       run = () => {
@@ -285,7 +306,7 @@ export abstract class DuelHandler {
         this._action(id, { type: 'respond', accept });
       };
     } else if (!p && this.game.turn === side) {
-      const level = this.seats[side]!.bot;
+      const level = this.seats[side]!.bot ?? 'medium';
       delay = level === 'easy' ? thinkMs(500, 1100) : thinkMs(350, 800);
       run = async () => {
         const game = this.game;
@@ -293,15 +314,17 @@ export abstract class DuelHandler {
         // A move may finish after undo, timeout, a pending request, or room disposal.
         if (this._botRevision !== revision || this.game !== game || this.status !== 'playing'
           || this.pending || this.game.turn !== side || this.seats[side]?.id !== id) return;
-        this._action(id, { type: 'move', ...move });
+        // Number(null) giữ nguyên hành vi cũ: ô không hợp lệ sẽ bị engine từ chối.
+        this._action(id, { type: 'move', cell: Number(move.cell) });
       };
     }
     if (!run) return;
+    const act = run;
     this.botTimer = setTimeout(async () => {
       this.botTimer = null;
       if (this.status !== 'playing' || this.seats[side]?.id !== id) return;
       try {
-        await run();
+        await act();
       } catch (e) {
         console.error('[bot]', e);
       }
@@ -312,7 +335,7 @@ export abstract class DuelHandler {
     }, delay);
   }
 
-  _resetScore(id: any) {
+  _resetScore(id: string) {
     if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đặt lại bảng điểm');
     if (this.status === 'playing') throw new Error('Không thể đặt lại khi ván đang diễn ra');
     this.score.reset();
@@ -320,7 +343,7 @@ export abstract class DuelHandler {
   }
 
   /** Trả lời yêu cầu cầu hòa / xin đi lại của đối thủ. */
-  _respond(c: any, accept: any) {
+  _respond(c: string, accept: boolean) {
     const opp = this.other(c);
     const p = this.pending;
     if (!p || p.from !== opp) throw new Error('Không có yêu cầu nào');
@@ -340,13 +363,13 @@ export abstract class DuelHandler {
   }
 
   /** Số nước cần lùi để quay về lượt của `side`. */
-  _undoCount(side: any) {
+  _undoCount(side: string) {
     const h = this.game.history.length;
     if (this.game.turn === side) return h >= 2 ? 2 : 0; // đối thủ vừa đi: lùi 2 nước
     return h >= 1 ? 1 : 0; // mình vừa đi: lùi 1 nước
   }
 
-  view(viewerId: any) {
+  view(viewerId: string): DuelView<O> & B {
     const playing = this.status === 'playing';
     const clocks = { ...this.clocks };
     if (playing) clocks[this.game.turn] = Math.max(0, clocks[this.game.turn] - (Date.now() - this.turnStart));
@@ -354,7 +377,7 @@ export abstract class DuelHandler {
       options: this.options,
       seats: this.seats,
       // Bên nào đã sẵn sàng (chủ phòng không cần bấm) và còn chờ ai
-      ready: Object.fromEntries(this.sides.map((c: any) => [c, !!this.seats[c]! && this.ready.has(this.seats[c]!.id)])),
+      ready: Object.fromEntries(this.sides.map((c) => [c, !!this.seats[c] && this.ready.has(this.seats[c].id)])),
       waitingFor: this.ready.waitingFor(this.playerIds()),
       status: this.status,
       ...this._boardView(),
@@ -367,5 +390,5 @@ export abstract class DuelHandler {
     };
   }
 
-  dispose() { this._botRevision = (this._botRevision || 0) + 1; clearTimeout(this.timer); clearTimeout(this.botTimer); }
+  dispose() { this._botRevision = (this._botRevision || 0) + 1; clearTimeout(this.timer ?? undefined); clearTimeout(this.botTimer ?? undefined); }
 }

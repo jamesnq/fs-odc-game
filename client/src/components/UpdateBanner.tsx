@@ -5,7 +5,7 @@ import { useApp } from '../store.js';
 /** Thông báo khi server đã chạy bản deploy mới hơn bản đang mở trong trình duyệt. */
 export default function UpdateBanner() {
   const { newVersion, room } = useApp();
-  const [dismissed, setDismissed] = useState<any>(null);
+  const [dismissed, setDismissed] = useState<string | null>(null);
   if (!newVersion || dismissed === newVersion) return null;
   return (
     <div className="update-banner" role="status">

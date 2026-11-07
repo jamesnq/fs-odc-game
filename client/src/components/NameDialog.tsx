@@ -1,15 +1,16 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useApp } from '../store.js';
 import { storage } from '../socket.js';
 import Modal from './Modal.js';
 
 /** Đổi tên khi đã vào sảnh (lần đầu nhập tên nằm trong Onboarding). */
-export default function NameDialog({ onClose }: any) {
+export default function NameDialog({ onClose }: { onClose: () => void }) {
   const { call, setUser, user } = useApp();
   const [name, setName] = useState(user?.name || storage.name);
   const [busy, setBusy] = useState(false);
 
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const nm = name.trim();
     if (!nm || busy) return;
@@ -22,7 +23,7 @@ export default function NameDialog({ onClose }: any) {
   return (
     <Modal title="Đổi tên" onClose={onClose}>
       <form onSubmit={submit} className="form">
-        <input autoFocus maxLength={24} value={name} onChange={(e: any) => setName(e.target.value)} placeholder="Tên hiển thị" />
+        <input autoFocus maxLength={24} value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên hiển thị" />
         <div className="row end">
           <button type="button" className="btn ghost" onClick={onClose}>Hủy</button>
           <button className="btn primary" disabled={busy || !name.trim()}>{busy ? <span className="spinner" /> : null} Lưu</button>

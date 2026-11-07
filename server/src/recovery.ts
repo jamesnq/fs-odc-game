@@ -1,5 +1,6 @@
 import { encrypt, decrypt, pack, unpack, encryptionKey } from './snapshot.js';
 import { resumeRoom } from './resumeRoom.js';
+import { ReadyGate } from './games/ready.js';
 import { RECONNECT_GRACE_MS } from './config.js';
 import type { Cluster } from './cluster.js';
 import type { Lobby, Room, User } from './lobby.js';
@@ -37,7 +38,8 @@ export class Recovery {
       room.voice = new Map();
       room._pending = false;
       room.handler.room = room;
-      if (room.handler.ready?.room === undefined && room.handler.ready?.ids instanceof Set) room.handler.ready.room = room;
+      const gate = 'ready' in room.handler ? room.handler.ready : undefined;
+      if (gate instanceof ReadyGate && gate.room === undefined && gate.ids instanceof Set) gate.room = room;
       this.lobby.rooms.set(room.id, room);
     }
     for (const user of this.lobby.users.values()) {

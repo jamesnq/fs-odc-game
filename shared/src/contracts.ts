@@ -1,10 +1,16 @@
 /** Wire contracts shared by browser and server. Runtime validation stays on the server. */
+import type { GameKind, GameViews, QueryResults } from './views.js';
+import type { DrawOp } from './scribble.js';
+
+/** Nét vẽ chuyển tiếp liên tục trong một lượt (`game:stream`). */
+export interface DrawStream { turn: number; ops: DrawOp[] }
+
 export interface Identity { id: string; name: string }
 export interface OnlineUser extends Identity { room: { id: string; name: string; game: string; playing: boolean } | null }
 export interface ServerInfo { id: string; name: string | null; gated: boolean }
 export interface VoiceStatus { enabled: boolean; reason?: string | null; hidden?: boolean; maxPerRoom: number; relay?: boolean }
 export interface IceServer { urls: string | string[]; username?: string; credential?: string }
-export type VoiceSignal = { description: { type: 'offer' | 'answer'; sdp: string }; candidate?: never }
+export type VoiceSignal = { description: { type: 'offer' | 'answer' | 'rollback'; sdp: string }; candidate?: never }
   | { candidate: { candidate?: string; sdpMid?: string | null; sdpMLineIndex?: number | null; usernameFragment?: string | null } | null; description?: never };
 export interface IncomingSignal { from: string; data: VoiceSignal }
 export type GameAction =
@@ -37,15 +43,15 @@ export interface RoomSummary {
   players: number; playerNames: string[]; maxPlayers: number; spectators: number; playing: boolean;
   options: Record<string, unknown>; createdAt: number;
 }
-export interface RoomState {
-  id: string; name: string; game: string; ownerId: string;
+export interface RoomStateBase {
+  id: string; name: string; ownerId: string;
   members: (Identity & { role: string; online: boolean })[];
   chat: { id: string; ts: number; text: string; from?: string; name?: string; system?: boolean }[];
   voice: { id: string; muted: boolean }[];
-  // Each game owns its view schema; narrowed by the game renderer.
-  state: Record<string, any>;
   serverTime: number;
 }
+/** Trạng thái phòng; `state` là view của trò `game` (xem `views.ts`), thu hẹp bằng `switch (room.game)`. */
+export type RoomState = { [G in GameKind]: RoomStateBase & { game: G; state: GameViews[G] } }[GameKind];
 export interface Requests {
   hello: { token?: string; tokens?: Record<string, string>; name?: string };
   'user:rename': { name: string };
@@ -55,7 +61,7 @@ export interface Requests {
   'room:leave': Record<string, never>;
   'room:delete': { roomId?: string };
   'room:rename': { name: string };
-  'room:sit': { seat: string | number };
+  'room:sit': { seat?: string | number };
   'room:stand': Record<string, never>;
   'room:kick': { userId: string };
   'room:chat': { text: string };
@@ -73,7 +79,7 @@ export interface Responses {
   'lobby:list': { rooms: RoomSummary[]; online: OnlineUser[] };
   'room:create': { roomId: string; warning?: string | null };
   'room:join': { roomId: string; warning?: string | null };
-  'game:query': { data: any };
+  'game:query': { data: QueryResults[GameQuery['type']] };
   'voice:join': { iceServers: IceServer[]; peers: string[] };
 }
 export type RequestEvent = keyof Requests;
@@ -90,5 +96,5 @@ export interface ServerToClientEvents {
   'room:state': (payload: RoomState) => void;
   'room:closed': (payload: { roomId: string; reason: string }) => void;
   'room:left': (payload: { roomId: string }) => void;
-  'game:stream': (payload: Record<string, unknown>) => void;
+  'game:stream': (payload: DrawStream) => void;
 }

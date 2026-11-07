@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { legalMovesFrom, colorOf, typeOf, PIECE_CHAR, rowOf, colOf, idx } from '@game/shared/xiangqi';
 import { useApp } from '../store.js';
@@ -7,16 +8,19 @@ import Scoreboard, { ScoreLine } from '../components/Scoreboard.js';
 import { PlayerBar, MoveList } from '../components/DuelPanels.js';
 import GameInfo from '../components/GameInfo.js';
 import { RequestOverlay, ResultOverlay, BoardActions } from '../components/BoardRequests.js';
+import type { XiangqiView } from '@game/shared/views';
+import type { ClientRoom } from '../store.js';
 
 const CELL = 56;
 const PAD = 50; // chừa chỗ cho số cột hai bên
 const W = CELL * 8 + PAD * 2;
 const H = CELL * 9 + PAD * 2;
-const COLOR_NAME: Record<string, any> = { r: 'Đỏ', b: 'Đen' };
+const COLOR_NAME: Record<string, string> = { r: 'Đỏ', b: 'Đen' };
+const PIECES: Record<string, Record<string, string>> = PIECE_CHAR;
 
-export default function XiangqiGame({ room, state: s }: any) {
+export default function XiangqiGame({ room, state: s }: { room: ClientRoom; state: XiangqiView }) {
   const { act } = useApp();
-  const [sel, setSel] = useState<any>(null);
+  const [sel, setSel] = useState<number | null>(null);
   const [manualFlip, setManualFlip] = useState(false);
   const my = s.myColor;
   const flipped = (my === 'b') !== manualFlip;
@@ -26,12 +30,12 @@ export default function XiangqiGame({ room, state: s }: any) {
 
   const targets = useMemo(() => {
     if (sel === null || !myTurn) return [];
-    return legalMovesFrom({ board: s.board, turn: s.turn, history: [] as any[] }, sel);
+    return legalMovesFrom({ board: s.board, turn: s.turn, history: [] }, sel);
   }, [sel, myTurn, s.board, s.turn]);
 
   useHotkeys({ Escape: () => setSel(null), f: () => setManualFlip((f) => !f) });
 
-  const clickPoint = (i: any) => {
+  const clickPoint = (i: number) => {
     if (!myTurn) return;
     const p = s.board[i];
     if (sel !== null && targets.includes(i)) {
@@ -44,7 +48,7 @@ export default function XiangqiGame({ room, state: s }: any) {
     }
   };
 
-  const pos = (i: any) => {
+  const pos = (i: number) => {
     let r = rowOf(i), c = colOf(i);
     if (flipped) { r = 9 - r; c = 8 - c; }
     return [PAD + c * CELL, PAD + r * CELL];
@@ -81,7 +85,7 @@ export default function XiangqiGame({ room, state: s }: any) {
               </g>
             );
           })()}
-          {s.board.map((p: any, i: any) => {
+          {s.board.map((p, i) => {
             const [x, y] = pos(i);
             const isTarget = targets.includes(i);
             return (
@@ -94,7 +98,7 @@ export default function XiangqiGame({ room, state: s }: any) {
                     <circle cx={x} cy={y} r="21.5" className="disc" fill="url(#xq-disc)" />
                     <circle cx={x} cy={y} r="18.5" className="inner" />
                     <path d={`M ${x - 21} ${y - 4} A 21.5 21.5 0 0 1 ${x + 21} ${y - 4}`} className="bevel" />
-                    <text x={x} y={y + 8} textAnchor="middle">{(PIECE_CHAR as Record<string, Record<string, string>>)[colorOf(p)!][typeOf(p)!]}</text>
+                    <text x={x} y={y + 8} textAnchor="middle">{PIECES[colorOf(p)!][typeOf(p)]}</text>
                   </g>
                 )}
                 {isTarget && (p === '.'
@@ -130,8 +134,8 @@ export default function XiangqiGame({ room, state: s }: any) {
   );
 }
 
-function XiangqiPlayer({ side, s, room }: any) {
-  return <PlayerBar side={side} s={s} room={room} chip={<span className={`xq-chip ${side}`}>{(PIECE_CHAR as Record<string, any>)[side].K}</span>} sitLabel={`Ngồi ${COLOR_NAME[side]}`} />;
+function XiangqiPlayer({ side, s, room }: { side: string; s: XiangqiView; room: ClientRoom }) {
+  return <PlayerBar side={side} s={s} room={room} chip={<span className={`xq-chip ${side}`}>{PIECES[side].K}</span>} sitLabel={`Ngồi ${COLOR_NAME[side]}`} />;
 }
 
 /** Gradient gỗ, mặt quân và bóng đổ (có độ lệch) cho bàn cờ. */
@@ -174,10 +178,10 @@ function BoardDefs() {
 }
 
 /** Số cột 1–9 kiểu Việt Nam: mỗi bên đếm từ tay phải của mình. */
-function FileLabels({ flipped }: any) {
-  const x = (c: any) => PAD + c * CELL;
+function FileLabels({ flipped }: { flipped: boolean }) {
+  const x = (c: number) => PAD + c * CELL;
   // Cột trên màn hình (trái → phải) ứng với cột trên bàn khi lật
-  const boardCol = (c: any) => (flipped ? 8 - c : c);
+  const boardCol = (c: number) => (flipped ? 8 - c : c);
   return (
     <g className="xq-files" aria-hidden>
       {Array.from({ length: 9 }, (_, c) => (
@@ -191,9 +195,9 @@ function FileLabels({ flipped }: any) {
 }
 
 function BoardLines() {
-  const L: any[] = [];
-  const x = (c: any) => PAD + c * CELL;
-  const y = (r: any) => PAD + r * CELL;
+  const L: ReactNode[] = [];
+  const x = (c: number) => PAD + c * CELL;
+  const y = (r: number) => PAD + r * CELL;
   for (let r = 0; r < 10; r++) L.push(<line key={'h' + r} x1={x(0)} y1={y(r)} x2={x(8)} y2={y(r)} />);
   for (let c = 0; c < 9; c++) {
     if (c === 0 || c === 8) L.push(<line key={'v' + c} x1={x(c)} y1={y(0)} x2={x(c)} y2={y(9)} />);

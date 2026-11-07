@@ -6,30 +6,32 @@ import Scoreboard, { ScoreLine } from '../components/Scoreboard.js';
 import { PlayerBar, MoveList } from '../components/DuelPanels.js';
 import GameInfo from '../components/GameInfo.js';
 import { RequestOverlay, ResultOverlay, BoardActions } from '../components/BoardRequests.js';
+import type { CaroView } from '@game/shared/views';
+import type { ClientRoom } from '../store.js';
 
 const CELL = 36;
 const PAD = 26;
-const NAME: Record<string, any> = { x: 'X', o: 'O' };
+const NAME: Record<string, string> = { x: 'X', o: 'O' };
 
-export default function CaroGame({ room, state: s }: any) {
+export default function CaroGame({ room, state: s }: { room: ClientRoom; state: CaroView }) {
   const { act } = useApp();
   const n = s.size;
   const W = n * CELL + PAD * 2;
   const my = s.myColor;
   const opp = my === 'x' ? 'o' : 'x';
   const myTurn = s.status === 'playing' && my && s.turn === my;
-  const [hover, setHover] = useState<any>(null);
+  const [hover, setHover] = useState<number | null>(null);
   const [cursor, setCursor] = useState(() => Math.floor(n / 2) * n + Math.floor(n / 2));
   const [showCursor, setShowCursor] = useState(false);
   const winLine = new Set(s.result?.line || []);
 
   useEffect(() => { setHover(null); }, [s.moves.length]);
 
-  const place = (i: any) => {
+  const place = (i: number) => {
     if (!myTurn || s.board[i] !== '.') return;
     act({ type: 'move', cell: i });
   };
-  const moveCursor = (dr: any, dc: any) => {
+  const moveCursor = (dr: number, dc: number) => {
     setShowCursor(true);
     setCursor((i) => {
       const r = Math.min(n - 1, Math.max(0, Math.floor(i / n) + dr));
@@ -47,7 +49,7 @@ export default function CaroGame({ room, state: s }: any) {
     Escape: () => setShowCursor(false),
   });
 
-  const xy = (i: any) => [PAD + (i % n) * CELL, PAD + Math.floor(i / n) * CELL];
+  const xy = (i: number) => [PAD + (i % n) * CELL, PAD + Math.floor(i / n) * CELL];
 
   return (
     <div className="bg caro">
@@ -62,7 +64,7 @@ export default function CaroGame({ room, state: s }: any) {
               <text x={PAD - 6} y={PAD + k * CELL + CELL / 2 + 4} textAnchor="end">{n - k}</text>
             </g>
           ))}
-          {s.board.map((p: any, i: any) => {
+          {s.board.map((p, i) => {
             const [x, y] = xy(i);
             const cls = ['caro-cell'];
             if (myTurn && p === '.') cls.push('active');
@@ -107,7 +109,7 @@ export default function CaroGame({ room, state: s }: any) {
   );
 }
 
-function Mark({ p, x, y, ghost }: any) {
+function Mark({ p, x, y, ghost }: { p: string; x: number; y: number; ghost?: boolean }) {
   const m = 9;
   return (
     <g className={`caro-mark ${p} ${ghost ? 'ghost' : ''}`}>
@@ -123,6 +125,6 @@ function Mark({ p, x, y, ghost }: any) {
   );
 }
 
-function CaroPlayer({ side, s, room }: any) {
+function CaroPlayer({ side, s, room }: { side: string; s: CaroView; room: ClientRoom }) {
   return <PlayerBar side={side} s={s} room={room} chip={<span className={`caro-chip ${side}`}>{NAME[side]}</span>} sitLabel={`Ngồi ${NAME[side]}`} bots />;
 }

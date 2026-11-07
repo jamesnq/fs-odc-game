@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBoard, findPath, findMove, applyGravity, applyShift, SHIFTS, remaining, OnetBoard, TILE_KINDS } from '../src/onet.js';
 
-const G = (rows: any) => rows.map((s: any) => [...s].map((ch: any) => (ch === '.' ? 0 : Number(ch))));
+const G = (rows: string[]) => rows.map((s) => [...s].map((ch) => (ch === '.' ? 0 : Number(ch))));
 
 test('tạo bàn: số ô đúng, mỗi loại xuất hiện số lần chẵn, cùng hạt giống thì cùng bàn', () => {
   const g = createBoard(9, 16, 42);

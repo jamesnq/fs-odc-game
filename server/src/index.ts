@@ -16,7 +16,7 @@ import { botPool } from './botPool.js';
 
 // Voice chat: tắt / bật lại (vd. hết hạn mức TURN miễn phí) → báo mọi người, đưa tất cả ra khỏi kênh thoại khi tắt
 const voice = new Voice({
-  onStatusChange: (st: any) => {
+  onStatusChange: (st) => {
     for (const s of SERVERS) io.to('lobby:' + s.id).emit('voice:status', voice.status(s.name));
     if (!st.enabled) lobby.clearVoice('Voice chat đã tạm tắt (hết hạn mức miễn phí tháng này)');
   },
@@ -26,7 +26,7 @@ let ready = false;
 const server = http.createServer(createApp(voice, { ready: () => ready && !lobby.draining && (!cluster || cluster.ready) }));
 const io: GameServer = new Server(server, {
   cors: { origin: CORS_ORIGINS.length ? CORS_ORIGINS : false },
-  allowRequest: (req: any, cb: any) => cb(null, originAllowed(req)),
+  allowRequest: (req, cb) => cb(null, originAllowed(req)),
   maxHttpBufferSize: 16 * 1024, // gói tin lớn nhất client gửi lên (chat 300 ký tự là đủ)
   connectTimeout: 10_000,
 });

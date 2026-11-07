@@ -1,14 +1,14 @@
 import type { Identity } from '@game/shared/contracts';
 
-interface ScorePlayer extends Identity {
+export interface ScorePlayer extends Identity {
   games: number;
   wins: number;
   draws: number;
   losses: number;
 }
 
-interface MatchPlayer extends Identity { side: string }
-interface MatchResult {
+export interface MatchPlayer extends Identity { side: string }
+export interface MatchResult {
   no: number;
   ts: number;
   players: MatchPlayer[];

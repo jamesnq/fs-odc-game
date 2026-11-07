@@ -6,31 +6,37 @@ import Modal from './Modal.js';
 import ConfirmDialog from './ConfirmDialog.js';
 
 const KEY = 'gl_quiz_sets';
-const load = () => {
-  try { return JSON.parse(localStorage.getItem(KEY) || 'null') || []; } catch { return []; }
+interface QuizSet { id: string; title: string; text: string; updated: number }
+const isQuizSet = (v: unknown): v is QuizSet => !!v && typeof v === 'object'
+  && 'id' in v && typeof v.id === 'string' && 'text' in v && typeof v.text === 'string' && 'title' in v && typeof v.title === 'string';
+const load = (): QuizSet[] => {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(KEY) || 'null');
+    return Array.isArray(saved) ? saved.filter(isQuizSet) : [];
+  } catch { return []; }
 };
-const store = (sets: any) => {
+const store = (sets: QuizSet[]) => {
   try { localStorage.setItem(KEY, JSON.stringify(sets)); return true; } catch { return false; }
 };
 const newId = () => Math.random().toString(36).slice(2, 10);
-const titleOf = (text: any) => {
+const titleOf = (text: string) => {
   try { return parseQuizText(text).title || 'Bộ chưa đặt tên'; } catch { return (text.match(/^#\s*(.+)$/m)?.[1] || 'Bộ chưa đặt tên').slice(0, 60); }
 };
 
-export default function QuizEditor({ onLoad, onClose }: any) {
+export default function QuizEditor({ onLoad, onClose }: { onLoad?: (text: string) => Promise<unknown>; onClose: () => void }) {
   const [sets, setSets] = useState(load);
-  const [cur, setCur] = useState(() => sets[0]?.id || null);
+  const [cur, setCur] = useState<string | null>(() => sets[0]?.id || null);
   const [text, setText] = useState(() => sets[0]?.text ?? QUIZ_TEMPLATE);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [del, setDel] = useState(false);
 
   const check = useMemo(() => {
-    try { const r = parseQuizText(text); return { ok: true, n: r.questions.length, title: r.title }; } catch (e: any) { return { ok: false, error: e.message }; }
+    try { const r = parseQuizText(text); return { ok: true, n: r.questions.length, title: r.title }; } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }
   }, [text]);
 
-  const pick = (id: any) => {
-    const s = sets.find((x: any) => x.id === id);
+  const pick = (id: string | null) => {
+    const s = sets.find((x) => x.id === id);
     setCur(id);
     setText(s ? s.text : QUIZ_TEMPLATE);
     setDirty(false);
@@ -39,7 +45,7 @@ export default function QuizEditor({ onLoad, onClose }: any) {
   const save = () => {
     const id = cur || newId();
     const item = { id, title: titleOf(text), text, updated: Date.now() };
-    const next = [item, ...sets.filter((x: any) => x.id !== id)];
+    const next = [item, ...sets.filter((x) => x.id !== id)];
     store(next);
     setSets(next);
     setCur(id);
@@ -48,7 +54,7 @@ export default function QuizEditor({ onLoad, onClose }: any) {
   };
 
   const loadIntoRoom = async () => {
-    if (!check.ok) return;
+    if (!check.ok || !onLoad) return;
     save();
     setBusy(true);
     const res = await onLoad(text);
@@ -57,7 +63,7 @@ export default function QuizEditor({ onLoad, onClose }: any) {
   };
 
   const remove = () => {
-    const next = sets.filter((x: any) => x.id !== cur);
+    const next = sets.filter((x) => x.id !== cur);
     store(next);
     setSets(next);
     setCur(next[0]?.id || null);
@@ -69,9 +75,9 @@ export default function QuizEditor({ onLoad, onClose }: any) {
     <Modal title="Bộ câu hỏi của bạn" onClose={onClose} wide>
       <div className="qe">
         <div className="qe-sets">
-          <select value={cur || ''} onChange={(e: any) => (e.target.value === '__new' ? pick(null) : pick(e.target.value))} aria-label="Chọn bộ câu hỏi đã lưu">
+          <select value={cur || ''} onChange={(e) => (e.target.value === '__new' ? pick(null) : pick(e.target.value))} aria-label="Chọn bộ câu hỏi đã lưu">
             {!cur && <option value="">— Bộ mới (chưa lưu) —</option>}
-            {sets.map((s: any) => <option key={s.id} value={s.id}>{s.title}</option>)}
+            {sets.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
             {cur && <option value="__new">+ Soạn bộ mới…</option>}
           </select>
           {cur && <button className="btn sm ghost" onClick={() => pick(null)}><Plus size={14} aria-hidden /> Bộ mới</button>}
@@ -86,7 +92,7 @@ export default function QuizEditor({ onLoad, onClose }: any) {
           </ul>
         </details>
         <textarea className="qe-text" value={text} spellCheck={false} rows={16}
-          onChange={(e: any) => { setText(e.target.value); setDirty(true); }} aria-label="Nội dung bộ câu hỏi" />
+          onChange={(e) => { setText(e.target.value); setDirty(true); }} aria-label="Nội dung bộ câu hỏi" />
         <div className={`qe-status small ${check.ok ? 'ok' : 'bad'}`} role="status">
           {check.ok ? <><Check size={14} aria-hidden /> Hợp lệ: {check.n} câu{check.title ? ` · "${check.title}"` : ''}</> : <><AlertTriangle size={14} aria-hidden /> {check.error}</>}
         </div>

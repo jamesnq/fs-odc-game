@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, legalMovesFrom, makeMove, idx, undoMoves, isInCheck } from '../src/xiangqi.js';
+import type { XiangqiState } from '../src/xiangqi.js';
 
-const mv = (s: any, a: [number, number], b: [number, number]) => makeMove(s, idx(...a), idx(...b));
+const mv = (s: XiangqiState, a: [number, number], b: [number, number]) => makeMove(s, idx(...a), idx(...b));
 
 test('nước đi khởi đầu có 44 nước', () => {
   const g = createGame();
@@ -22,7 +23,7 @@ test('pháo đầu và ký hiệu', () => {
 
 test('mã bị cản chân', () => {
   const g = createGame();
-  assert.deepEqual(legalMovesFrom(g, idx(9, 1)).sort((a: any, b: any) => a - b), [idx(7, 0), idx(7, 2)]);
+  assert.deepEqual(legalMovesFrom(g, idx(9, 1)).sort((a, b) => a - b), [idx(7, 0), idx(7, 2)]);
 });
 
 test('chiếu bí kết thúc ván', () => {
@@ -46,7 +47,7 @@ test('không được lộ mặt tướng', () => {
   const g = { board, turn: 'r', history: [] };
   const moves = legalMovesFrom(g, idx(5, 4));
   assert.ok(moves.length > 0);
-  assert.ok(moves.every((t: any) => t % 9 === 4), 'xe chỉ được đi dọc cột giữa');
+  assert.ok(moves.every((t) => t % 9 === 4), 'xe chỉ được đi dọc cột giữa');
 });
 
 test('đi lại', () => {

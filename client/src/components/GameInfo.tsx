@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
+import type { ReactNode } from 'react';
 
 /**
  * Khung phòng chơi (RoomView) cấp cho các trò:
@@ -10,7 +11,7 @@ export const RoomUICtx = createContext<{ infoNode: Element | null; openPanel: (t
 export const useRoomUI = () => useContext(RoomUICtx);
 
 /** Đưa nội dung phụ của trò chơi vào ngăn "Thông tin" thay vì chiếm chỗ cạnh bàn chơi. */
-export default function GameInfo({ children }: any) {
+export default function GameInfo({ children }: { children: ReactNode }) {
   const { infoNode } = useRoomUI();
   return infoNode ? createPortal(children, infoNode) : null;
 }

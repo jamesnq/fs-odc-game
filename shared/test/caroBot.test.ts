@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, makeMove } from '../src/caro.js';
+import type { CaroState } from '../src/caro.js';
 import { chooseMove } from '../src/caroBot.js';
 
-const play = (g: any, cells: any) => cells.reduce((s: any, [r, c]: any) => makeMove(s, r * s.size + c), g);
+const play = (g: CaroState, cells: number[][]) => cells.reduce((s, [r, c]) => makeMove(s, r * s.size + c), g);
 // rng cố định để test không ngẫu nhiên
-const seeded = (seed: any) => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+const seeded = (seed: number) => () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
 
 test('Nước đầu tiên đi gần tâm bàn', () => {
   const g = createGame();
@@ -35,10 +36,10 @@ test('Chặn ba mở của đối thủ', () => {
   assert.ok([7 * 15 + 4, 7 * 15 + 8, 7 * 15 + 3, 7 * 15 + 9].includes(i), `chọn ${i}`);
 });
 
-function duel(a: any, b: any, rng: any) {
+function duel(a: string, b: string, rng: () => number) {
   let g = createGame();
   const lv = { x: a, o: b };
-  while (!g.result) g = makeMove(g, chooseMove(g, (lv as Record<string, any>)[g.turn], rng));
+  while (!g.result) g = makeMove(g, chooseMove(g, (lv as Record<string, string>)[g.turn], rng));
   return g.result.winner;
 }
 

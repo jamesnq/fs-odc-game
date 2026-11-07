@@ -8,7 +8,7 @@ test('xếp theo phỏm: giải quyết phỏm chồng nhau, bài rác ở cuố
   const sorted = sortByMeld(hand);
   assert.ok(isMeld(sorted.slice(0, 3)));
   assert.ok(isMeld(sorted.slice(3, 6)));
-  assert.ok([sorted.slice(0, 3), sorted.slice(3, 6)].some((m: any) => m.join(',') === '5S,6S,7S'));
+  assert.ok([sorted.slice(0, 3), sorted.slice(3, 6)].some((m) => m.join(',') === '5S,6S,7S'));
   assert.deepEqual(sorted.slice(6), ['2C', '5D', '5H']);
   assert.deepEqual(hand, original);
   assert.deepEqual([...sorted].sort(), [...hand].sort());
@@ -37,7 +37,7 @@ test('tìm cách xếp tốt nhất', () => {
   const best = bestArrangement(hand);
   assert.equal(best!.points, 5 + 6 + 7 + 13 * 3);
   const withLock = bestArrangement(hand, ['6S']);
-  assert.ok(withLock!.melds.some((m: any) => m.includes('6S') && m.includes('5S')));
+  assert.ok(withLock!.melds.some((m) => m.includes('6S') && m.includes('5S')));
   assert.equal(enumerateMelds(['2H', '3H', '4H', '5H']).length, 3);
   // 2 lá ăn không được cùng 1 phỏm
   assert.equal(bestArrangement(['5S', '5D', '5H'], ['5S', '5D']), null);
@@ -46,7 +46,7 @@ test('tìm cách xếp tốt nhất', () => {
 test('mô phỏng ván tự động kết thúc, tổng điểm bằng 0', () => {
   for (let k = 0; k < 300; k++) {
     const n = 2 + (k % 3);
-    const ps = Array.from({ length: n }, (_: any, i: any) => ({ id: 'p' + i, name: 'P' + i }));
+    const ps = Array.from({ length: n }, (_, i) => ({ id: 'p' + i, name: 'P' + i }));
     const g = new TalaGame(ps, k % n);
     let guard = 0;
     while (!g.result && guard++ < 100) {
@@ -63,7 +63,7 @@ test('mô phỏng ván tự động kết thúc, tổng điểm bằng 0', () =>
       }
     }
     assert.ok(g.result, 'ván phải kết thúc');
-    assert.equal(g.scores.reduce((a: any, b: any) => a + b, 0), 0);
-    if (g.result.type === 'normal') assert.ok(g.discardCount.every((d: any) => d === 4));
+    assert.equal(g.scores.reduce((a, b) => a + b, 0), 0);
+    if (g.result.type === 'normal') assert.ok(g.discardCount.every((d) => d === 4));
   }
 });

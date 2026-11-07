@@ -24,13 +24,13 @@ test('Chấm xanh / vàng / xám', () => {
 
 test('Trùng lặp: phần đã khớp xanh không được tính vàng lần nữa', () => {
   // bí mật "con cá": âm đầu c, c. Đoán "cờ đỏ": c xanh, đ xám
-  assert.deepEqual(scoreGuess('con cá', 'cờ đỏ').map((m: any) => m.onset), ['g', 'x']);
+  assert.deepEqual(scoreGuess('con cá', 'cờ đỏ').map((m) => m.onset), ['g', 'x']);
   // bí mật "bàn tay" (thanh huyền, ngang); đoán "là cà" (huyền, huyền) → xanh, xám
-  assert.deepEqual(scoreGuess('bàn tay', 'là cà').map((m: any) => m.tone), ['g', 'x']);
+  assert.deepEqual(scoreGuess('bàn tay', 'là cà').map((m) => m.tone), ['g', 'x']);
   // bí mật "tay bàn" chỉ có một thanh huyền, đã khớp xanh ở chữ 2 → chữ 1 xám
-  assert.deepEqual(scoreGuess('tay bàn', 'cà là').map((m: any) => m.tone), ['x', 'g']);
+  assert.deepEqual(scoreGuess('tay bàn', 'cà là').map((m) => m.tone), ['x', 'g']);
   // bí mật "tay bàn"; đoán "bàn tay" → huyền ở chữ 1 vàng (có ở chữ 2), ngang ở chữ 2 vàng
-  assert.deepEqual(scoreGuess('tay bàn', 'bàn tay').map((m: any) => m.tone), ['y', 'y']);
+  assert.deepEqual(scoreGuess('tay bàn', 'bàn tay').map((m) => m.tone), ['y', 'y']);
 });
 
 test('Từ của ngày ổn định trong ngày, đổi qua ngày', () => {

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pencil, BookOpen, Eye, Pause } from 'lucide-react';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { AppContextValue, ClientRoom } from '../store.js';
+import type { PokerView } from '@game/shared/views';
+import type { FormEvent } from 'react';
 import Card from '../components/Card.js';
 import { useCountdown, useHotkeys } from '../hooks.js';
 import PokerHandLog from './PokerHandLog.js';
@@ -11,15 +14,19 @@ import { fmtNum } from '../format.js';
 import { PokerRules, BestHandPanel, myHole } from './PokerPanels.js';
 import { describeHand } from '@game/shared/poker';
 
-const STREET_VI: Record<string, any> = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
+type Act = AppContextValue['act'];
+type BetOptions = PokerView['options'];
 
-export default function PokerGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+const STREET_VI: Record<string, string> = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River', done: 'Kết thúc' };
+
+export default function PokerGame({ room, state: s }: { room: ClientRoom; state: PokerView }) {
+  const { act, call, user } = useRoomApp();
   const [editBlinds, setEditBlinds] = useState(false);
   const isOwner = room.ownerId === user.id;
   const h = s.hand;
   const N = s.seats.length;
   const mySeat = s.mySeat;
+  const mine = mySeat >= 0 ? s.seats[mySeat] : null;
   const base = mySeat >= 0 ? mySeat : 0;
   const o = s.options;
   // Luật chơi mở dạng popup (không đẩy nội dung xuống dưới bàn)
@@ -37,12 +44,12 @@ export default function PokerGame({ room, state: s }: any) {
 
   const winners = useMemo(() => {
     const w = new Set<number>();
-    h?.result?.pots.forEach((p: any) => p.winners.forEach((x: any) => w.add(x)));
+    h?.result?.pots.forEach((p) => p.winners.forEach((x) => w.add(x)));
     return w;
   }, [h?.result]);
   const winCards = useMemo(() => {
     const c = new Set();
-    for (const w of winners) h?.result?.shown?.[w]?.best?.forEach((x: any) => c.add(x));
+    for (const w of winners) h?.result?.shown?.[w]?.best?.forEach((x) => c.add(x));
     return c;
   }, [winners, h?.result]);
 
@@ -65,15 +72,15 @@ export default function PokerGame({ room, state: s }: any) {
             {h && <div className="pk-pot">Pot: <b>{fmtNum(h.pot)}</b> <span className="muted">· {STREET_VI[h.street]}</span>{h.rabbit && <span className="pk-rabbit-note" title="Các lá mờ là bài lẽ ra sẽ ra, không tính"> · 🐇 rabbit</span>}</div>}
             {h?.result && (
               <div className="pk-result">
-                {h.result.pots.map((p: any, k: any) => (
-                  <div key={k}>🏆 {p.winners.map((w: any) => s.seats[w]?.name || '?').join(', ')} thắng {fmtNum(p.amount)}{p.hand ? ` — ${p.hand}` : ''}</div>
+                {h.result.pots.map((p, k) => (
+                  <div key={k}>🏆 {p.winners.map((w) => s.seats[w]?.name || '?').join(', ')} thắng {fmtNum(p.amount)}{p.hand ? ` — ${p.hand}` : ''}</div>
                 ))}
               </div>
             )}
             {!h?.street || h.street === 'done' ? (
               <div className="muted small pk-next">
                 {!s.started ? 'Chờ mọi người sẵn sàng, chủ phòng bấm Bắt đầu'
-                  : nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x: any) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
+                  : nextIn ? `Ván mới sau ${Math.ceil(nextIn / 1000)} giây…` : s.seats.filter((x) => x && x.chips > 0 && !x.sitOut).length < 2 ? 'Đang chờ ít nhất 2 người chơi…' : ''}
               </div>
             ) : null}
             <div className="muted small">
@@ -81,16 +88,16 @@ export default function PokerGame({ room, state: s }: any) {
               {isOwner && <button className="link pk-blind-edit" title="Đổi blind" aria-label="Đổi blind" onClick={() => setEditBlinds(true)}><Pencil size={14} aria-hidden /></button>}
               {isOwner && s.started && <button className="link pk-pause" title="Không chia ván mới (ván đang chơi vẫn chơi nốt)" onClick={() => act({ type: 'pause' })}><Pause size={13} aria-hidden /> Tạm dừng</button>}
             </div>
-            {mySeat >= 0 && s.seats[mySeat].chips < s.bigBlind && !(h && h.street !== 'done' && s.seats[mySeat].inHand) && (
+            {mine && mine.chips < s.bigBlind && !(h && h.street !== 'done' && mine.inHand) && (
               <button className="btn cta sm" onClick={() => act({ type: 'rebuy' })}>Nạp thêm {fmtNum(s.config.buyIn)} chip</button>
             )}
-            {mySeat >= 0 && s.seats[mySeat].sitOut && (
+            {mine?.sitOut && (
               <button className="btn sm" onClick={() => act({ type: 'sitout' })}>Quay lại chơi</button>
             )}
             {s.nextBlinds && <div className="pk-next-blinds small">Từ ván sau: {fmtNum(s.nextBlinds.smallBlind)}/{fmtNum(s.nextBlinds.bigBlind)}</div>}
           </div>
 
-          {s.seats.map((seat: any, i: any) => {
+          {s.seats.map((seat, i) => {
             const k = (i - base + N) % N;
             const ang = Math.PI / 2 + (k * 2 * Math.PI) / N;
             const x = 50 + 44 * Math.cos(ang);
@@ -108,7 +115,7 @@ export default function PokerGame({ room, state: s }: any) {
             return (
               <div key={i} className={`pk-seat ${toAct ? 'acting' : ''} ${seat.folded ? 'folded' : ''} ${winners.has(i) ? 'winner' : ''} ${i === mySeat ? 'me' : ''}`} style={style}>
                 <div className="pk-cards">
-                  {seat.hole && seat.hole.map((c: any, j: any) => <Card key={j} card={c} size={i === mySeat ? 'md' : 'sm'} highlight={winners.has(i) && winCards.has(c)} />)}
+                  {seat.hole && seat.hole.map((c, j) => <Card key={j} card={c} size={i === mySeat ? 'md' : 'sm'} highlight={winners.has(i) && winCards.has(c)} />)}
                 </div>
                 <div className="pk-info">
                   <div className="pk-name">
@@ -132,7 +139,7 @@ export default function PokerGame({ room, state: s }: any) {
 
       {!s.started && (
         <div className="board-actions pk-start">
-          <StartBar players={s.seats.filter((x: any) => x && !x.left)} ready={s.ready} waitingFor={s.waitingFor} seated={mySeat >= 0}
+          <StartBar players={s.seats.filter((x) => x != null).filter((x) => !x.left)} ready={s.ready} waitingFor={s.waitingFor} seated={mySeat >= 0}
             startLabel="Bắt đầu chia bài" />
         </div>
       )}
@@ -156,14 +163,14 @@ export default function PokerGame({ room, state: s }: any) {
       <GameInfo>
         {mySeat >= 0 && (
           <div className="panel row wrap pk-mybar">
-            <button className="btn sm" onClick={() => act({ type: 'sitout' })}>{s.seats[mySeat].sitOut ? 'Quay lại chơi' : 'Nghỉ ván sau'}</button>
-            <button className="btn ghost sm" onClick={() => call('room:stand')}>Đứng dậy xem</button>
+            <button className="btn sm" onClick={() => act({ type: 'sitout' })}>{mine?.sitOut ? 'Quay lại chơi' : 'Nghỉ ván sau'}</button>
+            <button className="btn ghost sm" onClick={() => call('room:stand', {})}>Đứng dậy xem</button>
           </div>
         )}
         {h && (
           <details className="panel pk-log" open>
             <summary>Diễn biến ván #{h.no}</summary>
-            {h.log.map((l: any, i: any) => <div key={i} className="small">{l}</div>)}
+            {h.log.map((l, i) => <div key={i} className="small">{l}</div>)}
           </details>
         )}
         <PokerHandLog s={s} />
@@ -173,17 +180,17 @@ export default function PokerGame({ room, state: s }: any) {
   );
 }
 
-function ActionBar({ s, o, act, myTurn, timeLeft }: any) {
+function ActionBar({ s, o, act, myTurn, timeLeft }: { s: PokerView; o: BetOptions; act: Act; myTurn: boolean; timeLeft: number }) {
   const bb = s.bigBlind;
   const [amount, setAmount] = useState(o ? o.minTo : 0);
   // Chuỗi đang gõ trong ô số tiền (null = hiển thị amount). Tách riêng để xóa hết được số cũ, kể cả số 0.
-  const [draft, setDraft] = useState<any>(null);
+  const [draft, setDraft] = useState<string | null>(null);
   const key = o ? `${s.hand?.no}:${o.currentBet}:${o.minTo}` : '';
   useEffect(() => { if (o) { setAmount(o.minTo); setDraft(null); } }, [key]);
 
   const canBR = o && (o.canBet || o.canRaise);
-  const clamp = (v: any) => (o ? Math.max(o.minTo, Math.min(o.maxTo, Math.round(v))) : v);
-  const preset = (f: any) => {
+  const clamp = (v: number) => (o ? Math.max(o.minTo, Math.min(o.maxTo, Math.round(v))) : v);
+  const preset = (f: number) => {
     if (!o) return;
     const toCall = o.currentBet - o.myBet;
     setAmount(clamp(o.currentBet + f * (o.pot + toCall)));
@@ -194,7 +201,7 @@ function ActionBar({ s, o, act, myTurn, timeLeft }: any) {
   const doCall = () => o && act({ type: 'act', action: o.canCheck ? 'check' : 'call' });
   const doCheck = () => o && o.canCheck && act({ type: 'act', action: 'check' });
   const doBR = () => {
-    if (!canBR) return;
+    if (!canBR || !o) return;
     const v = clamp(amount);
     setAmount(v);
     setDraft(null);
@@ -210,8 +217,8 @@ function ActionBar({ s, o, act, myTurn, timeLeft }: any) {
     r: doBR,
     a: doAllIn,
     Enter: doBR,
-    ArrowUp: (e: any) => { if (canBR) { setDraft(null); setAmount((v: any) => clamp(v + (e.shiftKey ? 10 : 1) * bb)); } },
-    ArrowDown: (e: any) => { if (canBR) { setDraft(null); setAmount((v: any) => clamp(v - (e.shiftKey ? 10 : 1) * bb)); } },
+    ArrowUp: (e) => { if (canBR) { setDraft(null); setAmount((v) => clamp(v + (e.shiftKey ? 10 : 1) * bb)); } },
+    ArrowDown: (e) => { if (canBR) { setDraft(null); setAmount((v) => clamp(v - (e.shiftKey ? 10 : 1) * bb)); } },
     1: () => preset(1 / 3),
     2: () => preset(1 / 2),
     3: () => preset(3 / 4),
@@ -241,17 +248,17 @@ function ActionBar({ s, o, act, myTurn, timeLeft }: any) {
       </div>
       <div className={`row wrap pk-sizing ${canBR ? '' : 'off'}`} aria-hidden={!canBR}>
         <input type="range" min={o?.minTo ?? 0} max={o?.maxTo ?? 1} step={1} value={canBR ? amount : 0} disabled={!canBR}
-          onChange={(e: any) => { setAmount(Number(e.target.value)); setDraft(null); }} />
+          onChange={(e) => { setAmount(Number(e.target.value)); setDraft(null); }} />
         <input type="text" inputMode="numeric" className="num" aria-label="Số tiền cược" value={canBR ? (draft ?? String(amount)) : ''} disabled={!canBR}
-          onFocus={(e: any) => e.target.select()}
-          onChange={(e: any) => {
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => {
             const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 12);
             setDraft(d);
             if (d) setAmount(Number(d));
           }}
           onBlur={() => { setAmount(clamp(amount)); setDraft(null); }}
-          onKeyDown={(e: any) => { if (e.key === 'Enter') { e.preventDefault(); doBR(); } }} />
-        {[['1', '⅓', 1 / 3], ['2', '½', 1 / 2], ['3', '¾', 3 / 4], ['4', 'Pot', 1]].map(([k, l, f]) => (
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); doBR(); } }} />
+        {([['1', '⅓', 1 / 3], ['2', '½', 1 / 2], ['3', '¾', 3 / 4], ['4', 'Pot', 1]] as const).map(([k, l, f]) => (
           <button key={k} className="btn sm" disabled={!canBR} onClick={() => preset(f)}><kbd>{k}</kbd> {l}</button>
         ))}
       </div>
@@ -260,10 +267,10 @@ function ActionBar({ s, o, act, myTurn, timeLeft }: any) {
 }
 
 /** Chủ phòng đổi small/big blind. Đang giữa ván thì áp dụng từ ván sau. */
-function BlindsDialog({ s, act, onClose }: any) {
+function BlindsDialog({ s, act, onClose }: { s: PokerView; act: Act; onClose: () => void }) {
   const cur = s.nextBlinds || { smallBlind: s.smallBlind, bigBlind: s.bigBlind };
-  const [sb, setSb] = useState(cur.smallBlind);
-  const [bb, setBb] = useState(cur.bigBlind);
+  const [sb, setSb] = useState<number | string>(cur.smallBlind);
+  const [bb, setBb] = useState<number | string>(cur.bigBlind);
   const [busy, setBusy] = useState(false);
   const inHand = s.hand && s.hand.street !== 'done';
   const sbN = Math.floor(Number(sb)), bbN = Math.floor(Number(bb));
@@ -271,9 +278,9 @@ function BlindsDialog({ s, act, onClose }: any) {
     : bbN > s.config.buyIn ? `Big blind không được lớn hơn buy-in (${fmtNum(s.config.buyIn)})`
     : !(sbN >= 1) ? 'Small blind tối thiểu là 1'
     : sbN > bbN ? 'Small blind không được lớn hơn big blind' : null;
-  const preset = (f: any) => { const b = Math.max(2, Math.round(cur.bigBlind * f)); setBb(b); setSb(Math.max(1, Math.floor(b / 2))); };
+  const preset = (f: number) => { const b = Math.max(2, Math.round(cur.bigBlind * f)); setBb(b); setSb(Math.max(1, Math.floor(b / 2))); };
 
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (error) return;
     setBusy(true);
@@ -288,11 +295,11 @@ function BlindsDialog({ s, act, onClose }: any) {
         <div className="row pk-blind-fields">
           <div>
             <label>Small blind</label>
-            <input type="number" min={1} value={sb} autoFocus onChange={(e: any) => setSb(e.target.value)} />
+            <input type="number" min={1} value={sb} autoFocus onChange={(e) => setSb(e.target.value)} />
           </div>
           <div>
             <label>Big blind</label>
-            <input type="number" min={2} value={bb} onChange={(e: any) => setBb(e.target.value)} />
+            <input type="number" min={2} value={bb} onChange={(e) => setBb(e.target.value)} />
           </div>
         </div>
         <div className="row wrap">
