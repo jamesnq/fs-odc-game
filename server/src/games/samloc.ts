@@ -1,14 +1,13 @@
 import type { Room } from '../lobby.js';
 import { SamLocGame } from '@game/shared/samloc';
 import { CardTableHandler } from './cardTable.js';
+import type { GameAction, Identity } from '@game/shared/contracts';
 import { clampInt } from './options.js';
 
 const SAM_SECONDS = 10; // thời gian báo Sâm đầu ván
 
-export class SamLocHandler extends CardTableHandler {
-  declare turnKey: any;
-
-  constructor(room: Room, options: any) {
+export class SamLocHandler extends CardTableHandler<SamLocGame> {
+  constructor(room: Room, options: Record<string, unknown>) {
     super(room, {
       maxSeats: clampInt(options.maxSeats, 2, 5, 4),
       unit: clampInt(options.unit, 1, 1000000, 10),
@@ -16,14 +15,14 @@ export class SamLocHandler extends CardTableHandler {
     });
   }
 
-  _createGame(players: any, first: any) { return new SamLocGame(players, first); }
-  _startMessage(players: any, first: any) {
+  _createGame(players: Identity[], first: number) { return new SamLocGame(players, first); }
+  _startMessage(players: Identity[], first: number) {
     return `Ván ${this.gameNo} bắt đầu — ${players[first].name} đi trước. Ai báo Sâm thì báo trong ${SAM_SECONDS} giây!`;
   }
-  _turnKey(g: any) { return g.phase === 'sam' ? 'sam' : `${g.turn}:${g.log.length}`; }
-  _onFinish(g: any) { this.room.system(`🏆 ${g.players[g.result.winner].name}: ${g.result.text}`); }
+  _turnKey(g: SamLocGame) { return g.phase === 'sam' ? 'sam' : `${g.turn}:${g.log.length}`; }
+  _onFinish(g: SamLocGame) { if (g.result) this.room.system(`🏆 ${g.players[g.result.winner].name}: ${g.result.text}`); }
 
-  _play(g: any, id: any, a: any) {
+  _play(g: SamLocGame, id: string, a: GameAction) {
     switch (a.type) {
       case 'sam': return g.declareSam(id, !!a.yes);
       case 'play': return g.play(id, Array.isArray(a.cards) ? a.cards.map(String).slice(0, 13) : []);

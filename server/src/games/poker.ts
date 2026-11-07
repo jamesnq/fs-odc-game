@@ -1,26 +1,33 @@
 import type { Room } from '../lobby.js';
 import { PokerGame } from '@game/shared/poker';
+import type { PokerSeat } from '@game/shared/poker';
+import type { GameAction, GameQuery, Identity } from '@game/shared/contracts';
+import type { ActionOf } from './types.js';
 import { cardLabel } from '@game/shared/cards';
 import { DeckCommitments } from './fairness.js';
 import { bool, clampInt } from './options.js';
 import { ReadyGate } from './ready.js';
 
+interface PokerOptions {
+  bigBlind: number; smallBlind: number; buyIn: number; maxSeats: number; turnSeconds: number; rabbitHunt: boolean;
+}
+
 export class PokerHandler {
-  declare fair: any;
+  declare fair: DeckCommitments;
   declare room: Room;
-  declare options: any;
-  declare game: any;
-  declare stacks: any;
-  declare rebuys: any;
-  declare turnTimer: any;
+  declare options: PokerOptions;
+  declare game: PokerGame;
+  declare stacks: Map<string, number>;
+  declare rebuys: Map<string, number>;
+  declare turnTimer: ReturnType<typeof setTimeout> | null;
   declare deadline: number;
-  declare nextHandTimer: any;
+  declare nextHandTimer: ReturnType<typeof setTimeout> | null;
   declare nextHandAt: number;
   declare timerKey: string;
-  declare ready: any;
+  declare ready: ReadyGate;
   declare started: boolean;
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: Record<string, unknown>) {
     this.fair = new DeckCommitments();
     this.room = room;
     const bigBlind = clampInt(options.bigBlind, 2, 100000, 20);
@@ -49,22 +56,25 @@ export class PokerHandler {
   }
 
   /** Người đang ngồi bàn (chưa rời). */
-  _seated() { return this.game.seats.filter((x: any) => x && !x.left); }
+  _seated() { return this.game.seats.filter((x): x is PokerSeat => !!x && !x.left); }
 
   get maxPlayers() { return this.options.maxSeats; }
-  playerIds() { return this.game.seats.filter((s: any) => s && !s.left).map((s: any) => s.id); }
+  playerIds() { return this._seated().map((s) => s.id); }
   isPlaying() { return this.game.inHand; }
 
-  rename(id: any, name: any) {
-    const s = this.game.seats.find((x: any) => x && x.id === id);
+  /** Tên người chơi trong ván hiện tại (kể cả người đã rời ghế). */
+  _handPlayer(id: string) { return this.game.hand ? Object.values(this.game.hand.players).find((p) => p.id === id) : undefined; }
+
+  rename(id: string, name: string) {
+    const s = this.game.seats.find((x) => x && x.id === id);
     if (s) s.name = name;
-    const hp = this.game.hand && Object.values(this.game.hand.players as Record<string, {id: string; name: string}>).find((p) => p.id === id);
+    const hp = this._handPlayer(id);
     if (hp) hp.name = name;
   }
 
-  sit(user: any, seat: any) {
+  sit(user: Identity, seat?: string | number) {
     if (this.game.seatOf(user.id) >= 0) throw new Error('Bạn đã ngồi rồi');
-    const s = Number.isInteger(seat) ? seat : this.game.seats.findIndex((x: any) => !x);
+    const s = typeof seat === 'number' && Number.isInteger(seat) ? seat : this.game.seats.findIndex((x) => !x);
     if (s < 0 || s >= this.game.seats.length || this.game.seats[s]) throw new Error('Không còn ghế trống');
     let chips = this.stacks.get(user.id);
     if (!chips || chips <= 0) chips = this.options.buyIn;
@@ -72,18 +82,18 @@ export class PokerHandler {
     this._maybeSchedule();
   }
 
-  stand(id: any) {
+  stand(id: string) {
     const s = this.game.seatOf(id);
     if (s < 0) return;
-    this.stacks.set(id, this.game.seats[s].chips);
+    this.stacks.set(id, this.game.seats[s]!.chips);
     this.game.leave(id);
     this.ready.delete(id);
     this._afterChange();
   }
 
-  onLeave(id: any) { this.stand(id); }
+  onLeave(id: string) { this.stand(id); }
 
-  action(id: any, a: any) {
+  action(id: string, a: GameAction) {
     if (a.type === 'setBlinds') return this._setBlinds(id, a);
     if (a.type === 'start') {
       if (this.started) throw new Error('Bàn đang chơi');
@@ -105,26 +115,25 @@ export class PokerHandler {
     if (a.type === 'rabbit') {
       if (!this.options.rabbitHunt) throw new Error('Bàn này không cho xem rabbit');
       const cards = this.game.rabbitHunt(id);
-      const name = this.game.seats.find((x: any) => x && x.id === id)?.name
-        || Object.values(this.game.hand.players as Record<string, {id: string; name: string}>).find((p) => p.id === id)?.name || '?';
+      const name = this.game.seats.find((x) => x && x.id === id)?.name || this._handPlayer(id)?.name || '?';
       this.room.system(`🐇 ${name} xem rabbit: ${cards.map(cardLabel).join(' ')}`);
       return;
     }
     if (a.type === 'show') {
       const cards = this.game.showCards(id);
-      const name = Object.values(this.game.hand.players as Record<string, {id: string; name: string}>).find((p) => p.id === id)?.name || '?';
+      const name = this._handPlayer(id)?.name || '?';
       this.room.system(`🃏 ${name} show bài: ${cards.map(cardLabel).join(' ')}`);
       return;
     }
     const seat = this.game.seatOf(id);
     if (seat < 0) throw new Error('Bạn đang ở chế độ xem');
-    const s = this.game.seats[seat];
+    const s = this.game.seats[seat]!;
     switch (a.type) {
       case 'act':
         this.game.act(id, String(a.action), a.amount);
         break;
       case 'rebuy': {
-        if (this.game.inHand && this.game.hand.players[seat]) throw new Error('Đợi hết ván để nạp thêm');
+        if (this.game.inHand && this.game.hand?.players[seat]) throw new Error('Đợi hết ván để nạp thêm');
         if (s.chips >= this.options.bigBlind) throw new Error('Chỉ nạp khi hết chip');
         s.chips = this.options.buyIn;
         this.rebuys.set(id, (this.rebuys.get(id) || 0) + 1);
@@ -145,7 +154,7 @@ export class PokerHandler {
   }
 
   /** Chủ phòng đổi blind. Giữa ván thì áp dụng từ ván sau. */
-  _setBlinds(id: any, a: any) {
+  _setBlinds(id: string, a: ActionOf<'setBlinds'>) {
     if (id !== this.room.ownerId) throw new Error('Chỉ chủ phòng mới được đổi blind');
     const bb = Math.floor(Number(a.bigBlind));
     const sb = Math.floor(Number(a.smallBlind));
@@ -163,7 +172,7 @@ export class PokerHandler {
   _afterChange() {
     const h = this.game.hand;
     if (h && h.street === 'done') {
-      clearTimeout(this.turnTimer);
+      clearTimeout(this.turnTimer ?? undefined);
       this.deadline = 0;
       this.game.cleanup();
     } else if (h) {
@@ -173,7 +182,7 @@ export class PokerHandler {
   }
 
   _resetTurnTimer() {
-    clearTimeout(this.turnTimer);
+    clearTimeout(this.turnTimer ?? undefined);
     const h = this.game.hand;
     if (!h || h.street === 'done' || h.toAct < 0) { this.deadline = 0; return; }
     const key = `${h.no}:${h.toAct}:${h.log.length}`;
@@ -192,7 +201,7 @@ export class PokerHandler {
   _onTimeout() {
     try {
       this.game.timeout();
-    } catch (e: any) {
+    } catch (e) {
       console.error('poker timeout', e);
     }
     this._afterChange();
@@ -202,7 +211,7 @@ export class PokerHandler {
   /** Dừng chia ván mới (ván đang chơi vẫn chơi nốt). */
   _stop() {
     this.started = false;
-    clearTimeout(this.nextHandTimer);
+    clearTimeout(this.nextHandTimer ?? undefined);
     this.nextHandTimer = null;
     this.nextHandAt = 0;
   }
@@ -231,24 +240,24 @@ export class PokerHandler {
     }, delay);
   }
 
-  query(viewerId: any, q: any) {
+  query(viewerId: string, q: GameQuery) {
     if (q.type === 'handLog') return this.game.historyView(viewerId);
     throw new Error('Truy vấn không hợp lệ');
   }
 
   /** Lá của ván vừa xong mà người xem được thấy: bài chung, bài đã lật, rabbit, bài tẩy của chính mình. */
-  _visibleCards(viewerId: any) {
+  _visibleCards(viewerId: string) {
     const e = this.game.history[this.game.history.length - 1];
-    const set = new Set();
+    const set = new Set<string>();
     if (!e) return set;
     for (const c of e.board) set.add(c);
-    for (const v of Object.values(e.shown as Record<string, {hole: string[]}>)) for (const c of v.hole) set.add(c);
+    for (const v of Object.values(e.shown)) for (const c of v.hole) set.add(c);
     for (const p of e.players) if (p.id === viewerId) for (const c of p.hole) set.add(c);
     if (Array.isArray(e.rabbit)) for (const c of e.rabbit) set.add(c);
     return set;
   }
 
-  view(viewerId: any) {
+  view(viewerId: string) {
     this.fair.track(this.game.lastDeck);
     const v = this.game.view(viewerId);
     if (!this.options.rabbitHunt) v.canRabbit = false;
@@ -263,12 +272,12 @@ export class PokerHandler {
       turnTotal: this.options.turnSeconds * 1000,
       nextHandIn: this.nextHandAt ? Math.max(0, this.nextHandAt - Date.now()) : 0,
       started: this.started,
-      ...this.ready.view(this._seated().map((x: any) => x.id)),
+      ...this.ready.view(this.playerIds()),
     };
   }
 
   dispose() {
-    clearTimeout(this.turnTimer);
-    clearTimeout(this.nextHandTimer);
+    clearTimeout(this.turnTimer ?? undefined);
+    clearTimeout(this.nextHandTimer ?? undefined);
   }
 }

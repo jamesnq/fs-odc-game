@@ -1,11 +1,15 @@
 import type { Room } from '../lobby.js';
 import { createGame, makeMove, undoMoves, coord, MIN_SIZE, MAX_SIZE } from '@game/shared/caro';
+import type { CaroState } from '@game/shared/caro';
+import type { MoveAction } from './types.js';
 import { botPool } from '../botPool.js';
 import { botLevel } from './bots.js';
 import { DuelHandler } from './duel.js';
 import { bool, clampInt } from './options.js';
 
-export class CaroHandler extends DuelHandler {
+interface CaroOptions { minutes: number; size: number; blockTwoEnds: boolean }
+
+export class CaroHandler extends DuelHandler<CaroState, CaroOptions> {
   static SIDES = ['x', 'o'];
   static LABELS = { x: 'X', o: 'O' };
   static REASONS = {
@@ -13,7 +17,7 @@ export class CaroHandler extends DuelHandler {
     full: 'Kín bàn',
   };
 
-  constructor(room: Room, options: any) {
+  constructor(room: Room, options: Record<string, unknown>) {
     super(room, {
       minutes: clampInt(options.minutes, 1, 60, 10),
       size: clampInt(options.size, MIN_SIZE, MAX_SIZE, 15),
@@ -24,12 +28,12 @@ export class CaroHandler extends DuelHandler {
     if (bot) this._addBot(room.ownerId, { level: bot, seat: 'o' });
   }
 
-  _botMove(game: import('@game/shared/caro').CaroState, level: string) { return botPool.run(game, level); }
+  _botMove(game: CaroState, level: string) { return botPool.run(game, level); }
 
   _newGame() { return createGame({ size: this.options.size, blockTwoEnds: this.options.blockTwoEnds }); }
-  _move(game: any, a: any) { return makeMove(game, Number(a.cell)); }
-  _undo(game: any, n: any) { return undoMoves(game, n); }
-  _resultDetails(r: any) { return { line: r.line }; } // 5 ô thắng để tô sáng
+  _move(game: CaroState, a: MoveAction) { return makeMove(game, Number('cell' in a ? a.cell : undefined)); }
+  _undo(game: CaroState, n: number) { return undoMoves(game, n); }
+  _resultDetails(r: NonNullable<CaroState['result']>) { return { line: r.line }; } // 5 ô thắng để tô sáng
 
   _boardView() {
     const { size, board, turn, history } = this.game;
@@ -37,7 +41,7 @@ export class CaroHandler extends DuelHandler {
       size,
       board,
       turn,
-      moves: history.map((m: any) => ({ cell: m.i, p: m.p, san: coord(size, m.i) })),
+      moves: history.map((m) => ({ cell: m.i, p: m.p, san: coord(size, m.i) })),
       lastMove: history.length ? history[history.length - 1].i : null,
     };
   }
