@@ -1,3 +1,22 @@
+import type { Identity } from '@game/shared/contracts';
+
+interface ScorePlayer extends Identity {
+  games: number;
+  wins: number;
+  draws: number;
+  losses: number;
+}
+
+interface MatchPlayer extends Identity { side: string }
+interface MatchResult {
+  no: number;
+  ts: number;
+  players: MatchPlayer[];
+  winnerId: string | null;
+  reason: string;
+  moves: number;
+}
+
 // Bảng điểm cho các game đối kháng 2 người (Cờ tướng, Cờ caro).
 // Điểm tính theo người chơi (không theo màu quân), cộng dồn qua các ván trong phòng:
 // thắng 1 điểm, hòa ½ điểm, thua 0 điểm.
@@ -5,8 +24,8 @@
 const HISTORY_MAX = 30;
 
 export class Scoreboard {
-  declare players: any;
-  declare history: any;
+  declare players: Map<string, ScorePlayer>;
+  declare history: MatchResult[];
   declare gameNo: number;
 
   constructor() {
@@ -15,7 +34,7 @@ export class Scoreboard {
     this.gameNo = 0;
   }
 
-  _get({ id, name }: any) {
+  _get({ id, name }: Identity) {
     let p = this.players.get(id);
     if (!p) {
       p = { id, name, games: 0, wins: 0, draws: 0, losses: 0 };
@@ -25,7 +44,7 @@ export class Scoreboard {
     return p;
   }
 
-  rename(id: any, name: any) {
+  rename(id: string, name: string) {
     const p = this.players.get(id);
     if (p) p.name = name;
   }
@@ -35,22 +54,23 @@ export class Scoreboard {
    * @param players [{ id, name, side }] — hai người chơi
    * @param winnerId id người thắng, null nếu hòa
    */
-  record(players: any, winnerId: any, reason: any, moves: any) {
-    if (players.length !== 2 || players.some((p: any) => !p)) return;
+  record(players: readonly (MatchPlayer | null | undefined)[], winnerId: string | null, reason: string, moves: number) {
+    if (players.length !== 2 || players.some((p) => !p)) return;
+    const participants = players.filter((p) => p != null);
     this.gameNo++;
-    for (const pl of players) {
+    for (const pl of participants) {
       const p = this._get(pl);
       p.games++;
       if (!winnerId) p.draws++;
       else if (winnerId === pl.id) p.wins++;
       else p.losses++;
     }
-    this.history.push({ no: this.gameNo, ts: Date.now(), players: players.map(({ id, name, side }: any) => ({ id, name, side })), winnerId, reason, moves });
+    this.history.push({ no: this.gameNo, ts: Date.now(), players: participants.map(({ id, name, side }) => ({ id, name, side })), winnerId, reason, moves });
     if (this.history.length > HISTORY_MAX) this.history.shift();
   }
 
   /** Chuỗi tỉ số ngắn cho tin nhắn hệ thống, vd "An 2 – 1 Bình". */
-  line(a: any, b: any) {
+  line(a: Identity, b: Identity) {
     const pa = this.players.get(a.id), pb = this.players.get(b.id);
     return `${a.name} ${fmtPoints(points(pa))} – ${fmtPoints(points(pb))} ${b.name}`;
   }
@@ -69,5 +89,5 @@ export class Scoreboard {
   }
 }
 
-const points = (p: any) => (p ? p.wins + p.draws / 2 : 0);
-const fmtPoints = (n: any) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
+const points = (p: ScorePlayer | undefined) => (p ? p.wins + p.draws / 2 : 0);
+const fmtPoints = (n: number) => (Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`);
