@@ -2,9 +2,11 @@
 
 Ứng dụng sảnh game nhiều người chơi thời gian thực.
 
-- **Frontend:** React 18 + Vite
-- **Backend:** Node.js + Express + Socket.IO (server giữ toàn bộ luật chơi, client không gian lận được)
-- **Logic game dùng chung:** `shared/` (thuần JS, có unit test)
+**Tài liệu cho phát triển và AI:** [AGENTS.md](AGENTS.md) · [Kiến trúc hệ thống](docs/architecture.md) · [Convention](docs/conventions.md) · [Thêm feature](docs/feature-development.md).
+
+- **Frontend:** React 18 + Vite + TypeScript/TSX
+- **Backend:** Node.js 22+ + Express + Socket.IO + TypeScript (server giữ toàn bộ luật chơi, client không gian lận được)
+- **Logic game dùng chung:** `shared/` (TypeScript, có unit test)
 
 ## Tính năng
 
@@ -30,7 +32,7 @@
 - Tô sáng nước vừa đi và dãy thắng, biên bản nước đi theo tọa độ (H8, J7…)
 - **Bảng điểm** cộng dồn qua các ván (xem bên dưới)
 - **Phím tắt:** `←↑→↓` di chuyển con trỏ · `Enter`/`Space` đánh · `Esc` ẩn con trỏ
-- **Chơi với máy** (Dễ / Vừa / Khó): chọn khi tạo bàn (bạn cầm X đi trước) hoặc bấm **Chơi với máy** ở ghế trống. Máy luôn sẵn sàng, đồng ý chơi lại và cho đi lại, chỉ đồng ý hòa khi bàn gần kín. Máy Khó tìm trước vài nước (alpha-beta), chỉ nghĩ dưới 0,5 giây mỗi nước (`shared/src/caroBot.js`)
+- **Chơi với máy** (Dễ / Vừa / Khó): chọn khi tạo bàn (bạn cầm X đi trước) hoặc bấm **Chơi với máy** ở ghế trống. Máy luôn sẵn sàng, đồng ý chơi lại và cho đi lại, chỉ đồng ý hòa khi bàn gần kín. Máy Khó tìm trước vài nước (alpha-beta), chỉ nghĩ dưới 0,5 giây mỗi nước (`shared/src/caroBot.ts`)
 
 **Nối từ** (2–8 người)
 - Mỗi từ gồm **2 chữ**, chữ đầu phải trùng chữ cuối của từ trước: *con mèo → mèo con → con đường*; không lặp từ trong ván
@@ -40,7 +42,7 @@
 - Từ vô nghĩa? Bạn bè bấm **❌ phản đối** — quá nửa số người còn lại phản đối thì từ bị gỡ, người đó nối lại
 - Mỗi lượt 10–60 giây, hết giờ mất 1 mạng (1–3 mạng), hết mạng bị loại; người cuối cùng còn lại thắng. Có bảng thắng qua các ván
 - Khi tới lượt, ô nhập tự điền sẵn chữ đầu — chỉ cần gõ chữ thứ hai rồi `Enter`
-- **Chơi với máy** (tối đa 3 máy mỗi bàn): chọn khi tạo bàn hoặc bấm **Chơi với máy / Thêm máy**. Máy chỉ dùng từ có trong từ điển. Máy Dễ hay bí, máy Vừa nối ngẫu nhiên, máy Khó chọn từ có chữ cuối khó nối tiếp nhất. Máy không bỏ phiếu phản đối và không được tính vào số phiếu cần để gỡ từ. Bàn đầy thì người mới vào được nhường ghế của một máy (`shared/src/wordchainBot.js`)
+- **Chơi với máy** (tối đa 3 máy mỗi bàn): chọn khi tạo bàn hoặc bấm **Chơi với máy / Thêm máy**. Máy chỉ dùng từ có trong từ điển. Máy Dễ hay bí, máy Vừa nối ngẫu nhiên, máy Khó chọn từ có chữ cuối khó nối tiếp nhất. Máy không bỏ phiếu phản đối và không được tính vào số phiếu cần để gỡ từ. Bàn đầy thì người mới vào được nhường ghế của một máy (`shared/src/wordchainBot.ts`)
 
 **Đố vui** (kiểu Kahoot, 1–30 người, chơi một mình cũng được)
 - Câu hỏi trắc nghiệm 2–4 đáp án (▲ ◆ ● ■), mỗi câu 5–60 giây. Đúng được tới 1.000 điểm, trả lời càng nhanh càng nhiều điểm (`1000 × (1 − thời gian/2)`, trong 0,5 giây được trọn điểm). Đúng liên tiếp được thưởng chuỗi +100 … +500
@@ -76,12 +78,12 @@
 - **Gợi ý** và **đổi hình** (xáo bàn) có giới hạn lượt; hết nước đi thì bàn **tự xáo** miễn phí. Tùy chọn **trọng lực**: nối xong các hình phía trên rơi xuống
 - Server kiểm tra mọi nước nối; người xem bấm tên người chơi để xem bàn của họ. Điện thoại dọc: bàn tự xoay dọc cho ô to hơn
 - **Phím tắt:** `H` gợi ý · `S` đổi hình · `Esc` bỏ chọn
-- **Kiểu hình:** mặc định là 36 quái thú **pixel 16×16** tự vẽ theo phong cách game cầm tay cổ điển (`client/src/games/onetSprites.js`); chuyển lại emoji ở khung Thông tin, lựa chọn lưu theo máy
+- **Kiểu hình:** mặc định là 36 quái thú **pixel 16×16** tự vẽ theo phong cách game cầm tay cổ điển (`client/src/games/onetSprites.ts`); chuyển lại emoji ở khung Thông tin, lựa chọn lưu theo máy
 
 **Rắn săn mồi** (1–8 người, kiểu rắn trên điện thoại đen trắng đời đầu)
 - Màn hình LCD xanh 24×14 ô vẽ bằng từng điểm ảnh, điểm 4 chữ số, tiếng bíp sóng vuông khi ăn mồi. 9 cấp tốc độ, mỗi mồi được điểm bằng cấp; cứ 5 mồi hiện một **con thưởng** trong 40 bước, ăn càng sớm càng nhiều điểm
 - Mê cung: Không tường (đi xuyên mép) · Hộp kín · Đường hầm · Bốn phòng · Đường ray. Tùy chọn giới hạn thời gian
-- Mọi người cùng hạt giống, ai nhiều điểm nhất thắng. Client tự chạy rắn và gửi lượt rẽ `[bước, hướng]`; server **phát lại** để tự tính điểm (`shared/src/snake.js`), không tin điểm client gửi. Nhiều người thì không được dừng — ai im lặng quá 4 giây, server cho rắn bò tiếp
+- Mọi người cùng hạt giống, ai nhiều điểm nhất thắng. Client tự chạy rắn và gửi lượt rẽ `[bước, hướng]`; server **phát lại** để tự tính điểm (`shared/src/snake.ts`), không tin điểm client gửi. Nhiều người thì không được dừng — ai im lặng quá 4 giây, server cho rắn bò tiếp
 - **Phím:** mũi tên / `W A S D` / `2 4 6 8` · `P`/`Space` tạm dừng (chơi một mình) · điện thoại: vuốt hoặc bàn phím ảo
 
 **Bảng điểm (Cờ vua, Cờ tướng và Cờ caro)**
@@ -94,7 +96,7 @@
 - Mỗi người 10 lá; 3 < … < K < A < 2 (heo), **không xét chất**. Rác, đôi, sám, tứ quý, sảnh (A-2-3… hoặc …Q-K-A, không vòng K-A-2)
 - Chặn bằng bộ cùng loại, cùng số lá, cao hơn; **tứ quý chặt heo**; đã bỏ lượt thì nghỉ hết vòng
 - **Báo Sâm** đầu ván (10 giây), **báo 1** (người sau còn 1 lá thì đánh rác phải đánh lá lớn nhất — tự kiểm tra), **tới trắng** (tứ quý heo, sảnh rồng, 5 đôi, 3 sám, đồng màu)
-- Tính tiền: 1/lá còn lại, cóng 20, thối heo +5/con, chặt heo 10, Sâm / tới trắng 20 mỗi nhà — chỉnh trong `SAM_RULES` ở [shared/src/samloc.js](shared/src/samloc.js)
+- Tính tiền: 1/lá còn lại, cóng 20, thối heo +5/con, chặt heo 10, Sâm / tới trắng 20 mỗi nhà — chỉnh trong `SAM_RULES` ở [shared/src/samloc.ts](shared/src/samloc.ts)
 - Chọn bài là biết ngay bộ gì và có chặn được không; máy đánh hộ khi hết giờ / rời bàn; cộng dồn điểm qua các ván
 - **Phím tắt:** `←/→` di chuyển · `Space`/`↑` chọn · `Enter` đánh · `P` bỏ lượt · `Esc` bỏ chọn · `Y`/`K` báo Sâm / không · `N` ván mới
 
@@ -118,7 +120,7 @@ Bấm `?` trong phòng để xem bảng phím tắt.
 ### Luật tham khảo
 - Cờ tướng: luật của Liên đoàn Cờ tướng châu Á (AXF). Chưa xử lý luật cấm chiếu dai / đuổi dai; người chơi có thể cầu hòa.
 - Poker: Robert's Rules of Poker và luật của Poker TDA.
-- Tá lả: luật miền Bắc phổ biến. Mức trả: Nhì 1, Ba 2, Bét 3, Móm 4, bị ăn 1, bị ăn chốt 4, Ù 5 mỗi nhà. Luật Tá lả khác nhau theo vùng, có thể chỉnh trong `TALA_RULES` ở [shared/src/tala.js](shared/src/tala.js).
+- Tá lả: luật miền Bắc phổ biến. Mức trả: Nhì 1, Ba 2, Bét 3, Móm 4, bị ăn 1, bị ăn chốt 4, Ù 5 mỗi nhà. Luật Tá lả khác nhau theo vùng, có thể chỉnh trong `TALA_RULES` ở [shared/src/tala.ts](shared/src/tala.ts).
 
 ## Chạy trên máy
 
@@ -129,10 +131,12 @@ npm run dev        # server :3001 + Vite :5173 (proxy socket sang server)
 Mở http://localhost:5173 ở vài tab (hoặc tab ẩn danh) để thử nhiều người chơi.
 
 ```bash
-npm test                     # unit test luật chơi
-npm run build                # build client vào client/dist
+npm run typecheck            # strict: shared, server, client, scripts, tests và wire contracts
+npm test                     # unit test luật chơi và server qua tsx
+npm run build                # shared/dist (ESM + .d.ts), server/dist + data, client/dist
 npm start                    # server phục vụ luôn client đã build tại :3001
 npm run test:e2e -- http://localhost:3001   # kiểm thử tích hợp (server phải đang chạy)
+npm run test:integration      # tự chạy server dist trên cổng 3191, kiểm thử, rồi dừng
 ```
 
 ## Deploy bằng GitHub Actions
@@ -232,28 +236,30 @@ APP_SERVERS={"Bên A":"mat-khau-A","Bên B":"mat-khau-B"}
 ## Cấu trúc
 
 ```
-shared/src/       Luật chơi thuần JS (dùng cho cả server và client)
-  xiangqi.js      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
-  caro.js         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
-  wordchain.js    Nối từ: chuẩn hóa âm tiết, lượt, mạng, phản đối
-  poker.js        Chấm bài, ván cược, side pot
-  samloc.js       Sâm lốc: phân loại bộ, chặn, báo Sâm, báo 1, tới trắng, tính tiền
-  tala.js         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
+shared/src/       Luật chơi TypeScript (dùng cho cả server và client)
+  xiangqi.ts      Sinh nước đi, chiếu, chiếu bí, ký hiệu nước đi
+  caro.ts         Đặt quân, kiểm tra 5 liên tiếp, luật chặn hai đầu
+  wordchain.ts    Nối từ: chuẩn hóa âm tiết, lượt, mạng, phản đối
+  poker.ts        Chấm bài, ván cược, side pot
+  samloc.ts       Sâm lốc: phân loại bộ, chặn, báo Sâm, báo 1, tới trắng, tính tiền
+  tala.ts         Phỏm, xếp phỏm tối ưu, ăn / hạ / gửi / Ù, tính điểm
 shared/test/      Unit test (node --test)
 server/src/       Express + Socket.IO
-  index.js        Khởi động: ghép các phần bên dưới
-  config.js       Đọc biến môi trường, giới hạn tài nguyên
-  http.js         Header bảo mật, /health, phục vụ client đã build
-  auth.js         Mật khẩu, phiên đăng nhập, khóa IP đoán mật khẩu
-  rateLimit.js    Token bucket, bộ đếm theo IP
-  lobby.js        Người dùng, phòng: vào / ra / xóa phòng
-  connection.js   Các sự kiện socket của một kết nối
-  voice.js        Voice chat: STUN/TURN, hạn mức, lọc tín hiệu
+  index.ts        Khởi động: ghép các phần bên dưới
+  config.ts       Đọc biến môi trường, giới hạn tài nguyên
+  http.ts         Header bảo mật, /health, phục vụ client đã build
+  auth.ts         Mật khẩu, phiên đăng nhập, khóa IP đoán mật khẩu
+  rateLimit.ts    Token bucket, bộ đếm theo IP
+  lobby.ts        Người dùng, phòng: vào / ra / xóa phòng
+  connection.ts   Các sự kiện socket của một kết nối
+  voice.ts        Voice chat: STUN/TURN, hạn mức, lọc tín hiệu
 server/src/games/ Lớp điều phối từng game (ghế, hẹn giờ, quyền thao tác)
-  duel.js         Khung chung cờ 2 người có đồng hồ (Cờ tướng, Cờ caro)
-  cardTable.js    Khung chung bài đánh theo lượt (Tá lả, Sâm lốc)
+  duel.ts         Khung chung cờ 2 người có đồng hồ (Cờ tướng, Cờ caro)
+  cardTable.ts    Khung chung bài đánh theo lượt (Tá lả, Sâm lốc)
 server/src/data/  Từ điển tiếng Việt cho Nối từ (MIT, xem README trong thư mục)
 client/src/       React UI: sảnh, phòng, bàn cờ, bàn bài, phím tắt
 ```
 
 > Dữ liệu (người dùng, phòng, điểm) chỉ lưu trong bộ nhớ server, khởi động lại server là mất. Muốn lưu lâu dài thì cần thêm cơ sở dữ liệu (Redis / Postgres).
+
+Chi tiết build, exports và phạm vi kiểu dữ liệu: [docs/typescript.md](docs/typescript.md).

@@ -27,13 +27,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run check
       - run: npm test
       - run: npm run build
       - name: Kiểm thử tích hợp
-        run: |
-          PORT=3001 node server/src/index.js &
-          npx --yes wait-on -t 20000 http://localhost:3001/health
-          npm run test:e2e -- http://localhost:3001
+        run: npm run test:integration
 
   docker:
     needs: test

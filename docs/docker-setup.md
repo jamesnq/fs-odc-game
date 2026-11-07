@@ -46,7 +46,7 @@ curl -f http://127.0.0.1:3001/ready
 Kiểm thử Redis riêng (chỉ trên máy test, không mở Redis production ra Internet):
 
 ```sh
-TEST_REDIS_URL=redis://127.0.0.1:6379 node --test server/test/cluster.test.js
+TEST_REDIS_URL=redis://127.0.0.1:6379 npx tsx --test server/test/cluster.test.ts
 ```
 
 Để cập nhật lần lượt: build image trước, sau đó `docker compose up -d --no-deps node-b`, kiểm tra log/readiness và reconnect rồi làm tương tự với `node-a`.

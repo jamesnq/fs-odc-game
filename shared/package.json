@@ -4,24 +4,78 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./cards": "./src/cards.js",
-    "./xiangqi": "./src/xiangqi.js",
-    "./chess": "./src/chess.js",
-    "./caro": "./src/caro.js",
-    "./caroBot": "./src/caroBot.js",
-    "./samloc": "./src/samloc.js",
-    "./wordchain": "./src/wordchain.js",
-    "./wordchainBot": "./src/wordchainBot.js",
-    "./poker": "./src/poker.js",
-    "./quiz": "./src/quiz.js",
-    "./wordguess": "./src/wordguess.js",
-    "./tala": "./src/tala.js",
-    "./scribble": "./src/scribble.js",
-    "./telephone": "./src/telephone.js",
-    "./onet": "./src/onet.js",
-    "./snake": "./src/snake.js"
+    "./cards": {
+      "types": "./dist/cards.d.ts",
+      "import": "./dist/cards.js"
+    },
+    "./xiangqi": {
+      "types": "./dist/xiangqi.d.ts",
+      "import": "./dist/xiangqi.js"
+    },
+    "./chess": {
+      "types": "./dist/chess.d.ts",
+      "import": "./dist/chess.js"
+    },
+    "./caro": {
+      "types": "./dist/caro.d.ts",
+      "import": "./dist/caro.js"
+    },
+    "./caroBot": {
+      "types": "./dist/caroBot.d.ts",
+      "import": "./dist/caroBot.js"
+    },
+    "./samloc": {
+      "types": "./dist/samloc.d.ts",
+      "import": "./dist/samloc.js"
+    },
+    "./wordchain": {
+      "types": "./dist/wordchain.d.ts",
+      "import": "./dist/wordchain.js"
+    },
+    "./wordchainBot": {
+      "types": "./dist/wordchainBot.d.ts",
+      "import": "./dist/wordchainBot.js"
+    },
+    "./poker": {
+      "types": "./dist/poker.d.ts",
+      "import": "./dist/poker.js"
+    },
+    "./quiz": {
+      "types": "./dist/quiz.d.ts",
+      "import": "./dist/quiz.js"
+    },
+    "./wordguess": {
+      "types": "./dist/wordguess.d.ts",
+      "import": "./dist/wordguess.js"
+    },
+    "./tala": {
+      "types": "./dist/tala.d.ts",
+      "import": "./dist/tala.js"
+    },
+    "./scribble": {
+      "types": "./dist/scribble.d.ts",
+      "import": "./dist/scribble.js"
+    },
+    "./telephone": {
+      "types": "./dist/telephone.d.ts",
+      "import": "./dist/telephone.js"
+    },
+    "./onet": {
+      "types": "./dist/onet.d.ts",
+      "import": "./dist/onet.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./snake": {
+      "types": "./dist/snake.d.ts",
+      "import": "./dist/snake.js"
+    }
   },
   "scripts": {
-    "test": "node --test"
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json"
   }
 }

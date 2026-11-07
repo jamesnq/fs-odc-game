@@ -9,7 +9,27 @@ on:
     branches-ignore: [main]
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: TypeScript-only source and type-debt policy
+        env:
+          SOURCE_POLICY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: npm run check:source
+      - name: ESLint (syntax, correctness and React Hooks)
+        run: npm run lint
+      - name: Strict source, config, script and test typecheck
+        run: npm run typecheck
   compose:
+    needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,7 +47,7 @@ jobs:
         run: |
           docker compose up -d --build --wait --wait-timeout 180
           curl --fail --retry 10 --retry-delay 2 --retry-all-errors http://127.0.0.1:3001/ready
-          node server/test/compose-smoke.mjs http://127.0.0.1:3001
+          npx tsx server/test/compose-smoke.ts http://127.0.0.1:3001
       - name: Container logs
         if: failure()
         env:
@@ -36,6 +56,7 @@ jobs:
           SNAPSHOT_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         run: docker compose logs --tail=100
   test:
+    needs: quality
     runs-on: ubuntu-latest
     services:
       redis:
@@ -59,10 +80,9 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Unit test (luật chơi)
         run: npm test
-      - name: Build client
+      - name: Build shared, server và client
         run: npm run build
       - name: Kiểm thử tích hợp (server + socket)
-        run: |
-          PORT=3001 TRUST_PROXY=1 VOICE_SERVERS='Bên A' APP_SERVERS='{"Bên A":"ci-secret","Bên B":"ci-secret-b"}' node server/src/index.js &
-          npx --yes wait-on -t 20000 http://localhost:3001/health
-          TRUST_PROXY=1 APP_PASSWORD=ci-secret OTHER_PASSWORD=ci-secret-b npm run test:e2e -- http://localhost:3001
+        run: npm run test:integration
+      - name: Build Docker runtime
+        run: docker build --tag game-lobby:ci .
