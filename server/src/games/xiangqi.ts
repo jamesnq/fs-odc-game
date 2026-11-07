@@ -2,10 +2,11 @@ import type { Room } from '../lobby.js';
 import { createGame, makeMove, undoMoves, isInCheck } from '@game/shared/xiangqi';
 import type { XiangqiState } from '@game/shared/xiangqi';
 import type { MoveAction } from './types.js';
+import type { XiangqiBoardView } from '@game/shared/views';
 import { DuelHandler } from './duel.js';
 import { clampInt } from './options.js';
 
-export class XiangqiHandler extends DuelHandler<XiangqiState> {
+export class XiangqiHandler extends DuelHandler<XiangqiState, { minutes: number }, XiangqiBoardView> {
   static SIDES = ['r', 'b'];
   static LABELS = { r: 'Đỏ', b: 'Đen' };
   static REASONS = {
@@ -25,7 +26,7 @@ export class XiangqiHandler extends DuelHandler<XiangqiState> {
 
   _undo(game: XiangqiState, n: number) { return undoMoves(game, n); }
 
-  _boardView() {
+  _boardView(): XiangqiBoardView {
     const { board, turn, history } = this.game;
     const last = history[history.length - 1];
     return {

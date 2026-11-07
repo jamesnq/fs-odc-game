@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pencil, Timer, Check, Trophy, CircleStop } from 'lucide-react';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { AppContextValue, ClientRoom } from '../store.js';
+import type { ScribbleView } from '@game/shared/views';
+import type { FormEvent } from 'react';
+import type { CanvasHandle } from './ScribbleCanvas.js';
+
+type Act = AppContextValue['act'];
 import GameInfo from '../components/GameInfo.js';
 import StartBar, { ReadyMark } from '../components/StartBar.js';
 import GameOverDialog, { GoRanking } from '../components/GameOverDialog.js';
@@ -9,26 +15,26 @@ import { useCountdown } from '../hooks.js';
 import ScribbleCanvas from './ScribbleCanvas.js';
 import DrawTools, { useDrawTools } from './DrawTools.js';
 
-export default function ScribbleGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+export default function ScribbleGame({ room, state: s }: { room: ClientRoom; state: ScribbleView }) {
+  const { act, call, user } = useRoomApp();
   const playing = s.status === 'playing';
   const me = s.myId;
   const isDrawer = playing && s.drawerId === user.id;
   const canDraw = isDrawer && s.phase === 'draw';
   const isOwner = room.ownerId === user.id;
   const timeLeft = useCountdown(s.phaseLeft, room.receivedAt, playing && !!s.phaseLeft);
-  const nameOf = (id: any) => s.seats.find((x: any) => x.id === id)?.name || s.scores.find((x: any) => x.id === id)?.name || '?';
+  const nameOf = (id: string | null) => s.seats.find((x) => x.id === id)?.name || s.scores.find((x) => x.id === id)?.name || '?';
   const [stop, setStop] = useState(false);
-  const canvas = useRef<any>(null);
+  const canvas = useRef<CanvasHandle>(null);
   const t = useDrawTools(canvas, canDraw);
   const over = s.status === 'over';
-  const seatBtn = me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+  const seatBtn = me ? <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
     : s.seats.length < s.options.maxSeats && (
       <button className="btn primary" onClick={() => call('room:sit', {})}>{playing ? 'Vào đoán cùng' : 'Vào chơi'}</button>
     );
   const winIds = s.last?.winners || [];
   const winTitle = winIds.length === 0 ? 'Hết ván!'
-    : winIds.length > 1 ? `Đồng hạng nhất: ${winIds.map((id: any) => (id === user.id ? 'Bạn' : nameOf(id))).join(', ')}`
+    : winIds.length > 1 ? `Đồng hạng nhất: ${winIds.map((id) => (id === user.id ? 'Bạn' : nameOf(id))).join(', ')}`
       : <>{winIds[0] === user.id ? 'Bạn' : nameOf(winIds[0])} thắng!</>;
 
   return (
@@ -38,7 +44,7 @@ export default function ScribbleGame({ room, state: s }: any) {
           title={winTitle}
           detail={s.last ? `Ván ${s.last.no} kết thúc` : null}
           seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} seatBtn={seatBtn}>
-          <GoRanking me={user.id} rows={s.last?.ranking.map((r: any) => ({ id: r.id, name: r.name, value: r.score }))} />
+          <GoRanking me={user.id} rows={s.last?.ranking.map((r) => ({ id: r.id, name: r.name, value: r.score }))} />
         </GameOverDialog>
         <div className="panel sc-top">
           <span className="sc-round">{playing ? <>Vòng <b>{s.round}</b>/{s.options.rounds}</> : `Vẽ đoán · ${s.options.rounds} vòng`}</span>
@@ -94,7 +100,7 @@ export default function ScribbleGame({ room, state: s }: any) {
 }
 
 /** Từ đang vẽ: người vẽ / người đã đoán đúng thấy cả từ; người khác thấy ô trống và gợi ý. */
-function WordLine({ s, isDrawer }: any) {
+function WordLine({ s, isDrawer }: { s: ScribbleView; isDrawer: boolean }) {
   if (s.status !== 'playing' || !s.mask) {
     return <span className="sc-word muted">{s.status === 'playing' && s.phase === 'choose' ? 'Đang chọn từ…' : ''}</span>;
   }
@@ -103,8 +109,8 @@ function WordLine({ s, isDrawer }: any) {
   }
   const parts = s.mask.split(' ');
   return (
-    <span className="sc-word" aria-label={`Từ gồm ${parts.map((p: any) => p.length).join(', ')} chữ cái`}>
-      {parts.map((p: any, i: any) => (
+    <span className="sc-word" aria-label={`Từ gồm ${parts.map((p) => p.length).join(', ')} chữ cái`}>
+      {parts.map((p, i) => (
         <span key={i} className="sc-mask-part">
           {[...p].map((ch, j) => <span key={j} className={`sc-letter ${ch === '_' ? '' : 'hint'}`}>{ch === '_' ? '' : ch}</span>)}
           <sub>{p.length}</sub>
@@ -115,7 +121,7 @@ function WordLine({ s, isDrawer }: any) {
 }
 
 /** Lớp phủ trên khung vẽ: chờ bắt đầu · chọn từ · đáp án sau lượt · kết quả ván. */
-function StageOverlay({ s, isDrawer, nameOf, act }: any) {
+function StageOverlay({ s, isDrawer, nameOf, act }: { s: ScribbleView; isDrawer: boolean; nameOf: (id: string | null) => string; act: Act }) {
   if (s.status === 'playing' && s.phase === 'draw') return null;
   let body;
   if (s.status === 'playing' && s.phase === 'choose') {
@@ -123,7 +129,7 @@ function StageOverlay({ s, isDrawer, nameOf, act }: any) {
       <>
         <div className="sc-ov-title">Chọn một từ để vẽ</div>
         <div className="sc-choices">
-          {s.choices.map((w: any, i: any) => <button key={w} className="btn cta" onClick={() => act({ type: 'choose', index: i })}>{w}</button>)}
+          {s.choices.map((w, i) => <button key={w} className="btn cta" onClick={() => act({ type: 'choose', index: i })}>{w}</button>)}
         </div>
       </>
     ) : <div className="sc-ov-title"><Pencil size={18} aria-hidden /> {nameOf(s.drawerId)} đang chọn từ…</div>;
@@ -146,7 +152,7 @@ function StageOverlay({ s, isDrawer, nameOf, act }: any) {
       <>
         <div className="sc-ov-title"><Trophy size={20} aria-hidden /> Ván {s.last.no} kết thúc</div>
         <ol className="sc-podium">
-          {top.map((r: any, i: any) => <li key={r.id} className={`p${i + 1}`}><span>{['🥇', '🥈', '🥉'][i]}</span> {r.name} <b>{r.score}</b></li>)}
+          {top.map((r, i) => <li key={r.id} className={`p${i + 1}`}><span>{['🥇', '🥈', '🥉'][i]}</span> {r.name} <b>{r.score}</b></li>)}
         </ol>
       </>
     );
@@ -161,9 +167,9 @@ function StageOverlay({ s, isDrawer, nameOf, act }: any) {
   return <div className="sc-overlay" role="status">{body}</div>;
 }
 
-function Players({ s, ownerId, me }: any) {
+function Players({ s, ownerId, me }: { s: ScribbleView; ownerId: string; me: string }) {
   const playing = s.status === 'playing';
-  const score = new Map(s.scores.map((x: any) => [x.id, x.score]));
+  const score = new Map(s.scores.map((x) => [x.id, x.score]));
   const list = [...s.seats].map((x) => ({ ...x, score: score.get(x.id) || 0 }));
   if (playing || s.status === 'over') list.sort((a, b) => b.score - a.score);
   return (
@@ -188,18 +194,18 @@ function Players({ s, ownerId, me }: any) {
   );
 }
 
-function Feed({ s, me, isDrawer, act }: any) {
-  const box = useRef<any>(null);
-  const input = useRef<any>(null);
+function Feed({ s, me, isDrawer, act }: { s: ScribbleView; me: string | null; isDrawer: boolean; act: Act }) {
+  const box = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
   const last = s.feed[s.feed.length - 1];
   useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [last?.n]);
-  const guessed = s.guessed.includes(me);
+  const guessed = !!me && s.guessed.includes(me);
   const canGuess = s.status === 'playing' && s.phase === 'draw' && !!me && !isDrawer && !guessed;
   useEffect(() => {
     if (canGuess && window.matchMedia?.('(pointer: fine)').matches) input.current?.focus({ preventScroll: true });
   }, [canGuess, s.turnNo]);
-  const submit = (e: any) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     const t = text.trim();
     if (!t || !canGuess) return;
@@ -211,14 +217,14 @@ function Feed({ s, me, isDrawer, act }: any) {
     <div className="panel sc-feed">
       <div className="sc-feed-box" ref={box} aria-live="polite">
         {s.feed.length === 0 && <div className="muted small">Các câu đoán sẽ hiện ở đây</div>}
-        {s.feed.map((f: any) => (
+        {s.feed.map((f) => (
           <div key={f.n} className={`sc-msg ${f.kind}`}>
             {f.kind === 'guess' ? <><b>{f.name}:</b> {f.text}</> : f.text}
           </div>
         ))}
       </div>
       <form className="sc-guess" onSubmit={submit}>
-        <input ref={input} value={text} onChange={(e: any) => setText(e.target.value)} maxLength={60} disabled={!canGuess}
+        <input ref={input} value={text} onChange={(e) => setText(e.target.value)} maxLength={60} disabled={!canGuess}
           placeholder={placeholder} aria-label="Đoán" autoComplete="off" autoCapitalize="off" spellCheck={false} />
         <button className="btn primary" disabled={!canGuess || !text.trim()}>Đoán</button>
       </form>
@@ -226,7 +232,7 @@ function Feed({ s, me, isDrawer, act }: any) {
   );
 }
 
-function Wins({ wins, me }: any) {
+function Wins({ wins, me }: { wins: ScribbleView['wins']; me: string }) {
   if (!wins.length) return null;
   return (
     <div className="panel">
@@ -234,7 +240,7 @@ function Wins({ wins, me }: any) {
       <table className="sb-table">
         <thead><tr><th>#</th><th>Người chơi</th><th>Ván</th><th>Thắng</th></tr></thead>
         <tbody>
-          {wins.map((w: any, i: any) => (
+          {wins.map((w, i) => (
             <tr key={w.id} className={w.id === me ? 'me' : ''}>
               <td>{i === 0 && w.wins > 0 ? '🏆' : i + 1}</td>
               <td className="sb-name">{w.name}</td>

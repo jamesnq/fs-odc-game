@@ -10,7 +10,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Flag, Timer, Trophy, Volume2, VolumeX, Pause, Play } from 'lucide-react';
 import { SnakeGame as Engine, replay, mazeWalls, BONUS_TICKS } from '@game/shared/snake';
 import { drawClassic, drawModern, SIZE } from './snakeRender.js';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { Call } from '../store.js';
 import { request } from '../socket.js';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import GameInfo from '../components/GameInfo.js';
@@ -74,7 +75,7 @@ function useBeeper() {
 }
 
 export default function SnakeGame({ room, state: s }: {room: ClientRoom; state: SnakeView}) {
-  const { call, user } = useApp();
+  const { call, user } = useRoomApp();
   const playing = s.status === 'playing';
   const me = s.players.find((p) => p.id === s.myId) || null;
   const [watchId, setWatchId] = useState<string | null>(null);
@@ -136,7 +137,7 @@ export default function SnakeGame({ room, state: s }: {room: ClientRoom; state: 
             <>
               <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
                 startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />
-              <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+              <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
             </>
           ) : (
             <>
@@ -385,7 +386,7 @@ function Racers({ s, ownerId, shownId, onPick }: {s: SnakeView; ownerId: string;
   );
 }
 
-function Result({ s, me, call }: {s: SnakeView; me: string; call: (event: string, payload?: object) => unknown}) {
+function Result({ s, me, call }: {s: SnakeView; me: string; call: Call}) {
   const byId = (id: string | null) => s.players.find((p) => p.id === id);
   const winner = byId(s.result!.winner);
   const solo = s.players.length === 1;
@@ -398,7 +399,7 @@ function Result({ s, me, call }: {s: SnakeView; me: string; call: (event: string
   return (
     <GameOverDialog over icon={<Trophy size={26} />} title={title} min={1}
       seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!s.myId} reviewLabel="Xem lại màn hình"
-      seatBtn={s.myId ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+      seatBtn={s.myId ? <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
         : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
       <GoRanking me={me} rows={rows} />
     </GameOverDialog>

@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useApp } from '../store.js';
 import Modal from './Modal.js';
 import { GAME_META, GameIcon } from './Lobby.js';
 import { QUIZ_CATEGORIES } from '@game/shared/quiz';
 
-const DEFAULTS = {
+type OptionValue = string | number | boolean;
+type GameOptions = Record<string, OptionValue>;
+
+const DEFAULTS: Record<string, GameOptions> = {
   chess: { minutes: 10 },
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true, bot: '' },
@@ -21,14 +25,18 @@ const DEFAULTS = {
 };
 
 // Tạo bàn kèm máy (Cờ caro / Nối từ)
-const BOT_OPTIONS = [['', 'Không — chơi với người'], ['easy', 'Máy Dễ'], ['medium', 'Máy Vừa'], ['hard', 'Máy Khó']];
+const BOT_OPTIONS: [string, string][] = [['', 'Không — chơi với người'], ['easy', 'Máy Dễ'], ['medium', 'Máy Vừa'], ['hard', 'Máy Khó']];
 
-// [khóa, nhãn, min, max] · [khóa, nhãn, 'bool'] · [khóa, nhãn, 'select', các lựa chọn]
-const FIELDS: Record<string, any> = {
+// [khóa, nhãn, min, max] · [khóa, nhãn, 'bool'] · [khóa, nhãn, 'text'] · [khóa, nhãn, 'select', các lựa chọn]
+type Field =
+  | [key: string, label: string, min: number, max: number]
+  | [key: string, label: string, kind: 'bool' | 'text']
+  | [key: string, label: string, kind: 'select', choices: [string, string][]];
+const FIELDS: Record<string, Field[]> = {
   chess: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
 
   quiz: [
-    ['category', 'Chủ đề (bộ câu hỏi có sẵn)', 'select', [['all', 'Tất cả chủ đề'], ...QUIZ_CATEGORIES.map((c) => [c, c])]],
+    ['category', 'Chủ đề (bộ câu hỏi có sẵn)', 'select', [['all', 'Tất cả chủ đề'], ...QUIZ_CATEGORIES.map((c): [string, string] => [c, c])]],
     ['questions', 'Số câu mỗi ván', 3, 30],
     ['seconds', 'Thời gian mỗi câu (giây)', 5, 60],
     ['maxSeats', 'Số người chơi tối đa', 1, 30],
@@ -106,17 +114,58 @@ const FIELDS: Record<string, any> = {
   ],
 };
 
-export default function CreateRoomDialog({ game: initialGame, onClose }: any) {
+/** Một ô tùy chọn của bàn mới, theo loại trường. */
+function OptionField({ field, value, onChange }: { field: Field; value: OptionValue | undefined; onChange: (v: OptionValue) => void }) {
+  const [key, label] = field;
+  if (field[2] === 'select') {
+    return (
+      <div>
+        <label htmlFor={`opt-${key}`}>{label}</label>
+        <select id={`opt-${key}`} value={String(value ?? '')} onChange={(e) => onChange(e.target.value)}>
+          {field[3].map(([v, name]) => <option key={v} value={v}>{name}</option>)}
+        </select>
+      </div>
+    );
+  }
+  if (field[2] === 'text') {
+    return (
+      <div>
+        <label htmlFor={`opt-${key}`}>{label}</label>
+        <textarea id={`opt-${key}`} rows={3} maxLength={4000} value={String(value ?? '')} placeholder="vd: bánh bao, cái nón lá, con trâu"
+          onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  if (field[2] === 'bool') {
+    return (
+      <label className="check">
+        <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} />
+        {label}
+      </label>
+    );
+  }
+  return (
+    <div>
+      <label>{label}</label>
+      <input type="number" min={field[2]} max={field[3]} value={typeof value === 'boolean' ? String(value) : value ?? ''}
+        onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+export default function CreateRoomDialog({ game: initialGame, onClose }: { game: string; onClose: () => void }) {
   const { call, user } = useApp();
   const [game, setGame] = useState(initialGame);
   const [name, setName] = useState('');
   const [opts, setOpts] = useState(DEFAULTS);
   const [busy, setBusy] = useState(false);
+  const options = opts[game] ?? {};
+  const setOption = (key: string, value: OptionValue) => setOpts({ ...opts, [game]: { ...options, [key]: value } });
 
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const res = await call('room:create', { name, game, options: (opts as Record<string, any>)[game] });
+    const res = await call('room:create', { name, game, options });
     setBusy(false);
     if (res) onClose();
   };
@@ -133,34 +182,10 @@ export default function CreateRoomDialog({ game: initialGame, onClose }: any) {
           ))}
         </div>
         <label>Tên phòng</label>
-        <input autoFocus maxLength={40} value={name} onChange={(e: any) => setName(e.target.value)}
-          placeholder={`Bàn ${(GAME_META as Record<string, any>)[game].name} của ${user.name}`} />
-        {FIELDS[game].filter(([key]: any) => (key !== 'bots' || (opts as Record<string, any>)[game].bot) && !(key === 'gravity' && (opts as Record<string, any>)[game].mode === 'classic')).map(([key, label, min, max]: any) => min === 'select' ? (
-          <div key={key}>
-            <label htmlFor={`opt-${key}`}>{label}</label>
-            <select id={`opt-${key}`} value={(opts as Record<string, any>)[game][key]}
-              onChange={(e: any) => setOpts({ ...opts, [game]: { ...(opts as Record<string, any>)[game], [key]: e.target.value } })}>
-              {max.map(([v, name]: any) => <option key={v} value={v}>{name}</option>)}
-            </select>
-          </div>
-        ) : min === 'text' ? (
-          <div key={key}>
-            <label htmlFor={`opt-${key}`}>{label}</label>
-            <textarea id={`opt-${key}`} rows={3} maxLength={4000} value={(opts as Record<string, any>)[game][key]} placeholder="vd: bánh bao, cái nón lá, con trâu"
-              onChange={(e: any) => setOpts({ ...opts, [game]: { ...(opts as Record<string, any>)[game], [key]: e.target.value } })} />
-          </div>
-        ) : min === 'bool' ? (
-          <label key={key} className="check">
-            <input type="checkbox" checked={!!(opts as Record<string, any>)[game][key]}
-              onChange={(e: any) => setOpts({ ...opts, [game]: { ...(opts as Record<string, any>)[game], [key]: e.target.checked } })} />
-            {label}
-          </label>
-        ) : (
-          <div key={key}>
-            <label>{label}</label>
-            <input type="number" min={min} max={max} value={(opts as Record<string, any>)[game][key]}
-              onChange={(e: any) => setOpts({ ...opts, [game]: { ...(opts as Record<string, any>)[game], [key]: e.target.value } })} />
-          </div>
+        <input autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)}
+          placeholder={`Bàn ${GAME_META[game]?.name} của ${user?.name}`} />
+        {(FIELDS[game] ?? []).filter(([key]) => (key !== 'bots' || options.bot) && !(key === 'gravity' && options.mode === 'classic')).map((field) => (
+          <OptionField key={field[0]} field={field} value={options[field[0]]} onChange={(v) => setOption(field[0], v)} />
         ))}
         <div className="row end">
           <button type="button" className="btn ghost" onClick={onClose}>Hủy</button>

@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Lightbulb, Shuffle, Flag, Timer, Trophy } from 'lucide-react';
 import { findPath } from '@game/shared/onet';
-import { useApp } from '../store.js';
+import type { Cell } from '@game/shared/onet';
+import type { OnetPlayerView, OnetScoreView, OnetView } from '@game/shared/views';
+import type { AppContextValue, Call, ClientRoom } from '../store.js';
+
+type Act = AppContextValue['act'];
+type Path = NonNullable<ReturnType<typeof findPath>>;
+/** Đường nối vừa đi để vẽ thoáng qua; `cells`: hai ô vừa nối kèm hình [r, c, v]. */
+interface Flash { path: Path; cells: [number, number, number][]; key: number }
+import { useRoomApp } from '../store.js';
 import { useCountdown, useHotkeys, fmtClock } from '../hooks.js';
 import GameInfo from '../components/GameInfo.js';
 import ConfirmDialog from '../components/ConfirmDialog.js';
@@ -13,7 +21,7 @@ import { SPRITES, SPRITE_NAMES } from './onetSprites.js';
 const ANIMALS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
   '🐧', '🐦', '🐤', '🦆', '🦉', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐢', '🐍', '🐙', '🦀', '🐠', '🐬'];
 // Mỗi loại một sắc nền nhẹ để dễ phân biệt (và để vẽ bàn thu nhỏ của người khác)
-const hue = (v: any) => (v * 137) % 360;
+const hue = (v: number) => (v * 137) % 360;
 
 // Kiểu hình: quái thú pixel cổ điển (mặc định) hoặc emoji — lưu theo từng máy
 const SKIN_KEY = 'gl_onet_skin';
@@ -37,7 +45,7 @@ const CW = 40; // bề rộng ô (đơn vị SVG)
 const CH = 46; // chiều cao ô
 const FLASH_MS = 380;
 // Chế độ cổ điển: kiểu dồn hình của từng màn (khớp SHIFTS trong shared/src/onet.js)
-export const SHIFT_LABEL: Record<string, any> = {
+export const SHIFT_LABEL: Record<string, string> = {
   none: 'Không dồn', down: 'Dồn xuống ↓', left: 'Dồn sang trái ←', up: 'Dồn lên ↑', right: 'Dồn sang phải →',
   vin: 'Dồn vào giữa ↕', hin: 'Dồn vào giữa ↔', vout: 'Tách lên – xuống', hout: 'Tách trái – phải',
 };
@@ -56,12 +64,12 @@ function usePortrait() {
   return m;
 }
 
-export default function OnetGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+export default function OnetGame({ room, state: s }: { room: ClientRoom; state: OnetView }) {
+  const { act, call, user } = useRoomApp();
   const playing = s.status === 'playing';
-  const me = s.players.find((p: any) => p.id === s.myId) || null;
-  const [watchId, setWatchId] = useState<any>(null);
-  const shown = me || s.players.find((p: any) => p.id === watchId) || s.players[0] || null;
+  const me = s.players.find((p) => p.id === s.myId) || null;
+  const [watchId, setWatchId] = useState<string | null>(null);
+  const shown = me || s.players.find((p) => p.id === watchId) || s.players[0] || null;
   const classic = s.options.mode === 'classic';
   // Cổ điển: mỗi người một đồng hồ theo màn; kiểu đua: một đồng hồ chung
   const clockRunning = playing && (!classic || (shown && !shown.done));
@@ -71,8 +79,8 @@ export default function OnetGame({ room, state: s }: any) {
   const [skin, setSkin] = useSkin();
 
   useHotkeys({
-    h: () => canPlay && me.hintsLeft > 0 && act({ type: 'hint' }),
-    s: () => canPlay && me.shufflesLeft > 0 && act({ type: 'shuffle' }),
+    h: () => canPlay && (me.hintsLeft ?? 0) > 0 && act({ type: 'hint' }),
+    s: () => canPlay && (me.shufflesLeft ?? 0) > 0 && act({ type: 'shuffle' }),
   });
 
   return (
@@ -98,10 +106,10 @@ export default function OnetGame({ room, state: s }: any) {
           )}
           {canPlay && (
             <span className="onet-tools">
-              <button className="btn sm" disabled={me.hintsLeft <= 0} onClick={() => act({ type: 'hint' })} title="Gợi ý (H)" aria-label={`Gợi ý, còn ${me.hintsLeft}`}>
+              <button className="btn sm" disabled={(me.hintsLeft ?? 0) <= 0} onClick={() => act({ type: 'hint' })} title="Gợi ý (H)" aria-label={`Gợi ý, còn ${me.hintsLeft}`}>
                 <Lightbulb size={15} aria-hidden /> <span className="onet-tl">Gợi ý</span> {me.hintsLeft}
               </button>
-              <button className="btn sm" disabled={me.shufflesLeft <= 0} onClick={() => act({ type: 'shuffle' })} title="Đổi hình (S)" aria-label={`Đổi hình, còn ${me.shufflesLeft}`}>
+              <button className="btn sm" disabled={(me.shufflesLeft ?? 0) <= 0} onClick={() => act({ type: 'shuffle' })} title="Đổi hình (S)" aria-label={`Đổi hình, còn ${me.shufflesLeft}`}>
                 <Shuffle size={15} aria-hidden /> <span className="onet-tl">Đổi hình</span> {me.shufflesLeft}
               </button>
               <button className="btn sm danger" onClick={() => setGiveup(true)} title="Bỏ cuộc" aria-label="Bỏ cuộc"><Flag size={15} aria-hidden /></button>
@@ -127,7 +135,7 @@ export default function OnetGame({ room, state: s }: any) {
           )}
           {playing && me?.done && (
             <div className="onet-done">{me.gaveUp ? 'Bạn đã bỏ cuộc' : me.timedOut ? `⏰ Hết giờ ở màn ${me.level} — chờ mọi người…`
-              : `🎉 ${classic ? 'Phá đảo' : 'Dọn sạch'} sau ${fmtClock(me.finishedAt)} — chờ mọi người…`}</div>
+              : `🎉 ${classic ? 'Phá đảo' : 'Dọn sạch'} sau ${fmtClock(me.finishedAt ?? 0)} — chờ mọi người…`}</div>
           )}
         </div>
 
@@ -138,7 +146,7 @@ export default function OnetGame({ room, state: s }: any) {
             <>
               <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
                 startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />
-              <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+              <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
             </>
           ) : (
             <>
@@ -191,28 +199,30 @@ export default function OnetGame({ room, state: s }: any) {
   );
 }
 
-function Board({ p, rows, cols, interactive, act, skin }: any) {
-  const [sel, setSel] = useState<any>(null); // [r,c]
-  const [bad, setBad] = useState<any>(null); // hai ô vừa chọn sai (rung)
-  const [flash, setFlash] = useState<any>(null); // { path, cells: [[r,c,v]...], key }
-  const [pending, setPending] = useState<any>(null); // hai ô đang chờ server xác nhận (ẩn trước cho mượt)
+function Board({ p, rows, cols, interactive, act, skin }: {
+  p: OnetPlayerView; rows: number; cols: number; interactive: boolean; act: Act; skin: string;
+}) {
+  const [sel, setSel] = useState<Cell | null>(null); // [r,c]
+  const [bad, setBad] = useState<Cell[] | null>(null); // hai ô vừa chọn sai (rung)
+  const [flash, setFlash] = useState<Flash | null>(null);
+  const [pending, setPending] = useState<Cell[] | null>(null); // hai ô đang chờ server xác nhận (ẩn trước cho mượt)
   const seqRef = useRef(p.seq);
   const tr = usePortrait() && cols > rows;
   // Vị trí hiển thị của ô (r,c): bàn xoay thì hàng ↔ cột
-  const at = (r: any, c: any) => (tr ? [c, rows - 1 - r] : [r, c]);
+  const at = (r: number, c: number) => (tr ? [c, rows - 1 - r] : [r, c]);
   const W = ((tr ? rows : cols) + 2) * CW;
   const H = ((tr ? cols : rows) + 2) * CH;
-  const xy = (r: any, c: any) => { const [y, x] = at(r, c); return [(x + 1) * CW, (y + 1) * CH]; };
+  const xy = (r: number, c: number) => { const [y, x] = at(r, c); return [(x + 1) * CW, (y + 1) * CH]; };
 
   // Server đã cập nhật bàn → bỏ ẩn tạm, bỏ chọn nếu ô đã đổi
   useEffect(() => {
     if (p.seq === seqRef.current) return;
     seqRef.current = p.seq;
     setPending(null);
-    setSel((x: any) => (x && p.grid[x[0]][x[1]] ? x : null));
+    setSel((x) => (x && p.grid[x[0]][x[1]] ? x : null));
     // Người khác đang xem bàn này: vẽ đường nối của nước vừa đi
     if (!interactive && p.last?.path) {
-      setFlash({ path: p.last.path, cells: [] as any[], key: p.last.seq });
+      setFlash({ path: p.last.path, cells: [], key: p.last.seq });
     }
   }, [p.seq, p.grid, p.last, interactive]);
 
@@ -230,10 +240,10 @@ function Board({ p, rows, cols, interactive, act, skin }: any) {
 
   useHotkeys({ Escape: () => setSel(null) });
 
-  const hidden = (r: any, c: any) => pending?.some(([pr, pc]: any) => pr === r && pc === c);
-  const grid: number[][] = pending ? p.grid.map((row: any, r: any) => row.map((v: any, c: any) => (hidden(r, c) ? 0 : v))) : p.grid;
+  const hidden = (r: number, c: number) => pending?.some(([pr, pc]) => pr === r && pc === c);
+  const grid: number[][] = pending ? p.grid.map((row, r) => row.map((v, c) => (hidden(r, c) ? 0 : v))) : p.grid;
 
-  const click = async (r: any, c: any) => {
+  const click = async (r: number, c: number) => {
     if (!interactive || !grid[r][c]) return;
     if (!sel) return setSel([r, c]);
     if (sel[0] === r && sel[1] === c) return setSel(null);
@@ -244,7 +254,7 @@ function Board({ p, rows, cols, interactive, act, skin }: any) {
       setSel(null);
       return;
     }
-    const a = sel, b = [r, c];
+    const a = sel, b: Cell = [r, c];
     setFlash({ path, cells: [[...a, grid[a[0]][a[1]]], [...b, grid[r][c]]], key: Date.now() });
     setSel(null);
     setPending([a, b]);
@@ -253,9 +263,9 @@ function Board({ p, rows, cols, interactive, act, skin }: any) {
   };
 
   const hint = p.hint || null;
-  const isHint = (r: any, c: any) => hint?.some(([hr, hc]: any) => hr === r && hc === c);
-  const isBad = (r: any, c: any) => bad?.some(([br, bc]: any) => br === r && bc === c);
-  const pt = ([r, c]: any) => { const [x, y] = xy(r, c); return `${x + CW / 2},${y + CH / 2}`; };
+  const isHint = (r: number, c: number) => hint?.some(([hr, hc]) => hr === r && hc === c);
+  const isBad = (r: number, c: number) => bad?.some(([br, bc]) => br === r && bc === c);
+  const pt = ([r, c]: readonly number[]) => { const [x, y] = xy(r, c); return `${x + CW / 2},${y + CH / 2}`; };
 
   return (
     <svg className={`onet-board ${skin === 'pixel' ? 'pixel' : ''}`} viewBox={`0 0 ${W} ${H}`} role="grid" aria-label={`Bàn của ${p.name}, còn ${p.left} ô`}>
@@ -273,7 +283,7 @@ function Board({ p, rows, cols, interactive, act, skin }: any) {
       ) : null))}
       {flash && (
         <g key={flash.key} className="onet-flash" pointerEvents="none">
-          {flash.cells.map(([r, c, v]: any) => (
+          {flash.cells.map(([r, c, v]) => (
             <g key={`${r}-${c}`} transform={`translate(${xy(r, c).join(',')})`} className="onet-gone">
               <rect x="1.5" y="1.5" width={CW - 3} height={CH - 3} rx="6" className="onet-tile-face sel-face" />
               <TileArt v={v} skin={skin} />
@@ -286,14 +296,15 @@ function Board({ p, rows, cols, interactive, act, skin }: any) {
   );
 }
 
-function Racers({ s, ownerId, shownId, onPick }: any) {
+function Racers({ s, ownerId, shownId, onPick }: { s: OnetView; ownerId: string; shownId: string | undefined; onPick: ((id: string) => void) | null }) {
   const total = s.options.rows * s.options.cols;
-  const list = s.status === 'waiting' || !s.players.length
-    ? s.seats.map((x: any) => ({ ...x, left: total, score: 0, done: false }))
+  type Racer = Pick<OnetPlayerView, 'id' | 'name' | 'left' | 'score' | 'done'> & Partial<Pick<OnetPlayerView, 'gaveUp' | 'timedOut' | 'level'>>;
+  const list: Racer[] = s.status === 'waiting' || !s.players.length
+    ? s.seats.map((x) => ({ ...x, left: total, score: 0, done: false }))
     : s.players;
   return (
     <div className="onet-racers">
-      {list.map((p: any) => {
+      {list.map((p) => {
         const pct = ((total - p.left) / total) * 100;
         const Tag = onPick ? 'button' : 'div';
         return (
@@ -316,31 +327,33 @@ function Racers({ s, ownerId, shownId, onPick }: any) {
   );
 }
 
-function Result({ s, me, call }: any) {
-  const byId = (id: any) => s.players.find((p: any) => p.id === id);
-  const winner = byId(s.result.winner);
+function Result({ s, me, call }: { s: OnetView; me: string; call: Call }) {
+  const byId = (id: string | null) => s.players.find((p) => p.id === id);
+  const result = s.result;
+  if (!result) return null;
+  const winner = byId(result.winner);
   const solo = s.players.length === 1;
   const classic = s.options.mode === 'classic';
   const title = solo
     ? (s.players[0].finishedAt != null ? (classic ? `🎉 Phá đảo ${s.levels} màn!` : '🎉 Dọn sạch bàn!')
       : s.players[0].gaveUp ? (classic ? `🏳️ Bỏ cuộc ở màn ${s.players[0].level}` : '🏳️ Đã bỏ cuộc') : classic ? `⏰ Dừng ở màn ${s.players[0].level}` : '⏰ Hết giờ!')
     : winner ? <>🏆 {winner.id === me ? 'Bạn' : winner.name} thắng!</> : 'Không ai thắng';
-  const rows = s.result.ranking.map((id: any) => {
-    const p = byId(id);
+  const rows = result.ranking.map((id) => byId(id)).filter((p) => p != null).map((p) => {
+    const id = p.id;
     const note = `${classic && p.finishedAt == null ? `màn ${p.level} · ` : ''}${p.finishedAt != null ? `xong ${fmtClock(p.finishedAt)} (+${p.bonus})` : p.gaveUp ? 'bỏ cuộc' : `còn ${p.left} ô`}`;
     return { id, name: p.name, value: p.score, note };
   });
   return (
     <GameOverDialog over icon={<Trophy size={26} />} title={title} min={1}
       seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!s.myId} reviewLabel="Xem lại bàn"
-      seatBtn={s.myId ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+      seatBtn={s.myId ? <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
         : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
       <GoRanking me={me} rows={rows} />
     </GameOverDialog>
   );
 }
 
-function Wins({ wins, me }: any) {
+function Wins({ wins, me }: { wins: OnetScoreView[]; me: string }) {
   if (!wins.length) return null;
   return (
     <div className="panel">
@@ -348,7 +361,7 @@ function Wins({ wins, me }: any) {
       <table className="sb-table">
         <thead><tr><th>#</th><th>Người chơi</th><th>Ván</th><th>Thắng</th><th>Dọn sạch</th><th>Cao nhất</th></tr></thead>
         <tbody>
-          {wins.map((w: any, i: any) => (
+          {wins.map((w, i) => (
             <tr key={w.id} className={w.id === me ? 'me' : ''}>
               <td>{i === 0 && w.wins > 0 ? <Trophy size={14} aria-label="Dẫn đầu" /> : i + 1}</td>
               <td className="sb-name">{w.name}</td>

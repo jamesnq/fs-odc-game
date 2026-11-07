@@ -85,6 +85,9 @@ test('two real nodes route rooms and recover a committed move after owner crash'
   assert.equal(hello.user.id, identity.user.id);
   assert.equal(hello.roomId, roomId);
   for (let n = 0; n < 20 && !restored.latest; n++) await wait(50);
-  assert.equal(restored.latest!.state.board[112], 'x');
-  assert.equal(restored.latest!.state.myColor, 'x');
+  const latest = restored.latest!;
+  assert.equal(latest.game, 'caro');
+  if (latest.game !== 'caro') return;
+  assert.equal(latest.state.board[112], 'x');
+  assert.equal(latest.state.myColor, 'x');
 });

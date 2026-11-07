@@ -3,6 +3,7 @@ import { Scoreboard } from './scoreboard.js';
 import { createGame, makeMove, undoMoves, isInCheck, other } from '@game/shared/chess';
 import type { ChessState } from '@game/shared/chess';
 import type { GameAction, Identity } from '@game/shared/contracts';
+import type { ChessView } from '@game/shared/views';
 
 type Color = 'w' | 'b';
 interface ChessRequest { type: 'draw' | 'undo'; from: Color }
@@ -235,7 +236,7 @@ export class ChessHandler {
     return h >= 1 ? 1 : 0; // mình vừa đi: lùi 1 nước
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): ChessView {
     const now = Date.now();
     const clocks = { ...this.clocks };
     if (this.status === 'playing') clocks[this.game.turn] = Math.max(0, clocks[this.game.turn] - (now - this.turnStart));

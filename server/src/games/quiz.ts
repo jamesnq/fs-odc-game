@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { QuizView } from '@game/shared/views';
 // Đố vui (kiểu Kahoot): cả phòng cùng trả lời câu hỏi trắc nghiệm có giờ, chơi được cả một mình.
 // Câu hỏi lấy ngẫu nhiên từ bộ có sẵn (data/quiz-vi.json) hoặc từ bộ câu hỏi người chơi tự soạn.
 // Server giữ đáp án và tự đo thời gian trả lời: client không biết đáp án trước khi hết giờ.
@@ -357,7 +358,7 @@ export class QuizHandler {
     };
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): QuizView {
     const playing = this.status === 'playing';
     const game = this.game ? this._gameView(this.game, viewerId, playing) : null;
     return {

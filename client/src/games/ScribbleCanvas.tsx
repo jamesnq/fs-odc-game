@@ -2,12 +2,21 @@
 // người khác nhận nét qua sự kiện 'game:stream' và vẽ lại y hệt. Vào giữa lượt thì tải cả bức vẽ.
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { CANVAS_W as W, CANVAS_H as H, PALETTE } from '@game/shared/scribble';
-import { socket, request } from '../socket.js';
+import { socket, queryGame } from '../socket.js';
+import type { PointerEvent as ReactPointerEvent, Ref } from 'react';
+import type { DrawOp } from '@game/shared/scribble';
+import type { DrawStream } from '@game/shared/contracts';
+
+type Ctx = CanvasRenderingContext2D;
+/** Nét đang vẽ: phần đã gửi kết thúc ở `last`, phần chưa gửi nằm trong `pts`. */
+interface Stroke { id: number; c: number; w: number; last: number[] | null; pts: number[]; end: [number, number] }
+/** Điều khiển khung vẽ cho thanh công cụ. */
+export interface CanvasHandle { undo(): void; clear(): void }
 
 const FLUSH_MS = 40;
-const hexToRgb = (hex: any) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const hexToRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
-function drawLine(ctx: any, { c, w, p }: any) {
+function drawLine(ctx: Ctx, { c, w, p }: { c: number; w: number; p: number[] }) {
   ctx.strokeStyle = ctx.fillStyle = PALETTE[c];
   if (p.length === 2) {
     ctx.beginPath();
@@ -25,7 +34,7 @@ function drawLine(ctx: any, { c, w, p }: any) {
 }
 
 /** Đổ màu vùng liền kề cùng màu (có dung sai để ăn cả viền khử răng cưa). */
-function floodFill(ctx: any, x: any, y: any, c: any) {
+function floodFill(ctx: Ctx, x: number, y: number, c: number) {
   const img = ctx.getImageData(0, 0, W, H);
   const d = img.data;
   const at = (x + y * W) * 4;
@@ -33,12 +42,12 @@ function floodFill(ctx: any, x: any, y: any, c: any) {
   const [r1, g1, b1] = hexToRgb(PALETTE[c]);
   if (Math.abs(r0 - r1) + Math.abs(g0 - g1) + Math.abs(b0 - b1) < 6) return;
   const TOL = 90;
-  const same = (i: any) => Math.abs(d[i] - r0) + Math.abs(d[i + 1] - g0) + Math.abs(d[i + 2] - b0) <= TOL;
+  const same = (i: number) => Math.abs(d[i] - r0) + Math.abs(d[i + 1] - g0) + Math.abs(d[i + 2] - b0) <= TOL;
   const seen = new Uint8Array(W * H);
   const stack = [x, y];
   while (stack.length) {
-    const py = stack.pop();
-    let px = stack.pop();
+    const py = stack.pop()!;
+    let px = stack.pop()!;
     while (px > 0 && !seen[py * W + px - 1] && same((px - 1 + py * W) * 4)) px--;
     let up = false;
     let down = false;
@@ -61,13 +70,13 @@ function floodFill(ctx: any, x: any, y: any, c: any) {
   ctx.putImageData(img, 0, 0);
 }
 
-function applyOp(ctx: any, op: any) {
+function applyOp(ctx: Ctx, op: DrawOp) {
   if (op.k === 'l') drawLine(ctx, op);
   else if (op.k === 'f') floodFill(ctx, op.p[0], op.p[1], op.c);
 }
 
 /** Vẽ lại toàn bộ bức vẽ từ danh sách thao tác (nền trắng). */
-export function renderOps(ctx: any, list: any) {
+export function renderOps(ctx: Ctx, list: DrawOp[]) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
   for (const op of list) applyOp(ctx, op);
@@ -77,13 +86,15 @@ export function renderOps(ctx: any, list: any) {
  * props: turn (số lượt — đổi lượt thì xóa khung và tải lại), canDraw, tool ('pen'|'eraser'|'fill'), color, size
  * ref: { undo(), clear() } cho thanh công cụ
  */
-const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool, color, size }: any, ref: any) {
-  const canvas = useRef<any>(null);
-  const ops = useRef<any[]>([]); // các thao tác của lượt hiện tại (để vẽ lại khi hoàn tác)
+const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool, color, size }: {
+  turn: number; canDraw: boolean; tool: string; color: number; size: number;
+}, ref: Ref<CanvasHandle>) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const ops = useRef<DrawOp[]>([]); // các thao tác của lượt hiện tại (để vẽ lại khi hoàn tác)
   const turnRef = useRef(turn);
   const loading = useRef(false);
-  const outbox = useRef<any[]>([]); // thao tác chờ gửi
-  const stroke = useRef<any>(null); // nét đang vẽ { id, c, w, last: [x,y], pts: [] }
+  const outbox = useRef<DrawOp[]>([]); // thao tác chờ gửi
+  const stroke = useRef<Stroke | null>(null); // nét đang vẽ
   const nextId = useRef(Math.floor(Math.random() * 1e8));
 
   const ctx = () => canvas.current?.getContext('2d', { willReadFrequently: true });
@@ -93,11 +104,12 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
   }, []);
 
   // Nhận một thao tác (từ server hoặc của chính mình) vào bức vẽ
-  const take = useCallback((op: any) => {
+  const take = useCallback((op: DrawOp) => {
     if (op.k === 'c') { ops.current = []; redraw(); return; }
-    if (op.k === 'u') { ops.current = ops.current.filter((x) => x.id !== op.id); redraw(); return; }
+    if (op.k === 'u') { ops.current = ops.current.filter((x) => !('id' in x) || x.id !== op.id); redraw(); return; }
     ops.current.push(op);
-    applyOp(ctx(), op);
+    const c = ctx();
+    if (c) applyOp(c, op);
   }, [redraw]);
 
   // Đổi lượt: xóa khung, tải bức vẽ hiện có (vào giữa lượt / tải lại trang)
@@ -105,10 +117,10 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
     loading.current = true;
     ops.current = [];
     redraw();
-    request('game:query', { type: 'canvas' })
-      .then((res) => {
-        if (res.data.turn !== turnRef.current) return;
-        ops.current = res.data.ops;
+    queryGame({ type: 'canvas' })
+      .then((data) => {
+        if (data.turn !== turnRef.current) return;
+        ops.current = data.ops;
         redraw();
       })
       .catch(() => {})
@@ -123,7 +135,7 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
   }, [turn, load]);
 
   useEffect(() => {
-    const onStream = ({ turn: t, ops: list }: any) => {
+    const onStream = ({ turn: t, ops: list }: DrawStream) => {
       // Gói đến trước khi tải xong đã nằm trong bức vẽ tải về → bỏ qua
       if (t !== turnRef.current || loading.current) return;
       for (const op of list) take(op);
@@ -142,7 +154,7 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
   const commitStroke = () => {
     const s = stroke.current;
     if (!s || !s.pts.length) return;
-    const op = { k: 'l', id: s.id, c: s.c, w: s.w, p: s.last ? [...s.last, ...s.pts] : s.pts };
+    const op: DrawOp = { k: 'l', id: s.id, c: s.c, w: s.w, p: s.last ? [...s.last, ...s.pts] : s.pts };
     s.last = s.pts.slice(-2);
     s.pts = [];
     ops.current.push(op);
@@ -163,7 +175,7 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
     return () => { clearInterval(t); flush(); };
   }, [canDraw, flush]);
 
-  const send = (op: any) => {
+  const send = (op: DrawOp) => {
     commitStroke();
     take(op);
     outbox.current.push(op);
@@ -174,8 +186,8 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
     undo() {
       commitStroke();
       stroke.current = null;
-      const last = [...ops.current].reverse().find((o) => o.id !== undefined);
-      if (last) send({ k: 'u', id: last.id });
+      const last = [...ops.current].reverse().find((o) => 'id' in o);
+      if (last && 'id' in last) send({ k: 'u', id: last.id });
     },
     clear() {
       stroke.current = null;
@@ -183,12 +195,12 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
     },
   }));
 
-  const point = (e: any) => {
-    const r = canvas.current.getBoundingClientRect();
+  const point = (e: { clientX: number; clientY: number }): [number, number] => {
+    const r = canvas.current!.getBoundingClientRect();
     return [Math.round(((e.clientX - r.left) * W) / r.width), Math.round(((e.clientY - r.top) * H) / r.height)];
   };
 
-  const onDown = (e: any) => {
+  const onDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!canDraw || (e.pointerType === 'mouse' && e.button !== 0)) return;
     e.preventDefault();
     const [x, y] = point(e);
@@ -197,20 +209,23 @@ const ScribbleCanvas = forwardRef(function ScribbleCanvas({ turn, canDraw, tool,
       if (x >= 0 && y >= 0 && x < W && y < H) send({ k: 'f', id: nextId.current++, c, p: [x, y] });
       return;
     }
-    canvas.current.setPointerCapture?.(e.pointerId);
-    stroke.current = { id: nextId.current++, c, w: tool === 'eraser' ? size * 2 : size, last: null, pts: [x, y], end: [x, y] };
-    drawLine(ctx(), { c, w: stroke.current.w, p: [x, y] });
+    canvas.current?.setPointerCapture?.(e.pointerId);
+    const s: Stroke = { id: nextId.current++, c, w: tool === 'eraser' ? size * 2 : size, last: null, pts: [x, y], end: [x, y] };
+    stroke.current = s;
+    const g = ctx();
+    if (g) drawLine(g, { c, w: s.w, p: [x, y] });
   };
 
-  const onMove = (e: any) => {
+  const onMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const s = stroke.current;
     if (!s || !canDraw) return;
     const evts = e.nativeEvent.getCoalescedEvents?.() || [e.nativeEvent];
+    const g = ctx();
     for (const ev of evts) {
       const [x, y] = point(ev);
       const [px, py] = s.end;
       if (Math.abs(x - px) + Math.abs(y - py) < 2) continue;
-      drawLine(ctx(), { c: s.c, w: s.w, p: [px, py, x, y] });
+      if (g) drawLine(g, { c: s.c, w: s.w, p: [px, py, x, y] });
       s.pts.push(x, y);
       s.end = [x, y];
     }

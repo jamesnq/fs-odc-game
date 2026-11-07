@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Timer, Flag, Trophy, Users, Swords, CalendarDays } from 'lucide-react';
 import { splitWord, partLabel, scoreGuess, PARTS, TONE_NAMES } from '@game/shared/wordguess';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { AppContextValue, ClientRoom } from '../store.js';
+import type { Marks } from '@game/shared/wordguess';
+import type { GuessBoardView, GuessView, WordGuessGameView, WordGuessHistoryView, WordGuessScoreView, WordGuessView } from '@game/shared/views';
+import type { FormEvent } from 'react';
+
+type Act = AppContextValue['act'];
+type Part = typeof PARTS[number];
+type Mark = Marks[Part];
 import { useCountdown } from '../hooks.js';
 import { fmtTime } from '../format.js';
 import GameInfo from '../components/GameInfo.js';
@@ -9,12 +17,12 @@ import StartBar from '../components/StartBar.js';
 import GameOverDialog from '../components/GameOverDialog.js';
 import ConfirmDialog from '../components/ConfirmDialog.js';
 
-const PART_NAMES: Record<string, any> = { onset: 'Âm đầu', rhyme: 'Vần', tone: 'Thanh' };
-const RANK: Record<string, any> = { g: 3, y: 2, x: 1 };
-const mmss = (ms: any) => { const t = Math.ceil(ms / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+const PART_NAMES: Record<string, string> = { onset: 'Âm đầu', rhyme: 'Vần', tone: 'Thanh' };
+const RANK: Record<string, number> = { g: 3, y: 2, x: 1 };
+const mmss = (ms: number) => { const t = Math.ceil(ms / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 
-export default function WordGuessGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+export default function WordGuessGame({ room, state: s }: { room: ClientRoom; state: WordGuessView }) {
+  const { act, call, user } = useRoomApp();
   const [giveup, setGiveup] = useState(false);
   const g = s.game;
   const me = s.myId;
@@ -22,7 +30,7 @@ export default function WordGuessGame({ room, state: s }: any) {
   const left = useCountdown(g?.timeLeft || 0, room.receivedAt, playing);
   const coop = g ? g.mode === 'coop' : s.options.mode === 'coop';
   const board = g ? (coop ? g.shared : g.mine) : null;
-  const canGuess = playing && !!me && board && !board.done;
+  const canGuess = playing && !!me && !!board && !board.done;
   const canEdit = !playing && (!!me || room.ownerId === user.id);
 
   const over = s.status === 'over' && !!g?.result;
@@ -33,7 +41,7 @@ export default function WordGuessGame({ room, state: s }: any) {
         <GameOverDialog over={over} title={over ? resultTitle(g, me) : ''} startLabel="Ván mới" min={1}
           detail={over ? <>Từ bí mật: <b className="wg-secret">{g.secret}</b>{g.daily && <><br />Từ của ngày — ngày mai có từ mới.</>}</> : null}
           seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me} reviewLabel="Xem lại bàn đoán"
-          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
             : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>} />
         <div className="wg-top">
           <span className="wg-mode">{coop ? <><Users size={15} aria-hidden /> Cùng đoán</> : <><Swords size={15} aria-hidden /> Đua</>}{(g ? g.daily : s.options.daily) && <> · <CalendarDays size={14} aria-hidden /> Từ của ngày</>}</span>
@@ -65,7 +73,7 @@ export default function WordGuessGame({ room, state: s }: any) {
               <>
                 <StartBar players={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated min={1}
                   startLabel={s.status === 'over' ? 'Ván mới' : 'Bắt đầu'} />
-                <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+                <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
               </>
             )
           ) : (
@@ -95,7 +103,7 @@ export default function WordGuessGame({ room, state: s }: any) {
   );
 }
 
-function Setup({ s, canEdit, act }: any) {
+function Setup({ s, canEdit, act }: { s: WordGuessView; canEdit: boolean; act: Act }) {
   const o = s.options;
   return (
     <div className="wg-setup">
@@ -109,7 +117,7 @@ function Setup({ s, canEdit, act }: any) {
             <button type="button" className={o.mode === 'coop' ? 'active' : ''} onClick={() => act({ type: 'setMode', mode: 'coop' })}><Users size={15} aria-hidden /> Cùng đoán — chung một bàn</button>
           </div>
           <label className="check">
-            <input type="checkbox" checked={o.daily} onChange={(e: any) => act({ type: 'setMode', daily: e.target.checked })} />
+            <input type="checkbox" checked={o.daily} onChange={(e) => act({ type: 'setMode', daily: e.target.checked })} />
             Từ của ngày (mọi người cùng một từ, mỗi ngày đổi một lần)
           </label>
         </div>
@@ -117,7 +125,7 @@ function Setup({ s, canEdit, act }: any) {
         <div className="muted small">{o.mode === 'coop' ? 'Cùng đoán' : 'Đua'}{o.daily ? ' · Từ của ngày' : ''}</div>
       )}
       <div className="qz-seated">
-        {s.seats.length === 0 ? <span className="muted small">Chưa có ai ngồi — bấm "Vào chơi"</span> : s.seats.map((p: any) => (
+        {s.seats.length === 0 ? <span className="muted small">Chưa có ai ngồi — bấm "Vào chơi"</span> : s.seats.map((p) => (
           <span key={p.id} className={`qz-chip ${s.ready.includes(p.id) ? 'ready' : ''}`}>{s.ready.includes(p.id) && <Check size={12} aria-hidden />}{p.name}</span>
         ))}
       </div>
@@ -142,8 +150,8 @@ function Example() {
   );
 }
 
-function Board({ board, max, showBy }: any) {
-  const rows: any[] = [];
+function Board({ board, max, showBy }: { board: GuessBoardView | null; max: number; showBy: boolean }) {
+  const rows: (GuessView | null)[] = [];
   for (let i = 0; i < max; i++) rows.push(board?.guesses[i] || null);
   return (
     <div className="wg-board" aria-label="Bàn đoán">
@@ -152,7 +160,7 @@ function Board({ board, max, showBy }: any) {
   );
 }
 
-function Row({ guess, showBy = false }: any) {
+function Row({ guess, showBy = false }: { guess: { text?: string; marks: Marks[]; name?: string } | null; showBy?: boolean }) {
   if (!guess) {
     return (
       <div className="wg-row blank">
@@ -160,11 +168,11 @@ function Row({ guess, showBy = false }: any) {
       </div>
     );
   }
-  const parts: any = guess.text ? splitWord(guess.text) : null;
+  const parts = guess.text ? splitWord(guess.text) : null;
   const syl = guess.text ? guess.text.split(' ') : [];
   return (
     <div className="wg-row" title={guess.name ? `${guess.name} đoán` : undefined}>
-      {guess.marks.map((m: any, i: any) => (
+      {guess.marks.map((m, i) => (
         <div key={i} className={`wg-tile ${PARTS.every((p) => m[p] === 'g') ? 'solved' : ''}`}>
           <div className="wg-syl">{syl[i]}</div>
           <div className="wg-parts">
@@ -181,12 +189,12 @@ function Row({ guess, showBy = false }: any) {
   );
 }
 
-function GuessInput({ act, count, max }: any) {
+function GuessInput({ act, count, max }: { act: Act; count: number; max: number }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  const ref = useRef<any>(null);
+  const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { ref.current?.focus(); }, [count]);
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const t = text.trim().replace(/\s+/g, ' ');
     if (!t || busy) return;
@@ -198,7 +206,7 @@ function GuessInput({ act, count, max }: any) {
   };
   return (
     <form className="wc-input" onSubmit={submit}>
-      <input ref={ref} autoFocus value={text} maxLength={24} disabled={busy} onChange={(e: any) => setText(e.target.value)}
+      <input ref={ref} autoFocus value={text} maxLength={24} disabled={busy} onChange={(e) => setText(e.target.value)}
         placeholder={`Lượt ${count + 1}/${max}: gõ từ 2 chữ, vd "học sinh"`} autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Từ đoán" />
       <button className="btn primary" disabled={!text.trim() || busy}>Đoán ↵</button>
     </form>
@@ -206,16 +214,17 @@ function GuessInput({ act, count, max }: any) {
 }
 
 /** Tổng hợp các âm đầu / vần / thanh đã thử, tô theo kết quả tốt nhất. */
-function Tracker({ guesses }: any) {
-  const seen: any = useMemo(() => {
-    const out: Record<string, any> = { onset: new Map(), rhyme: new Map(), tone: new Map() };
+function Tracker({ guesses }: { guesses: GuessView[] }) {
+  const seen = useMemo(() => {
+    const out: Record<Part, Map<string | number, Mark>> = { onset: new Map(), rhyme: new Map(), tone: new Map() };
     for (const gs of guesses) {
       if (!gs.text) continue;
       splitWord(gs.text).forEach((sp, i) => {
         for (const p of PARTS) {
           const k = sp[p];
           const v = gs.marks[i][p];
-          if (!out[p].has(k) || RANK[v] > RANK[out[p].get(k)]) out[p].set(k, v);
+          const prev = out[p].get(k);
+          if (!prev || RANK[v] > RANK[prev]) out[p].set(k, v);
         }
       });
     }
@@ -238,15 +247,16 @@ function Tracker({ guesses }: any) {
   );
 }
 
-function resultTitle(g: any, me: any) {
+function resultTitle(g: WordGuessGameView, me: string | null) {
   const r = g.result;
-  if (g.mode === 'coop') return r.solved ? `🎉 Cả đội đoán đúng sau ${r.guesses} lượt!` : 'Chưa đoán ra rồi!';
+  if (!r) return '';
+  if ('solved' in r) return r.solved ? `🎉 Cả đội đoán đúng sau ${r.guesses} lượt!` : 'Chưa đoán ra rồi!';
   if (!r.winner) return 'Không ai đoán ra!';
-  if (r.winner === me) return r.ranking.length > 1 ? '🏆 Bạn thắng!' : `🎉 Bạn đoán đúng sau ${g.mine.count} lượt!`;
-  return `🏆 ${g.others.find((b: any) => b.id === r.winner)?.name || '?'} thắng`;
+  if (r.winner === me) return r.ranking.length > 1 ? '🏆 Bạn thắng!' : `🎉 Bạn đoán đúng sau ${g.mine?.count} lượt!`;
+  return `🏆 ${g.others.find((b) => b.id === r.winner)?.name || '?'} thắng`;
 }
 
-function Result({ g, me }: any) {
+function Result({ g, me }: { g: WordGuessGameView; me: string | null }) {
   const title = resultTitle(g, me);
   return (
     <div className="wg-result">
@@ -257,18 +267,18 @@ function Result({ g, me }: any) {
   );
 }
 
-function Others({ g }: any) {
+function Others({ g }: { g: WordGuessGameView }) {
   return (
     <div className="panel">
       <h4>Bàn của mọi người</h4>
       <div className="wg-others">
-        {g.others.map((b: any) => (
+        {g.others.map((b) => (
           <div key={b.id} className="wg-other">
             <div className="small"><b>{b.name}</b> <span className="muted">· {b.solved ? `✓ ${b.count} lượt` : b.gaveUp ? 'chịu thua' : b.left ? 'đã rời' : b.done ? 'hết lượt' : `${b.count}/${g.maxGuesses}`}</span></div>
             <div className="wg-minigrid">
-              {b.guesses.map((gs: any, i: any) => (
+              {b.guesses.map((gs, i) => (
                 <div key={i} className="wg-minirow" title={gs.text || undefined}>
-                  {gs.marks.flatMap((m: any, j: any) => PARTS.map((p) => <i key={`${j}${p}`} className={`wg-dot ${m[p]}`} />))}
+                  {gs.marks.flatMap((m, j) => PARTS.map((p) => <i key={`${j}${p}`} className={`wg-dot ${m[p]}`} />))}
                 </div>
               ))}
             </div>
@@ -279,7 +289,7 @@ function Others({ g }: any) {
   );
 }
 
-function Wins({ wins, me }: any) {
+function Wins({ wins, me }: { wins: WordGuessScoreView[]; me: string }) {
   if (!wins.length) return null;
   return (
     <div className="panel">
@@ -287,7 +297,7 @@ function Wins({ wins, me }: any) {
       <table className="sb-table">
         <thead><tr><th>#</th><th>Người chơi</th><th>Ván</th><th>Đoán ra</th><th>Thắng</th></tr></thead>
         <tbody>
-          {wins.map((w: any, i: any) => (
+          {wins.map((w, i) => (
             <tr key={w.id} className={w.id === me ? 'me' : ''}>
               <td>{i === 0 && w.wins > 0 ? '🏆' : i + 1}</td>
               <td className="sb-name">{w.name}</td>
@@ -302,23 +312,23 @@ function Wins({ wins, me }: any) {
   );
 }
 
-function History({ history }: any) {
+function History({ history }: { history: WordGuessHistoryView[]; me?: string }) {
   if (!history.length) return null;
   return (
     <div className="panel">
       <h4>Các ván trước</h4>
-      {history.map((h: any) => (
+      {history.map((h) => (
         <div key={h.no} className="wg-hist small">
           <b>Ván {h.no}</b> · <span className="wg-secret">{h.secret}</span> · {h.mode === 'coop' ? 'Cùng đoán' : 'Đua'} · {h.solved ? <Trophy size={12} aria-label="đoán ra" /> : 'không ai ra'}
           <span className="muted"> · {fmtTime(h.endedAt)}</span>
-          {h.mode === 'race' && <div className="muted">{h.ranking.map((p: any) => `${p.name} ${p.solved ? `✓${p.guesses}` : '✗'}`).join(' · ')}</div>}
+          {h.mode === 'race' && <div className="muted">{h.ranking.map((p) => `${p.name} ${p.solved ? `✓${p.guesses}` : '✗'}`).join(' · ')}</div>}
         </div>
       ))}
     </div>
   );
 }
 
-function Rules({ s }: any) {
+function Rules({ s }: { s: WordGuessView }) {
   return (
     <div className="panel small muted wc-rules">
       <b>Luật chơi</b>

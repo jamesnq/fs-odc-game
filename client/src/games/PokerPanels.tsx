@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { describeHand, HAND_NAMES_VI } from '@game/shared/poker';
 import Card from '../components/Card.js';
+import type { PokerView } from '@game/shared/views';
 
 // Ví dụ cho từng bộ, từ yếu tới mạnh (cùng thứ tự HAND_NAMES_VI)
 const EXAMPLES = [
@@ -16,7 +17,7 @@ const EXAMPLES = [
 ];
 
 /** Bảng luật Texas Hold'em tóm tắt + thứ hạng các bộ bài. `current` = bộ hiện tại của người xem (để làm nổi bật). */
-export function PokerRules({ s, current = -1, bare = false }: any) {
+export function PokerRules({ s, current = -1, bare = false }: { s: Pick<PokerView, 'smallBlind' | 'bigBlind'>; current?: number; bare?: boolean }) {
   return (
     <div className={`pk-rules ${bare ? 'bare' : 'panel'}`}>
       {!bare && <h4>Luật Texas Hold'em</h4>}
@@ -45,18 +46,18 @@ export function PokerRules({ s, current = -1, bare = false }: any) {
 }
 
 /** Lá tẩy thật của người xem (không phải lá úp / đã bỏ). */
-export function myHole(s: any) {
+export function myHole(s: PokerView) {
   const seat = s.mySeat >= 0 ? s.seats[s.mySeat] : null;
   const hole = seat?.hole;
   return hole && hole.length === 2 && !hole.includes('??') ? hole : null;
 }
 
 /** Bảng "Bài mạnh nhất": combo 5 lá tốt nhất từ 2 lá tẩy + bài chung hiện có. */
-export function BestHandPanel({ s }: any) {
+export function BestHandPanel({ s }: { s: PokerView }) {
   const hole = myHole(s);
   const board = s.hand?.board || [];
   const info = useMemo(() => (hole ? describeHand(hole, board) : null), [hole?.join(), board.join()]);
-  if (!info) return null;
+  if (!info || !hole) return null;
   const used = new Set(info.used);
   const folded = s.seats[s.mySeat]?.folded;
   return (
@@ -67,7 +68,7 @@ export function BestHandPanel({ s }: any) {
       </div>
       <div className="pk-best-name">{info.name}</div>
       <div className="pk-best-cards">
-        {info.cards.map((c: any) => (
+        {info.cards.map((c) => (
           <div key={c} className="pk-best-card">
             <Card card={c} size="md" highlight={used.has(c)} dim={!used.has(c)} />
             <span className="pk-best-src">{hole.includes(c) ? 'tẩy' : 'chung'}</span>

@@ -1,21 +1,26 @@
 // Thanh bắt đầu ván dùng chung cho mọi trò: không tự bắt đầu —
 // người ngồi bàn bấm "Sẵn sàng", khi mọi người đã sẵn sàng thì chủ phòng bấm "Bắt đầu".
 import { Check, Play, Crown } from 'lucide-react';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { ReactNode } from 'react';
+import type { Identity } from '@game/shared/contracts';
 
 /**
  * players: [{ id, name }] người đang ngồi bàn
  * ready: id đã sẵn sàng; waitingFor: id còn phải chờ (server tính, không gồm chủ phòng)
  * seated: mình có đang ngồi bàn không
  */
-export default function StartBar({ players, ready = [], waitingFor = [], seated, min = 2, startLabel = 'Bắt đầu', readyLabel = 'Sẵn sàng', onStart }: any) {
-  const { act, room, user } = useApp();
+export default function StartBar({ players, ready = [], waitingFor = [], seated, min = 2, startLabel = 'Bắt đầu', readyLabel = 'Sẵn sàng', onStart }: {
+  players: Identity[]; ready?: string[]; waitingFor?: string[]; seated: boolean; min?: number;
+  startLabel?: ReactNode; readyLabel?: ReactNode; onStart?: () => void;
+}) {
+  const { act, room, user } = useRoomApp();
   const isOwner = room.ownerId === user.id;
   const n = players.length;
-  const waitNames = players.filter((p: any) => waitingFor.includes(p.id)).map((p: any) => (p.id === user.id ? 'bạn' : p.name));
+  const waitNames = players.filter((p) => waitingFor.includes(p.id)).map((p) => (p.id === user.id ? 'bạn' : p.name));
   const canStart = isOwner && n >= min && waitNames.length === 0;
   const iAmReady = ready.includes(user.id);
-  const ownerName = room.members.find((m: any) => m.id === room.ownerId)?.name || 'chủ phòng';
+  const ownerName = room.members.find((m) => m.id === room.ownerId)?.name || 'chủ phòng';
 
   let status;
   if (n < min) status = `Cần ít nhất ${min} người ngồi bàn`;
@@ -44,7 +49,7 @@ export default function StartBar({ players, ready = [], waitingFor = [], seated,
 }
 
 /** Dấu "✔ sẵn sàng" / "chủ phòng" cạnh tên người chơi trước ván. */
-export function ReadyMark({ id, ready, ownerId }: any) {
+export function ReadyMark({ id, ready, ownerId }: { id: string; ready: string[]; ownerId: string }) {
   if (id === ownerId) return <span className="ready owner" title="Chủ phòng — bấm Bắt đầu khi mọi người sẵn sàng"> 👑</span>;
   return ready.includes(id) ? <span className="ready" title="Đã sẵn sàng"> ✔</span> : null;
 }

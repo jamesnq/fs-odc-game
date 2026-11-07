@@ -2,13 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as wait } from 'node:timers/promises';
 import { Lobby } from '../src/lobby.js';
-import { GAMES } from '../src/games/index.js';
+import { GAMES, isGame } from '../src/games/index.js';
+import type { GameId } from '../src/games/index.js';
+import type { GameHandler } from '../src/games/types.js';
+import { ReadyGate } from '../src/games/ready.js';
+import { CaroHandler } from '../src/games/caro.js';
+import { OnetHandler } from '../src/games/onet.js';
+import { PokerHandler } from '../src/games/poker.js';
+import { SamLocHandler } from '../src/games/samloc.js';
+import { SnakeHandler } from '../src/games/snake.js';
+import { TalaHandler } from '../src/games/tala.js';
+import { WordChainHandler } from '../src/games/wordchain.js';
+import { WordGuessHandler } from '../src/games/wordguess.js';
 import { pack, unpack, encrypt, decrypt, encryptionKey } from '../src/snapshot.js';
 import { resumeRoom } from '../src/resumeRoom.js';
 import { rng } from '@game/shared/onet';
 
 const io = { to: () => ({ emit() {} }) };
-function started(t: import('node:test').TestContext, game: any) {
+
+/** Cặp handler gốc / khôi phục khi cả hai là trò `Class`, để so trạng thái riêng của trò đó. */
+function pair<T>(Class: abstract new (...args: never[]) => T, a: GameHandler, b: GameHandler): [T, T] | null {
+  return a instanceof Class && b instanceof Class ? [a, b] : null;
+}
+/** Trường tùy chọn của handler (timer, game…) mà không phải trò nào cũng có. */
+const field = (h: object, key: string): unknown => (key in h ? (h as Record<string, unknown>)[key] : undefined);
+
+function started(t: import('node:test').TestContext, game: GameId) {
   const lobby = new Lobby(io as unknown as ConstructorParameters<typeof Lobby>[0]);
   const owner = lobby.createUser('Owner', 'default');
   const room = lobby.createRoom(owner, { name: game, game, options: { dictionary: false } });
@@ -21,40 +40,49 @@ function started(t: import('node:test').TestContext, game: any) {
     room.handler.action(user.id, { type: 'ready' });
   }
   room.handler.action(owner.id, { type: game === 'chess' ? 'ready' : 'start' });
-  if (game === 'poker') { clearTimeout(room.handler.nextHandTimer); room.handler.nextHandTimer = null; room.handler.game.startHand(); room.handler._afterChange(); }
+  const h = room.handler;
+  if (h instanceof PokerHandler) { clearTimeout(h.nextHandTimer ?? undefined); h.nextHandTimer = null; h.game.startHand(); h._afterChange(); }
   t.after(() => room.handler.dispose());
   return { lobby, room, users };
 }
 
-for (const game of Object.keys(GAMES)) test(`${game}: snapshot restores active game prototypes, private state and timers`, (t) => {
+for (const game of Object.keys(GAMES).filter(isGame)) test(`${game}: snapshot restores active game prototypes, private state and timers`, (t) => {
   const { lobby, room, users } = started(t, game);
   // Track commitments before snapshot, as normal views do.
   room.viewFor(users[0].id);
   const restored = unpack<typeof room>(pack(room));
   restored.lobby = lobby;
   restored.handler.room = restored;
-  if (restored.handler.ready?.ids) restored.handler.ready.room = restored;
+  const gate = field(restored.handler, 'ready');
+  if (gate instanceof ReadyGate) gate.room = restored;
   assert.equal(restored.game, game);
   assert.equal(restored.handler.constructor, room.handler.constructor);
   assert.equal(restored.handler.isPlaying(), room.handler.isPlaying());
   assert.deepEqual(restored.handler.playerIds(), room.handler.playerIds());
-  if ('timer' in room.handler) assert.equal(restored.handler.timer, null);
-  if (game === 'poker') assert.deepEqual(restored.handler.game.hand, room.handler.game.hand);
+  if ('timer' in room.handler) assert.equal(field(restored.handler, 'timer'), null);
+  const poker = pair(PokerHandler, room.handler, restored.handler);
+  if (poker) assert.deepEqual(poker[1].game.hand, poker[0].game.hand);
   assert.doesNotThrow(() => restored.viewFor(users[0].id));
-  if (room.handler.game) assert.equal(restored.handler.game.constructor, room.handler.game.constructor);
-  if (game === 'wordchain') assert.equal(typeof restored.handler.game.isKnownWord, 'function');
-  if (game === 'onet') assert.equal(restored.handler.players[0].board.rand(), room.handler.players[0].board.rand());
-  if (game === 'snake') {
-    const [a, b] = [room.handler.players[0].game, restored.handler.players[0].game];
+  const original = field(room.handler, 'game');
+  if (original) assert.equal((field(restored.handler, 'game') as object).constructor, original.constructor);
+  const chain = pair(WordChainHandler, room.handler, restored.handler);
+  if (chain) assert.equal(typeof chain[1].game?.isKnownWord, 'function');
+  const onet = pair(OnetHandler, room.handler, restored.handler);
+  if (onet) assert.equal(onet[1].players[0].board.rand(), onet[0].players[0].board.rand());
+  const snake = pair(SnakeHandler, room.handler, restored.handler);
+  if (snake) {
+    const [a, b] = [snake[0].players[0].game, snake[1].players[0].game];
     assert.equal(b.rand(), a.rand(), 'mồi tiếp theo giống hệt sau khi khôi phục');
     assert.deepEqual(b.snake, a.snake);
     assert.ok(b.walls instanceof Set && b.walls.size === a.walls.size);
   }
-  if (['tala', 'samloc'].includes(game)) {
-    assert.deepEqual(restored.handler.game.players, room.handler.game.players);
-    assert.equal(restored.handler.fair.ref, restored.handler.game.initialDeck);
+  const cards = pair(TalaHandler, room.handler, restored.handler) ?? pair(SamLocHandler, room.handler, restored.handler);
+  if (cards) {
+    assert.deepEqual(cards[1].game?.players, cards[0].game?.players);
+    assert.equal(cards[1].fair.ref, cards[1].game?.initialDeck);
   }
-  if (game === 'wordguess') assert.equal(restored.handler.game.secret, room.handler.game.secret);
+  const guess = pair(WordGuessHandler, room.handler, restored.handler);
+  if (guess) assert.equal(guess[1].game?.secret, guess[0].game?.secret);
   resumeRoom(restored);
   t.after(() => restored.handler.dispose());
 });
@@ -73,11 +101,13 @@ test('encrypted snapshots authenticate contents and preserve RNG progress', () =
 
 test('expired duel clocks end the restored game instead of granting a fresh clock', async (t) => {
   const { room } = started(t, 'caro');
-  room.handler.dispose();
-  room.handler.clocks.x = 1;
-  room.handler.turnStart = Date.now() - 1000;
+  const h = room.handler;
+  assert.ok(h instanceof CaroHandler);
+  h.dispose();
+  h.clocks.x = 1;
+  h.turnStart = Date.now() - 1000;
   resumeRoom(room);
   await wait(100);
-  assert.equal(room.handler.status, 'over');
-  assert.equal(room.handler.result.reason, 'timeout');
+  assert.equal(h.status, 'over');
+  assert.equal(h.result?.reason, 'timeout');
 });

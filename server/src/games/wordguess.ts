@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { WordGuessView } from '@game/shared/views';
 // Đoán chữ (kiểu Wordle tiếng Việt): đoán từ 2 chữ trong 6 lượt; mỗi chữ chấm theo âm đầu · vần · thanh.
 //  - Đua (race): mọi người cùng một từ, mỗi người một bàn; ai đoán đúng ít lượt nhất (rồi nhanh nhất) thắng.
 //    Trong lúc chơi chỉ thấy màu ô của người khác, không thấy chữ.
@@ -304,7 +305,7 @@ export class WordGuessHandler {
     };
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): WordGuessView {
     const game = this.game ? this._gameView(this.game, viewerId) : null;
     return {
       options: this.options,

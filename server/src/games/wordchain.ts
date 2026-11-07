@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { WordChainView } from '@game/shared/views';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -317,7 +318,7 @@ export class WordChainHandler {
     this.room.system(`🏆 ${winner ? `${name(winner)} thắng` : 'Không ai thắng'} sau ${g.chain.length} từ. Xếp hạng: ${ranking.map(name).join(', ')}`);
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): WordChainView {
     const g = this.game;
     return {
       options: this.options,

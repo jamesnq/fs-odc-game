@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { FormEvent } from 'react';
+import type { RoomState } from '@game/shared/contracts';
+import type { ClientRoom } from '../store.js';
 import { ArrowLeft, Pencil, Link, Keyboard, Trash2, Eye, Check, Info, MessageCircle, Users, MoreVertical, X, Crown, Headphones, Mic, MicOff, PhoneOff, Volume2 } from 'lucide-react';
 import { useVoice } from '../voice.js';
 import { RoomUICtx } from './GameInfo.js';
@@ -23,12 +26,34 @@ import WordGuessGame from '../games/WordGuessGame.js';
 import FairnessBadge from './FairnessBadge.js';
 import { useHotkeys } from '../hooks.js';
 
-const GAME_COMPONENT: Record<string, any> = {
-  chess: ChessGame, xiangqi: XiangqiGame, poker: PokerGame, tala: TalaGame, caro: CaroGame, samloc: SamLocGame, wordchain: WordChainGame,
-  scribble: ScribbleGame, telephone: TelephoneGame, onet: OnetGame, snake: SnakeGame, quiz: QuizGame, wordguess: WordGuessGame,
-};
+type Voice = ReturnType<typeof useVoice>;
+type ChatEntry = RoomState['chat'][number];
+type Member = RoomState['members'][number];
 
-export const SHORTCUTS: Record<string, any> = {
+/** Màn hình của trò đang chơi; `switch` để mỗi trò nhận đúng kiểu trạng thái của mình. */
+function GameScreen({ room }: { room: ClientRoom }) {
+  switch (room.game) {
+    case 'chess': return <ChessGame room={room} state={room.state} />;
+    case 'xiangqi': return <XiangqiGame room={room} state={room.state} />;
+    case 'poker': return <PokerGame room={room} state={room.state} />;
+    case 'tala': return <TalaGame room={room} state={room.state} />;
+    case 'caro': return <CaroGame room={room} state={room.state} />;
+    case 'samloc': return <SamLocGame room={room} state={room.state} />;
+    case 'wordchain': return <WordChainGame room={room} state={room.state} />;
+    case 'scribble': return <ScribbleGame room={room} state={room.state} />;
+    case 'telephone': return <TelephoneGame room={room} state={room.state} />;
+    case 'onet': return <OnetGame room={room} state={room.state} />;
+    case 'snake': return <SnakeGame room={room} state={room.state} />;
+    case 'quiz': return <QuizGame room={room} state={room.state} />;
+    case 'wordguess': return <WordGuessGame room={room} state={room.state} />;
+    default: return null;
+  }
+}
+
+/** Huy hiệu cam kết bộ bài cho các trò bài. */
+const fairOf = (room: RoomState) => (room.game === 'poker' || room.game === 'tala' || room.game === 'samloc' ? room.state?.fair ?? null : null);
+
+export const SHORTCUTS: Record<string, [string, string][]> = {
   poker: [
     ['F', 'Bỏ bài (Fold)'], ['C', 'Theo / Check (Call)'], ['K', 'Check'], ['B', 'Cược (Bet)'], ['R', 'Tố (Raise)'],
     ['A', 'All-in'], ['↑ / ↓', 'Tăng / giảm mức cược 1 BB'], ['Shift + ↑/↓', 'Tăng / giảm 10 BB'],
@@ -71,7 +96,7 @@ const PANEL_TABS: [string, string, typeof Info][] = [
 ];
 
 export default function RoomView() {
-  const { room, user, call, voiceStatus, toast } = useApp();
+  const { room, user, call, voiceStatus, toast } = useRoomApp();
   const voice = useVoice({ room, me: user.id, status: voiceStatus, toast });
   const [help, setHelp] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -79,11 +104,11 @@ export default function RoomView() {
   const [menu, setMenu] = useState(false);
   const [name, setName] = useState(room.name);
   // Ngăn bên: màn rộng mở sẵn "Thông tin" cạnh bàn chơi; màn hẹp đóng, bấm nút mới hiện (đè lên bàn)
-  const [panel, setPanel] = useState(() => (window.matchMedia?.(WIDE).matches ? 'info' : null));
-  const [infoNode, setInfoNode] = useState<any>(null);
-  const Game = GAME_COMPONENT[room.game];
+  const [panel, setPanel] = useState<string | null>(() => (window.matchMedia?.(WIDE).matches ? 'info' : null));
+  const [infoNode, setInfoNode] = useState<HTMLDivElement | null>(null);
+  const fair = fairOf(room);
   const isOwner = room.ownerId === user.id;
-  const me = room.members.find((m: any) => m.id === user.id);
+  const me = room.members.find((m) => m.id === user.id);
   const turn = turnInfo(room, user.id);
   const unread = useUnread(room.chat, user.id, panel === 'chat');
 
@@ -94,11 +119,11 @@ export default function RoomView() {
     m: () => (voice.joined ? voice.toggleMute() : voice.available && voice.join()),
   });
 
-  const togglePanel = useCallback((tab: any) => setPanel((p) => (p === tab ? null : tab)), []);
+  const togglePanel = useCallback((tab: string) => setPanel((p) => (p === tab ? null : tab)), []);
   const ui = useMemo(() => ({ infoNode, openPanel: setPanel }), [infoNode]);
 
-  const leave = () => call('room:leave');
-  const saveName = async (e: any) => {
+  const leave = () => call('room:leave', {});
+  const saveName = async (e: FormEvent) => {
     e.preventDefault();
     if (await call('room:rename', { name })) setEditing(false);
   };
@@ -118,7 +143,7 @@ export default function RoomView() {
             <span className={`gicon g-${room.game}`}><GameIcon game={room.game} size={20} /></span>
             {editing ? (
               <form onSubmit={saveName} className="inline-form">
-                <input autoFocus maxLength={40} value={name} onChange={(e: any) => setName(e.target.value)} />
+                <input autoFocus maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
                 <button className="btn primary sm">Lưu</button>
                 <button type="button" className="btn ghost sm" onClick={() => setEditing(false)}>Hủy</button>
               </form>
@@ -129,8 +154,8 @@ export default function RoomView() {
                   {me?.role === 'spectator' && <span className="badge watching"><Eye size={12} aria-hidden /> Đang xem</span>}
                 </h2>
                 <div className="room-sub-row">
-                  <TurnPill info={turn} sub={`${(GAME_META as Record<string, any>)[room.game].name} · #${room.id}`} />
-                  {room.state?.fair && <FairnessBadge roomId={room.id} fair={room.state.fair} />}
+                  <TurnPill info={turn} sub={`${GAME_META[room.game].name} · #${room.id}`} />
+                  {fair && <FairnessBadge roomId={room.id} fair={fair} />}
                 </div>
               </div>
             )}
@@ -168,7 +193,7 @@ export default function RoomView() {
         <div className="room-body">
           <div className={`game-area ${turn?.mine ? 'my-turn' : ''}`}>
             <div className="game-fit">
-              <Game room={room} state={room.state} />
+              <GameScreen room={room} />
             </div>
             {copied && <div className="room-flash" role="status"><Check size={14} aria-hidden /> Đã chép link phòng</div>}
           </div>
@@ -196,7 +221,7 @@ export default function RoomView() {
           <Modal title="Phím tắt" onClose={() => setHelp(false)}>
             <table className="keys">
               <tbody>
-                {SHORTCUTS[room.game].map(([k, d]: any) => (
+                {(SHORTCUTS[room.game] ?? []).map(([k, d]) => (
                   <tr key={k}><td><kbd>{k}</kbd></td><td>{d}</td></tr>
                 ))}
                 {voice.available && <tr><td><kbd>M</kbd></td><td>Bật / tắt mic (chưa vào kênh thoại thì vào kênh)</td></tr>}
@@ -217,7 +242,7 @@ export default function RoomView() {
 }
 
 /** Số tin nhắn mới (của người khác) từ lúc ngăn chat đóng. */
-function useUnread(chat: any, me: any, open: any) {
+function useUnread(chat: ChatEntry[], me: string, open: boolean) {
   const seen = useRef(chat.length ? chat[chat.length - 1].id : null);
   const lastId = chat.length ? chat[chat.length - 1].id : null;
   useEffect(() => { if (open) seen.current = lastId; }, [open, lastId]);
@@ -230,8 +255,8 @@ function useUnread(chat: any, me: any, open: any) {
 }
 
 /** Tin nhắn mới hiện thoáng qua ở góc bàn chơi khi ngăn chat đang đóng; bấm vào để mở chat. */
-function ChatPeek({ chat, me, onOpen }: any) {
-  const [msg, setMsg] = useState<any>(null);
+function ChatPeek({ chat, me, onOpen }: { chat: ChatEntry[]; me: string; onOpen: () => void }) {
+  const [msg, setMsg] = useState<ChatEntry | null>(null);
   const last = chat[chat.length - 1];
   const first = useRef(true);
   useEffect(() => {
@@ -250,13 +275,13 @@ function ChatPeek({ chat, me, onOpen }: any) {
   );
 }
 
-function Members({ room, isOwner, voice }: any) {
-  const { user, call } = useApp();
-  const inVoice = new Map<string, {muted: boolean}>(voice.members.map((v: any) => [v.id, v]));
-  const players = room.members.filter((m: any) => m.role === 'player');
-  const watchers = room.members.filter((m: any) => m.role === 'spectator');
-  const [kick, setKick] = useState<any>(null);
-  const row = (m: any) => (
+function Members({ room, isOwner, voice }: { room: ClientRoom; isOwner: boolean; voice: Voice }) {
+  const { user, call } = useRoomApp();
+  const inVoice = new Map<string, {muted: boolean}>(voice.members.map((v) => [v.id, v]));
+  const players = room.members.filter((m) => m.role === 'player');
+  const watchers = room.members.filter((m) => m.role === 'spectator');
+  const [kick, setKick] = useState<Member | null>(null);
+  const row = (m: Member) => (
     <li key={m.id} className={m.online ? '' : 'offline'}>
       <span className={`dot ${m.online ? 'on' : 'off'}`} />
       {m.name}
@@ -291,7 +316,7 @@ function Members({ room, isOwner, voice }: any) {
  *  - Chưa vào: tai nghe "Vào thoại" (+ số người đang trong kênh)
  *  - Đã vào: nút micro bật/tắt (viền xanh khi mình đang nói) + nút rời (màn rộng; điện thoại rời trong menu ⋮ / tab Người chơi)
  */
-function VoiceControl({ v, onOpen }: any) {
+function VoiceControl({ v, onOpen: _onOpen }: { v: Voice; onOpen?: () => void }) {
   if (!v.available && !v.joined) return null;
   const n = v.members.length;
   if (!v.joined) {
@@ -318,9 +343,9 @@ function VoiceControl({ v, onOpen }: any) {
 }
 
 /** Khối kênh thoại trong tab Người chơi: vào/rời, bật/tắt mic, ai đang nói, chỉnh âm lượng từng người. */
-function VoicePanel({ v, room, me }: any) {
+function VoicePanel({ v, room, me }: { v: Voice; room: ClientRoom; me: string }) {
   if (!v.status || v.status.hidden) return null; // server (sảnh) này không bật voice chat
-  const nameOf = (id: any) => room.members.find((m: any) => m.id === id)?.name || '?';
+  const nameOf = (id: string) => room.members.find((m) => m.id === id)?.name || '?';
   return (
     <section className="voice-card" aria-label="Kênh thoại">
       <div className="vc-head">
@@ -344,7 +369,7 @@ function VoicePanel({ v, room, me }: any) {
       )}
       {v.members.length > 0 && (
         <ul className="vc-list">
-          {v.members.map((m: any) => {
+          {v.members.map((m) => {
             const st = m.id === me ? null : v.peerState[m.id];
             return (
               <li key={m.id} className={v.speaking.has(m.id) ? 'talk' : ''}>
@@ -356,7 +381,7 @@ function VoicePanel({ v, room, me }: any) {
                   <label className="vc-vol" title="Âm lượng">
                     <Volume2 size={14} aria-hidden />
                     <input type="range" min="0" max="1" step="0.05" value={v.volumes[m.id] ?? 1} aria-label={`Âm lượng của ${nameOf(m.id)}`}
-                      onChange={(e: any) => v.setVolume(m.id, Number(e.target.value))} />
+                      onChange={(e) => v.setVolume(m.id, Number(e.target.value))} />
                   </label>
                 )}
               </li>
@@ -368,11 +393,11 @@ function VoicePanel({ v, room, me }: any) {
   );
 }
 
-function Chat({ room, active }: any) {
-  const { call, user } = useApp();
+function Chat({ room, active }: { room: ClientRoom; active: boolean }) {
+  const { call, user } = useRoomApp();
   const [text, setText] = useState('');
-  const box = useRef<any>(null);
-  const input = useRef<any>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const last = room.chat[room.chat.length - 1];
   // Luôn cuộn tới tin mới nhất: khi mở ngăn chat, khi có tin mới (sau khi vẽ xong để đo đúng chiều cao)
   useLayoutEffect(() => {
@@ -382,7 +407,7 @@ function Chat({ room, active }: any) {
   useEffect(() => {
     if (active && window.matchMedia?.('(pointer: fine)').matches) input.current?.focus({ preventScroll: true });
   }, [active]);
-  const send = (e: any) => {
+  const send = (e: FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
     call('room:chat', { text });
@@ -392,14 +417,14 @@ function Chat({ room, active }: any) {
     <div className="chat">
       <div className="chat-box" ref={box}>
         {room.chat.length === 0 && <div className="muted small chat-empty">Chưa có tin nhắn nào</div>}
-        {room.chat.map((m: any) => (
+        {room.chat.map((m) => (
           <div key={m.id} className={m.system ? 'sys' : m.from === user.id ? 'msg mine' : 'msg'}>
             {m.system ? m.text : <><b>{m.name}:</b> {m.text}</>}
           </div>
         ))}
       </div>
       <form onSubmit={send} className="chat-form">
-        <input ref={input} value={text} maxLength={300} onChange={(e: any) => setText(e.target.value)} placeholder="Nhập tin nhắn… (Enter)" />
+        <input ref={input} value={text} maxLength={300} onChange={(e) => setText(e.target.value)} placeholder="Nhập tin nhắn… (Enter)" />
       </form>
     </div>
   );

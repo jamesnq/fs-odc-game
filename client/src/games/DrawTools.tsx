@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { Pencil, Eraser, PaintBucket, Undo2, Trash2 } from 'lucide-react';
 import { PALETTE, BRUSH_SIZES } from '@game/shared/scribble';
 import { useHotkeys } from '../hooks.js';
+import type { RefObject } from 'react';
+import type { CanvasHandle } from './ScribbleCanvas.js';
 
 const TOOLS: [string, string, typeof Pencil, string][] = [['pen', 'Bút', Pencil, 'b'], ['eraser', 'Tẩy', Eraser, 'e'], ['fill', 'Đổ màu', PaintBucket, 'f']];
 
 /** Trạng thái công cụ + phím tắt (B/E/F, Z hoàn tác, 1–5 cỡ nét) khi `enabled`. canvas: ref tới ScribbleCanvas. */
-export function useDrawTools(canvas: any, enabled: any) {
+export function useDrawTools(canvas: RefObject<CanvasHandle | null>, enabled: boolean) {
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState(1);
   const [size, setSize] = useState(1);
@@ -18,7 +20,9 @@ export function useDrawTools(canvas: any, enabled: any) {
   return { tool, setTool, color, setColor, size, setSize, brush: BRUSH_SIZES[size] };
 }
 
-export default function DrawTools({ t, canvas, className = '' }: any) {
+export type DrawToolState = ReturnType<typeof useDrawTools>;
+
+export default function DrawTools({ t, canvas, className = '' }: { t: DrawToolState; canvas: RefObject<CanvasHandle | null>; className?: string }) {
   const { tool, setTool, color, setColor, size, setSize } = t;
   return (
     <div className={`sc-tools ${className}`} role="toolbar" aria-label="Công cụ vẽ">

@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { QueryResults, ScribbleView } from '@game/shared/views';
 // Vẽ đoán chữ: lần lượt mỗi người vẽ một từ, những người còn lại gõ đoán.
 // Mỗi vòng ai cũng được vẽ một lần. Đoán càng nhanh càng nhiều điểm; người vẽ được điểm theo số người đoán đúng.
 import fs from 'node:fs';
@@ -204,7 +205,7 @@ export class ScribbleHandler {
     return out.length ? { turn: this.turnNo, ops: out } : null;
   }
 
-  query(viewerId: string, q: GameQuery) {
+  query(viewerId: string, q: GameQuery): QueryResults['canvas'] {
     if (q.type === 'canvas') return { turn: this.turnNo, ops: this.phase === 'choose' ? [] : this.ops };
     throw new Error('Truy vấn không hợp lệ');
   }
@@ -392,7 +393,7 @@ export class ScribbleHandler {
     this.room.system(`🏆 Ván ${this.gameNo} kết thúc: ${ranking.map((r, i) => `${i + 1}. ${r.name} (${r.score})`).join(' · ') || 'không ai ghi điểm'}`);
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): ScribbleView {
     const playing = this.status === 'playing';
     const isDrawer = viewerId === this.drawerId;
     const showWord = this.phase === 'reveal' || isDrawer || this.guessed.has(viewerId);

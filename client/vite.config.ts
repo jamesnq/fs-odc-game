@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 // Được nhúng vào bundle (__APP_VERSION__) và ghi ra dist/version.json để server đọc.
 const APP_VERSION = process.env.APP_VERSION || new Date().toISOString();
 
-export default defineConfig(({ command }: any) => ({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     {

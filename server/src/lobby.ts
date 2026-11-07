@@ -107,7 +107,9 @@ export class Room {
   }
 
   viewFor(uid: string, common = this.commonView()): RoomState {
-    return { ...common, state: this.handler.view(uid) };
+    // Each Handler is created from GAMES[this.game] and declares the matching view type,
+    // so the game id and its view stay correlated even though TypeScript cannot follow that here.
+    return { ...common, state: this.handler.view(uid) } as RoomState;
   }
 
   summary(): RoomSummary {

@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Flag, ThumbsDown, Timer, ChevronRight, Trophy, AlertTriangle, X } from 'lucide-react';
-import { useApp } from '../store.js';
+import { useRoomApp } from '../store.js';
+import type { AppContextValue, ClientRoom } from '../store.js';
+import type { Identity } from '@game/shared/contracts';
+import type { WordChainGameView, WordChainHistoryView, WordChainScoreView, WordChainView } from '@game/shared/views';
+import type { FormEvent } from 'react';
+
+type Act = AppContextValue['act'];
+type FlowWord = WordChainHistoryView['words'][number];
 import GameInfo from '../components/GameInfo.js';
 import ConfirmDialog from '../components/ConfirmDialog.js';
 import StartBar, { ReadyMark } from '../components/StartBar.js';
@@ -11,8 +18,8 @@ import BotPicker, { canManageBots } from '../components/BotPicker.js';
 
 const MAX_BOTS = 3;
 
-export default function WordChainGame({ room, state: s }: any) {
-  const { act, call, user } = useApp();
+export default function WordChainGame({ room, state: s }: { room: ClientRoom; state: WordChainView }) {
+  const { act, call, user } = useRoomApp();
   const [giveup, setGiveup] = useState(false);
   const g = s.game;
   const me = s.myId;
@@ -20,12 +27,12 @@ export default function WordChainGame({ room, state: s }: any) {
   const myTurn = playing && g?.currentId === me;
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, playing);
   const last = g?.chain[g.chain.length - 1];
-  const meInGame = g?.players.find((p: any) => p.id === me);
+  const meInGame = g?.players.find((p) => p.id === me);
   const canObject = playing && last && meInGame && !meInGame.out && last.by !== me;
-  const objected = g?.objections.includes(me);
-  const nameOf = (id: any) => g?.players.find((p: any) => p.id === id)?.name || s.seats.find((x: any) => x.id === id)?.name || '?';
+  const objected = !!me && !!g?.objections.includes(me);
+  const nameOf = (id: string | null) => g?.players.find((p) => p.id === id)?.name || s.seats.find((x) => x.id === id)?.name || '?';
   const manageBots = !playing && canManageBots(room, user, !!me);
-  const botCount = s.seats.filter((x: any) => x.bot).length;
+  const botCount = s.seats.filter((x) => x.bot).length;
   const canAddBot = manageBots && s.seats.length < s.options.maxSeats && botCount < MAX_BOTS;
   const over = s.status === 'over' && !!g?.result;
   const winnerId = g?.result?.winner;
@@ -36,14 +43,14 @@ export default function WordChainGame({ room, state: s }: any) {
         <GameOverDialog over={over} icon={<Trophy size={26} />}
           title={winnerId ? <>{winnerId === me ? 'Bạn' : nameOf(winnerId)} thắng!</> : 'Hòa!'}
           detail={g?.result?.reason === 'deadEnd'
-            ? `Nối “${g.result.word}” — không còn từ nào bắt đầu bằng “${g.result.word.split(' ')[1]}”, thắng luôn!`
+            ? `Nối “${g.result.word}” — không còn từ nào bắt đầu bằng “${g.result.word?.split(' ')[1]}”, thắng luôn!`
             : `Cả bàn nối được ${g?.total ?? 0} từ`}
           seats={s.seats} ready={s.ready} waitingFor={s.waitingFor} seated={!!me}
-          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>
+          seatBtn={me ? <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>
             : s.seats.length < s.options.maxSeats && <button className="btn primary" onClick={() => call('room:sit', {})}>Vào chơi</button>}>
-          <GoRanking me={me} rows={g?.result?.ranking.map((id: any) => ({ id, name: nameOf(id) }))} />
+          <GoRanking me={me} rows={g?.result?.ranking.map((id) => ({ id, name: nameOf(id) }))} />
         </GameOverDialog>
-        <PlayerRow s={s} timeLeft={timeLeft} ownerId={room.ownerId} onRemoveBot={manageBots ? (id: any) => act({ type: 'removeBot', id }) : null} />
+        <PlayerRow s={s} timeLeft={timeLeft} ownerId={room.ownerId} onRemoveBot={manageBots ? (id) => act({ type: 'removeBot', id }) : null} />
 
         <div className={`panel wc-stage ${myTurn ? 'my-turn' : ''}`}>
           {!g || s.status === 'waiting' ? (
@@ -71,10 +78,10 @@ export default function WordChainGame({ room, state: s }: any) {
                 <div className="wc-result">
                   <div className="wc-big">🏆 {g.result.winner ? `${nameOf(g.result.winner)} thắng!` : 'Hòa'}</div>
                   {g.result.reason === 'deadEnd' && (
-                    <div className="wc-deadend">🎯 Nối “{g.result.word}” — từ điển không còn từ nào bắt đầu bằng “{g.result.word.split(' ')[1]}”, thắng luôn!</div>
+                    <div className="wc-deadend">🎯 Nối “{g.result.word}” — từ điển không còn từ nào bắt đầu bằng “{g.result.word?.split(' ')[1]}”, thắng luôn!</div>
                   )}
                   <div className="muted small">
-                    Xếp hạng: {g.result.ranking.map((id: any, i: any) => `${i + 1}. ${nameOf(id)}`).join(' · ')} — {g.total} từ
+                    Xếp hạng: {g.result.ranking.map((id, i) => `${i + 1}. ${nameOf(id)}`).join(' · ')} — {g.total} từ
                   </div>
                 </div>
               ) : (
@@ -108,7 +115,7 @@ export default function WordChainGame({ room, state: s }: any) {
         </div>
 
         {over ? (
-          canAddBot && <div className="board-actions"><BotPicker label={botCount ? 'Thêm máy' : 'Chơi với máy'} onPick={(level: any) => act({ type: 'addBot', level })} /></div>
+          canAddBot && <div className="board-actions"><BotPicker label={botCount ? 'Thêm máy' : 'Chơi với máy'} onPick={(level) => act({ type: 'addBot', level })} /></div>
         ) : <div className="board-actions">
           {me ? (
             <>
@@ -119,8 +126,8 @@ export default function WordChainGame({ room, state: s }: any) {
               {playing && meInGame && !meInGame.out && (
                 <button className="btn danger" onClick={() => setGiveup(true)}><Flag size={16} aria-hidden /> Chịu thua</button>
               )}
-              {canAddBot && <BotPicker label={botCount ? 'Thêm máy' : 'Chơi với máy'} onPick={(level: any) => act({ type: 'addBot', level })} />}
-              {!playing && <button className="btn ghost" onClick={() => call('room:stand')}>Đứng dậy</button>}
+              {canAddBot && <BotPicker label={botCount ? 'Thêm máy' : 'Chơi với máy'} onPick={(level) => act({ type: 'addBot', level })} />}
+              {!playing && <button className="btn ghost" onClick={() => call('room:stand', {})}>Đứng dậy</button>}
             </>
           ) : (
             <>
@@ -134,7 +141,7 @@ export default function WordChainGame({ room, state: s }: any) {
                 startLabel={s.status === 'over' ? 'Chơi ván mới' : 'Bắt đầu'} />}
             </>
           )}
-          {!me && canAddBot && <BotPicker label="Thêm máy" onPick={(level: any) => act({ type: 'addBot', level })} />}
+          {!me && canAddBot && <BotPicker label="Thêm máy" onPick={(level) => act({ type: 'addBot', level })} />}
         </div>}
         {giveup && (
           <ConfirmDialog title="Chịu thua ván này?" danger okLabel="Chịu thua" icon={<Flag size={22} />}
@@ -167,13 +174,13 @@ export default function WordChainGame({ room, state: s }: any) {
   );
 }
 
-function WordInput({ required, act }: any) {
+function WordInput({ required, act }: { required: string | null; act: Act }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  const ref = useRef<any>(null);
+  const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { setText(''); ref.current?.focus(); }, [required]);
 
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const t = text.trim();
     if (!t || busy) return;
@@ -187,19 +194,19 @@ function WordInput({ required, act }: any) {
     <form className="wc-input" onSubmit={submit}>
       {required && <span className="wc-prefix">{required}</span>}
       <input ref={ref} autoFocus value={text} maxLength={required ? 12 : 24} disabled={busy} aria-label={required ? `Chữ thứ hai sau "${required}"` : 'Từ đầu tiên'}
-        onChange={(e: any) => setText(required ? e.target.value.replace(/\s/g, '') : e.target.value)}
+        onChange={(e) => setText(required ? e.target.value.replace(/\s/g, '') : e.target.value)}
         placeholder={required ? 'chữ thứ hai…' : 'từ đầu tiên, vd: học tập'} autoComplete="off" autoCapitalize="off" spellCheck={false} />
       <button className="btn primary" disabled={!text.trim() || busy}>Nối ↵</button>
     </form>
   );
 }
 
-function PlayerRow({ s, timeLeft, ownerId, onRemoveBot }: any) {
+function PlayerRow({ s, timeLeft, ownerId, onRemoveBot }: { s: WordChainView; timeLeft: number; ownerId: string; onRemoveBot: ((id: string) => void) | null }) {
   const g = s.game;
-  const list = g && s.status !== 'waiting' ? g.players : s.seats.map((x: any) => ({ ...x, lives: s.options.lives, out: false, words: 0 }));
+  const list = g && s.status !== 'waiting' ? g.players : s.seats.map((x) => ({ ...x, lives: s.options.lives, out: false, words: 0 }));
   return (
     <div className="wc-players">
-      {list.map((p: any) => {
+      {list.map((p) => {
         const turn = s.status === 'playing' && g?.currentId === p.id;
         return (
           <div key={p.id} className={`wc-player ${turn ? 'turn' : ''} ${p.out ? 'out' : ''} ${p.id === s.myId ? 'me' : ''}`}>
@@ -225,19 +232,19 @@ function PlayerRow({ s, timeLeft, ownerId, onRemoveBot }: any) {
 
 // Mỗi người chơi một màu để nhìn là biết ai nối từ nào
 const PLAYER_COLORS = ['#60a5fa', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#fb923c', '#22d3ee', '#f87171'];
-const colorOf = (players: any, id: any) => PLAYER_COLORS[Math.max(0, players.findIndex((p: any) => p.id === id)) % PLAYER_COLORS.length];
+const colorOf = (players: Identity[], id: string) => PLAYER_COLORS[Math.max(0, players.findIndex((p) => p.id === id)) % PLAYER_COLORS.length];
 
 /**
  * Chuỗi từ hiển thị nối liền từ trái sang phải theo thứ tự nối.
  * Chữ nối (chữ đầu của từ = chữ cuối của từ trước) được tô sáng để thấy mạch nối.
  */
-function WordFlow({ words, players, me, offset = 0, follow = false }: any) {
-  const ref = useRef<any>(null);
+function WordFlow({ words, players, me, offset = 0, follow = false }: { words: FlowWord[]; players: Identity[]; me: string | null; offset?: number; follow?: boolean }) {
+  const ref = useRef<HTMLOListElement>(null);
   useEffect(() => { if (follow && ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [follow, words.length]);
-  const nameOf = (id: any) => players.find((p: any) => p.id === id)?.name || '?';
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name || '?';
   return (
     <ol className="wf" ref={ref} aria-label="Chuỗi từ theo thứ tự nối">
-      {words.map((w: any, i: any) => (
+      {words.map((w, i) => (
         <li key={offset + i} className={`wf-item ${w.by === me ? 'mine' : ''}`} style={{ '--pc': colorOf(players, w.by) }}
           title={`${offset + i + 1}. ${w.s.join(' ')} — ${nameOf(w.by)}`}>
           {offset + i > 0 && <ChevronRight size={12} className="wf-arrow" aria-hidden />}
@@ -253,10 +260,10 @@ function WordFlow({ words, players, me, offset = 0, follow = false }: any) {
   );
 }
 
-function Legend({ players, me }: any) {
+function Legend({ players, me }: { players: Identity[]; me: string | null }) {
   return (
     <div className="wf-legend">
-      {players.map((p: any) => (
+      {players.map((p) => (
         <span key={p.id} className="wf-legend-item" style={{ '--pc': colorOf(players, p.id) }}>
           <span className="wf-dot" aria-hidden />{p.name}{p.id === me && ' (bạn)'}
         </span>
@@ -265,9 +272,9 @@ function Legend({ players, me }: any) {
   );
 }
 
-function Chain({ g, history, me }: any) {
+function Chain({ g, history, me }: { g: WordChainGameView; history: WordChainHistoryView[]; me: string | null }) {
   const [tab, setTab] = useState('now');
-  const words = g.chain.map((w: any) => ({ s: w.syllables, by: w.by, known: w.known }));
+  const words = g.chain.map((w) => ({ s: w.syllables, by: w.by, known: w.known }));
   return (
     <div className="panel wc-chain">
       <div className="sb-head">
@@ -289,8 +296,8 @@ function Chain({ g, history, me }: any) {
         </>
       ) : (
         <div className="wf-history">
-          {history.length === 0 ? <div className="wf-empty muted small">Chưa có ván nào kết thúc</div> : history.map((h: any) => {
-            const winner = h.players.find((p: any) => p.id === h.winner);
+          {history.length === 0 ? <div className="wf-empty muted small">Chưa có ván nào kết thúc</div> : history.map((h) => {
+            const winner = h.players.find((p) => p.id === h.winner);
             return (
               <details key={h.no} className="wf-game">
                 <summary>
@@ -310,7 +317,7 @@ function Chain({ g, history, me }: any) {
   );
 }
 
-function Wins({ wins, me }: any) {
+function Wins({ wins, me }: { wins: WordChainScoreView[]; me: string }) {
   if (!wins.length) return null;
   return (
     <div className="panel">
@@ -318,7 +325,7 @@ function Wins({ wins, me }: any) {
       <table className="sb-table">
         <thead><tr><th>#</th><th>Người chơi</th><th>Ván</th><th>Thắng</th></tr></thead>
         <tbody>
-          {wins.map((w: any, i: any) => (
+          {wins.map((w, i) => (
             <tr key={w.id} className={w.id === me ? 'me' : ''}>
               <td>{i === 0 && w.wins > 0 ? '🏆' : i + 1}</td>
               <td className="sb-name">{w.name}</td>

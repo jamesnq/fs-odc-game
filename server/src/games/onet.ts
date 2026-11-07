@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { OnetView } from '@game/shared/views';
 import { createBoard, OnetBoard, rng, SHIFTS } from '@game/shared/onet';
 import type { Cell } from '@game/shared/onet';
 import type { GameAction, Identity } from '@game/shared/contracts';
@@ -315,7 +316,7 @@ export class OnetHandler {
     else this.room.system(`🏁 Kết thúc: ${line}`);
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): OnetView {
     const playing = this.status === 'playing';
     return {
       options: this.options,

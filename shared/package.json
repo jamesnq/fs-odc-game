@@ -71,6 +71,10 @@
     "./snake": {
       "types": "./dist/snake.d.ts",
       "import": "./dist/snake.js"
+    },
+    "./views": {
+      "types": "./dist/views.d.ts",
+      "import": "./dist/views.js"
     }
   },
   "scripts": {

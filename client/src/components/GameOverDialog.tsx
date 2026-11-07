@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { PartyPopper, Eye } from 'lucide-react';
 import Modal from './Modal.js';
 import StartBar from './StartBar.js';
+import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import type { Identity } from '@game/shared/contracts';
 
 /**
  * Popup "Hết ván!" dùng chung: tự mở khi ván vừa kết thúc, gom các nút Chơi ván mới / Sẵn sàng,
@@ -14,7 +17,11 @@ export default function GameOverDialog({
   over, title = 'Hết ván!', detail, children, icon,
   seats, ready, waitingFor, seated, min = 2, startLabel = 'Chơi ván mới',
   seatBtn, reviewLabel = 'Xem lại bàn chơi', ReviewIcon = Eye,
-}: any) {
+}: {
+  over: boolean; title?: ReactNode; detail?: ReactNode; children?: ReactNode; icon?: ReactNode;
+  seats: Identity[]; ready?: string[]; waitingFor?: string[]; seated: boolean; min?: number; startLabel?: string;
+  seatBtn?: ReactNode; reviewLabel?: string; ReviewIcon?: LucideIcon;
+}) {
   const [open, setOpen] = useState(over);
   const wasOver = useRef(over);
   useEffect(() => {
@@ -50,11 +57,13 @@ export default function GameOverDialog({
 }
 
 /** Bảng xếp hạng gọn trong popup: [{ id, name, value, note }] */
-export function GoRanking({ rows, me }: any) {
+export interface GoRankRow { id: string; name: string; value?: ReactNode; note?: ReactNode }
+
+export function GoRanking({ rows, me }: { rows: GoRankRow[] | null | undefined; me?: string | null }) {
   if (!rows?.length) return null;
   return (
     <ol className="go-rank">
-      {rows.map((r: any, i: any) => (
+      {rows.map((r, i) => (
         <li key={r.id} className={r.id === me ? 'me' : ''}>
           <span className="go-pos">{['🥇', '🥈', '🥉'][i] || i + 1}</span>
           <span className="go-name">{r.name}{r.note && <span className="muted small"> · {r.note}</span>}</span>

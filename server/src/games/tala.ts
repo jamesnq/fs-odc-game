@@ -2,9 +2,10 @@ import type { Room } from '../lobby.js';
 import { TalaGame } from '@game/shared/tala';
 import { CardTableHandler } from './cardTable.js';
 import type { GameAction, Identity } from '@game/shared/contracts';
+import type { TalaGameView } from '@game/shared/views';
 import { clampInt } from './options.js';
 
-export class TalaHandler extends CardTableHandler<TalaGame> {
+export class TalaHandler extends CardTableHandler<TalaGame, TalaGameView> {
   constructor(room: Room, options: Record<string, unknown>) {
     super(room, {
       maxSeats: clampInt(options.maxSeats, 2, 4, 4),

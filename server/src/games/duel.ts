@@ -2,6 +2,7 @@ import type { Room } from '../lobby.js';
 import type { GameAction, Identity } from '@game/shared/contracts';
 import type { BotMove } from '../botPool.js';
 import type { MoveAction, Seat } from './types.js';
+import type { DuelView } from '@game/shared/views';
 // Khung chung cho game cờ đối kháng 2 người có đồng hồ (Cờ tướng, Cờ caro):
 // ngồi / sẵn sàng / chơi lại, đồng hồ mỗi bên, cầu hòa, xin đi lại, xin thua, bảng điểm.
 import { Scoreboard } from './scoreboard.js';
@@ -40,12 +41,12 @@ export interface DuelOptions { minutes: number }
 interface DuelRequest { type: 'draw' | 'undo'; from: string }
 export interface DuelResult { winner: string | null; winnerName: string | null; reason: string; text: string; line?: number[] }
 
-export abstract class DuelHandler<G extends DuelGame = DuelGame, O extends DuelOptions = DuelOptions> {
+export abstract class DuelHandler<G extends DuelGame = DuelGame, O extends DuelOptions = DuelOptions, B extends object = object> {
   declare _botRevision: number | undefined;
   abstract _newGame(): G;
   abstract _move(game: G, action: MoveAction): G;
   abstract _undo(game: G, n: number): G;
-  abstract _boardView(): object;
+  abstract _boardView(): B;
   _botMove?(game: G, level: string): Promise<BotMove>;
   declare static SIDES: string[];
   declare static LABELS: Record<string, string>;
@@ -368,7 +369,7 @@ export abstract class DuelHandler<G extends DuelGame = DuelGame, O extends DuelO
     return h >= 1 ? 1 : 0; // mình vừa đi: lùi 1 nước
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): DuelView<O> & B {
     const playing = this.status === 'playing';
     const clocks = { ...this.clocks };
     if (playing) clocks[this.game.turn] = Math.max(0, clocks[this.game.turn] - (Date.now() - this.turnStart));

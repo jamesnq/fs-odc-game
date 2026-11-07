@@ -2,11 +2,12 @@ import type { Room } from '../lobby.js';
 import { SamLocGame } from '@game/shared/samloc';
 import { CardTableHandler } from './cardTable.js';
 import type { GameAction, Identity } from '@game/shared/contracts';
+import type { SamLocGameView } from '@game/shared/views';
 import { clampInt } from './options.js';
 
 const SAM_SECONDS = 10; // thời gian báo Sâm đầu ván
 
-export class SamLocHandler extends CardTableHandler<SamLocGame> {
+export class SamLocHandler extends CardTableHandler<SamLocGame, SamLocGameView> {
   constructor(room: Room, options: Record<string, unknown>) {
     super(room, {
       maxSeats: clampInt(options.maxSeats, 2, 5, 4),

@@ -1,5 +1,6 @@
 import type { Room } from '../lobby.js';
 import type { GameAction, Identity } from '@game/shared/contracts';
+import type { CardTableConfig, CardTableView } from '@game/shared/views';
 // Khung chung cho game bài đánh theo lượt quanh bàn (Tá lả, Sâm lốc):
 // ghế, điểm tích lũy, người rời bàn giữa ván được máy đánh hộ, đồng hồ lượt, cam kết bộ bài.
 import { randInt } from '@game/shared/cards';
@@ -17,18 +18,18 @@ const AUTO_PLAY_MS = 2000; // người rời bàn / mất kết nối: máy đá
  *   _resetTimer(force)           (tùy chọn) ghi đè nếu có pha đặc biệt; mặc định là đồng hồ lượt
  *   _onFinish(game)              (tùy chọn) khi ván kết thúc
  */
-export interface CardGame {
+export interface CardGame<V> {
   players: Identity[];
   turn: number;
   initialDeck: string[];
   result: { winner: number; scores: number[] } | null;
   indexOf(id: string): number;
   autoPlay(id: string): void;
-  view(viewerId: string): object;
+  view(viewerId: string): V;
 }
-export interface CardTableOptions { maxSeats: number; unit: number; turnSeconds: number }
+export type CardTableOptions = CardTableConfig;
 
-export abstract class CardTableHandler<G extends CardGame> {
+export abstract class CardTableHandler<G extends CardGame<V>, V> {
   abstract _createGame(players: Identity[], first: number): G;
   abstract _startMessage(players: Identity[], first: number): string;
   abstract _play(game: G, id: string, action: GameAction): void;
@@ -191,7 +192,7 @@ export abstract class CardTableHandler<G extends CardGame> {
     }, ms);
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): CardTableView<V> {
     this.fair.track(this.game?.initialDeck);
     return {
       fair: this.fair.view(!this.isPlaying()),

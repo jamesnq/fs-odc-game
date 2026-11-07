@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { rankOf } from '@game/shared/cards';
 import { isMeld, bestArrangement, sortByMeld } from '@game/shared/tala';
 import { useApp } from '../store.js';
+import type { AppContextValue, ClientRoom } from '../store.js';
+import type { TalaGameView, TalaView } from '@game/shared/views';
 import Card from '../components/Card.js';
 import CardTable from '../components/CardTable.js';
 import GameInfo from '../components/GameInfo.js';
@@ -11,13 +13,16 @@ import { fmtSigned } from '../format.js';
 import { Timer, ArrowDownUp } from 'lucide-react';
 import { useCountdown, useHotkeys } from '../hooks.js';
 
-const PHASE_VI: Record<string, any> = { draw: 'Bốc hoặc ăn bài', discard: 'Đánh bài', lay: 'Hạ phỏm / gửi bài rồi đánh lá cuối', done: 'Kết thúc' };
+type Act = AppContextValue['act'];
+type SendTarget = { target: number; meldIdx: number };
 
-const sortCards = (cards: any, mode: any) => cards.slice().sort((a: any, b: any) => (mode === 'suit'
+const PHASE_VI: Record<string, string> = { draw: 'Bốc hoặc ăn bài', discard: 'Đánh bài', lay: 'Hạ phỏm / gửi bài rồi đánh lá cuối', done: 'Kết thúc' };
+
+const sortCards = (cards: string[], mode: string) => cards.slice().sort((a, b) => (mode === 'suit'
   ? a[1].localeCompare(b[1]) || rankOf(a) - rankOf(b)
   : rankOf(a) - rankOf(b) || a[1].localeCompare(b[1])));
 
-function PlayerAvatar({ index }: any) {
+function PlayerAvatar({ index }: { index: number }) {
   const colors = ['#fdba74', '#c4b5fd', '#86efac', '#93c5fd'];
   const color = colors[index % colors.length];
   return (
@@ -49,10 +54,10 @@ function PlayerAvatar({ index }: any) {
   );
 }
 
-export default function TalaGame({ room, state: s }: any) {
+export default function TalaGame({ room, state: s }: { room: ClientRoom; state: TalaView }) {
   const { act } = useApp();
   const g = s.game;
-  const inGame = g && g.me >= 0;
+  const inGame = !!g && g.me >= 0;
   const timeLeft = useCountdown(s.turnLeft, room.receivedAt, !!s.turnLeft);
 
   if (!g || (!s.playing && !g.result)) return <WaitingRoom s={s} title="Bàn Tá lả" startLabel="Bắt đầu ván" rules={<Rules />} />;
@@ -67,7 +72,7 @@ export default function TalaGame({ room, state: s }: any) {
   );
 }
 
-function Rules({ open = false }: any) {
+function Rules({ open = false }: { open?: boolean }) {
   return (
     <details className="rules" open={open}>
       <summary>Luật chơi tóm tắt</summary>
@@ -83,7 +88,7 @@ function Rules({ open = false }: any) {
   );
 }
 
-function Table({ s, g, act, timeLeft, inGame }: any) {
+function Table({ s, g, act, timeLeft, inGame }: { s: TalaView; g: TalaGameView; act: Act; timeLeft: number; inGame: boolean }) {
   const { toast } = useApp();
   const n = g.players.length;
   const base = g.me >= 0 ? g.me : 0;
@@ -93,14 +98,14 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
   // ----- Bài trên tay, thứ tự & lựa chọn -----
   const hand = me?.hand || [];
   const [sortMode, setSortMode] = useState('rank');
-  const [order, setOrder] = useState<any[]>([]);
-  const [selected, setSelected] = useState<any[]>([]);
+  const [order, setOrder] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [cursor, setCursor] = useState(0);
   const handKey = hand.slice().sort().join(',');
   useEffect(() => {
     setOrder((prev) => {
       const kept = prev.filter((c) => hand.includes(c));
-      const added = hand.filter((c: any) => !kept.includes(c));
+      const added = hand.filter((c) => !kept.includes(c));
       return kept.length === 0 ? sortCards(hand, sortMode) : [...kept, ...added];
     });
     setSelected((sel) => sel.filter((c) => hand.includes(c)));
@@ -110,29 +115,29 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
 
   const eaten = new Set(me?.eaten || []);
   const hint = useMemo(() => {
-    if (!hand.length) return new Set();
+    if (!hand.length) return new Set<string>();
     const b = bestArrangement(hand, me?.eaten || []);
     return new Set(b ? b.melds.flat() : []);
   }, [handKey]);
 
-  const toggle = (c: any) => setSelected((sel) => (sel.includes(c) ? sel.filter((x) => x !== c) : [...sel, c]));
+  const toggle = (c: string) => setSelected((sel) => (sel.includes(c) ? sel.filter((x) => x !== c) : [...sel, c]));
   const target = selected.length === 1 ? selected[0] : selected.length === 0 ? ordered[cursor] : null;
 
   const doDraw = () => myTurn && g.phase === 'draw' && act({ type: 'draw' });
   const doEat = () => myTurn && g.canEat && act({ type: 'eat' });
-  const doDiscard = () => myTurn && (g.phase === 'discard' || g.phase === 'lay') && target && act({ type: 'discard', card: target }).then((r: any) => r && setSelected([]));
-  const doLay = () => myTurn && g.phase === 'lay' && selected.length >= 3 && act({ type: 'lay', cards: selected }).then((r: any) => r && setSelected([]));
+  const doDiscard = () => myTurn && (g.phase === 'discard' || g.phase === 'lay') && target && act({ type: 'discard', card: target }).then((r) => r && setSelected([]));
+  const doLay = () => myTurn && g.phase === 'lay' && selected.length >= 3 && act({ type: 'lay', cards: selected }).then((r) => r && setSelected([]));
   const doAutoLay = () => myTurn && g.phase === 'lay' && act({ type: 'autoLay' });
-  const sendTargets = (card: any) => {
-    const res: any[] = [];
-    g.players.forEach((p: any, t: any) => p.melds.forEach((m: any, k: any) => { if (isMeld([...m.cards, card])) res.push({ target: t, meldIdx: k }); }));
+  const sendTargets = (card: string) => {
+    const res: SendTarget[] = [];
+    g.players.forEach((p, t) => p.melds.forEach((m, k) => { if (isMeld([...m.cards, card])) res.push({ target: t, meldIdx: k }); }));
     return res;
   };
-  const doSend = (t?: any) => {
+  const doSend = (t?: SendTarget) => {
     if (!myTurn || g.phase !== 'lay' || !target) return;
     const dest = t || sendTargets(target)[0];
     if (!dest) return toast('Lá này không gửi được vào phỏm nào', 'error');
-    act({ type: 'send', card: target, ...dest }).then((r: any) => r && setSelected([]));
+    act({ type: 'send', card: target, ...dest }).then((r) => r && setSelected([]));
   };
   const doU = () => g.canU && act({ type: 'u' });
   const doSort = () => {
@@ -163,9 +168,9 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
     ArrowDown: () => ordered[cursor] && setSelected((sel) => sel.filter((x) => x !== ordered[cursor])),
   }, inGame && !g.result);
 
-  const canSendTo = (t: any, k: any) => myTurn && g.phase === 'lay' && target && isMeld([...g.players[t].melds[k].cards, target]) && me.melds.length > 0;
+  const canSendTo = (t: number, k: number) => myTurn && g.phase === 'lay' && target && isMeld([...g.players[t].melds[k].cards, target]) && !!me?.melds.length;
 
-  const seats = g.players.map((p: any, i: any) => {
+  const seats = g.players.map((p, i) => {
     const isTurn = g.turn === i && !g.result;
     const seat = s.seats[s.gameSeats[i]];
     const isMe = i === g.me;
@@ -188,7 +193,7 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
           </div>
           {!isMe && (
             <div className="tl-hand-back">
-              {p.hand ? p.hand.map((c: any) => <Card key={c} card={c} size="sm" />)
+              {p.hand ? p.hand.map((c) => <Card key={c} card={c} size="sm" />)
                 : <span className="card-fan" aria-label={`${p.handCount} lá`}>{Array.from({ length: p.handCount }).map((_, j) => <Card key={j} card="??" size="xs" />)}</span>}
               {!p.hand && <span className="felt-muted small">{p.handCount} lá</span>}
             </div>
@@ -196,12 +201,12 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
           {!isMe && p.eaten.length > 0 && !p.finished && (
             <div className="tl-eaten-side" aria-label={`Bài đã ăn của ${p.name}`}>
               <span className="tl-lbl">Đã ăn</span>
-              <div className="tl-eaten-cards">{p.eaten.map((c: any) => <Card key={c} card={c} size="sm" locked />)}</div>
+              <div className="tl-eaten-cards">{p.eaten.map((c) => <Card key={c} card={c} size="sm" locked />)}</div>
             </div>
           )}
           <div className="tl-row">
             <span className="tl-lbl">Đánh {p.discardCount}/4</span>
-            {p.discards.map((c: any) => (
+            {p.discards.map((c) => (
               <Card key={c} card={c} size="sm" highlight={g.lastDiscard?.card === c} />
             ))}
           </div>
@@ -211,22 +216,22 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
     };
   });
 
-  const laidMelds = g.players.some((p: any) => p.melds.length > 0) ? (
+  const laidMelds = g.players.some((p) => p.melds.length > 0) ? (
     <section className="tl-laid" aria-label="Phỏm đã hạ trên bàn">
       <h3>Phỏm đã hạ</h3>
       <div className="tl-laid-players">
-        {g.players.map((p: any, i: any) => p.melds.length > 0 && (
+        {g.players.map((p, i) => p.melds.length > 0 && (
           <div className="tl-laid-player" key={p.id}>
             <div className="tl-laid-name"><b>{p.name}</b>{i === g.me && <span className="seat-me">bạn</span>}</div>
             <div className="tl-laid-melds">
-              {p.melds.map((m: any, k: any) => {
+              {p.melds.map((m, k) => {
                 const sendable = !!canSendTo(i, k);
                 return (
                   <button type="button" key={k} className={`meld ${sendable ? 'sendable' : ''}`}
                     disabled={!sendable} onClick={() => doSend({ target: i, meldIdx: k })}
                     aria-label={`Phỏm ${k + 1} của ${p.name}${sendable ? ': gửi lá đang chọn' : ''}`}
                     title={sendable ? 'Bấm để gửi lá đang chọn vào phỏm này' : `Phỏm đã hạ của ${p.name}`}>
-                    {m.cards.map((c: any) => <Card key={c} card={c} size="sm" />)}
+                    {m.cards.map((c) => <Card key={c} card={c} size="sm" />)}
                   </button>
                 );
               })}
@@ -250,7 +255,7 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
         </div>
       )}
       <div className="tl-log">
-        {g.log.slice(-3).map((l: any, i: any) => <div key={i} className="small felt-muted">{l}</div>)}
+        {g.log.slice(-3).map((l, i) => <div key={i} className="small felt-muted">{l}</div>)}
       </div>
     </>
   );
@@ -284,7 +289,7 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
                 <>
                   <button className="btn" disabled={selected.length < 3} onClick={doLay}><kbd>H</kbd> Hạ phỏm</button>
                   <button className="btn" onClick={doAutoLay}><kbd>X</kbd> Hạ tự động</button>
-                  <button className="btn" disabled={!target || !me.melds.length} onClick={() => doSend()}><kbd>G</kbd> Gửi</button>
+                  <button className="btn" disabled={!target || !me?.melds.length} onClick={() => doSend()}><kbd>G</kbd> Gửi</button>
                 </>
               )}
               {g.canU && <button className="btn cta" onClick={doU}><kbd>U</kbd> Ù!</button>}
@@ -298,8 +303,9 @@ function Table({ s, g, act, timeLeft, inGame }: any) {
   );
 }
 
-function Result({ s, g }: any) {
+function Result({ s, g }: { s: TalaView; g: TalaGameView }) {
   const r = g.result;
+  if (!r) return null;
   const rankName = ['Nhất', 'Nhì', 'Ba', 'Bét'];
   return (
     <ResultOverlay over peek="Xem bàn" resetKey={s.gameNo} title={r.type === 'u' ? `${g.players[r.winner].name} Ù!` : `${g.players[r.winner].name} về Nhất`}
@@ -308,7 +314,7 @@ function Result({ s, g }: any) {
       <table className="result-table">
         <thead><tr><th>Hạng</th><th>Người chơi</th><th>Điểm bài</th><th>Thắng/thua</th></tr></thead>
         <tbody>
-          {r.ranking.map((p: any, k: any) => (
+          {r.ranking.map((p, k) => (
             <tr key={p}>
               <td>{r.type === 'u' ? (k === 0 ? 'Ù' : '—') : r.mom[p] ? 'Móm' : rankName[k]}</td>
               <td>{g.players[p].name}</td>

@@ -3,19 +3,16 @@ import { PokerGame } from '@game/shared/poker';
 import type { PokerSeat } from '@game/shared/poker';
 import type { GameAction, GameQuery, Identity } from '@game/shared/contracts';
 import type { ActionOf } from './types.js';
+import type { PokerConfig, PokerView, QueryResults } from '@game/shared/views';
 import { cardLabel } from '@game/shared/cards';
 import { DeckCommitments } from './fairness.js';
 import { bool, clampInt } from './options.js';
 import { ReadyGate } from './ready.js';
 
-interface PokerOptions {
-  bigBlind: number; smallBlind: number; buyIn: number; maxSeats: number; turnSeconds: number; rabbitHunt: boolean;
-}
-
 export class PokerHandler {
   declare fair: DeckCommitments;
   declare room: Room;
-  declare options: PokerOptions;
+  declare options: PokerConfig;
   declare game: PokerGame;
   declare stacks: Map<string, number>;
   declare rebuys: Map<string, number>;
@@ -240,7 +237,7 @@ export class PokerHandler {
     }, delay);
   }
 
-  query(viewerId: string, q: GameQuery) {
+  query(viewerId: string, q: GameQuery): QueryResults['handLog'] {
     if (q.type === 'handLog') return this.game.historyView(viewerId);
     throw new Error('Truy vấn không hợp lệ');
   }
@@ -257,7 +254,7 @@ export class PokerHandler {
     return set;
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): PokerView {
     this.fair.track(this.game.lastDeck);
     const v = this.game.view(viewerId);
     if (!this.options.rabbitHunt) v.canRabbit = false;

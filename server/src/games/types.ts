@@ -1,4 +1,5 @@
-import type { GameAction, GameQuery, Identity, Requests } from '@game/shared/contracts';
+import type { DrawStream, GameAction, GameQuery, Identity, Requests } from '@game/shared/contracts';
+import type { GameKind, GameViews, QueryResults } from '@game/shared/views';
 import type { Room } from '../lobby.js';
 
 /** Payload của một loại hành động game; dữ liệu vẫn đến từ client nên handler phải tự kiểm tra lúc chạy. */
@@ -21,10 +22,10 @@ export interface GameHandler {
   onLeave(id: string): void;
   rename(id: string, name: string): void;
   action(id: string, action: GameAction): void;
-  view(viewerId: string): object;
+  view(viewerId: string): GameViews[GameKind];
   dispose(): void;
   botName?(id: string): string | undefined;
-  query?(viewerId: string, query: GameQuery): unknown;
-  stream?(id: string, payload: Requests['game:stream']): Record<string, unknown> | null | undefined | false;
+  query?(viewerId: string, query: GameQuery): QueryResults[GameQuery['type']];
+  stream?(id: string, payload: Requests['game:stream']): DrawStream | null;
   censorChat?(id: string, text: string): void;
 }

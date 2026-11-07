@@ -2,6 +2,7 @@ import type { Room } from '../lobby.js';
 import { createGame, makeMove, undoMoves, coord, MIN_SIZE, MAX_SIZE } from '@game/shared/caro';
 import type { CaroState } from '@game/shared/caro';
 import type { MoveAction } from './types.js';
+import type { CaroBoardView } from '@game/shared/views';
 import { botPool } from '../botPool.js';
 import { botLevel } from './bots.js';
 import { DuelHandler } from './duel.js';
@@ -9,7 +10,7 @@ import { bool, clampInt } from './options.js';
 
 interface CaroOptions { minutes: number; size: number; blockTwoEnds: boolean }
 
-export class CaroHandler extends DuelHandler<CaroState, CaroOptions> {
+export class CaroHandler extends DuelHandler<CaroState, CaroOptions, CaroBoardView> {
   static SIDES = ['x', 'o'];
   static LABELS = { x: 'X', o: 'O' };
   static REASONS = {
@@ -35,7 +36,7 @@ export class CaroHandler extends DuelHandler<CaroState, CaroOptions> {
   _undo(game: CaroState, n: number) { return undoMoves(game, n); }
   _resultDetails(r: NonNullable<CaroState['result']>) { return { line: r.line }; } // 5 ô thắng để tô sáng
 
-  _boardView() {
+  _boardView(): CaroBoardView {
     const { size, board, turn, history } = this.game;
     return {
       size,

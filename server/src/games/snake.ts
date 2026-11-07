@@ -1,6 +1,6 @@
 import type { Room } from '../lobby.js';
 import type { Identity, GameAction } from '@game/shared/contracts';
-import type { SnakeInput, Direction } from '@game/shared/snake';
+import type { SnakeInput, Direction, SnakeView } from '@game/shared/snake';
 interface SnakePlayer extends Identity {
   game: SnakeGame; inputs: SnakeInput[]; used: number; seq: number; done: boolean;
   dead: boolean; gaveUp: boolean; timedOut: boolean; endedAt: number | null;
@@ -259,7 +259,7 @@ export class SnakeHandler {
     else this.room.system(`🏁 Kết thúc: ${line}`);
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): SnakeView {
     const playing = this.status === 'playing';
     const now = Date.now();
     return {

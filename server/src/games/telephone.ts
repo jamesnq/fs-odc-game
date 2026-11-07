@@ -1,4 +1,5 @@
 import type { Room } from '../lobby.js';
+import type { ChainEntryView, QueryResults, TelephoneTaskView, TelephoneView } from '@game/shared/views';
 // Tam sao thất bản (vẽ): viết câu → vẽ → đoán lại → vẽ… tất cả cùng làm một lúc, mỗi người một câu chuyện.
 // Bức vẽ được gửi dần từng nét (gói tin lên server có giới hạn kích thước) và lưu làm bản nháp,
 // hết giờ thì lấy luôn bản nháp. Cuối ván chủ phòng lật từng câu chuyện cho cả bàn xem.
@@ -17,7 +18,7 @@ const MIN_PLAYERS = 3;
 
 interface TelephoneOptions { mode: 'relay' | 'classic'; maxSeats: number; writeSeconds: number; drawSeconds: number; suggest: boolean }
 interface TelephonePlayer extends Identity { gone: boolean }
-interface ChainEntry { by: string | null; name: string; kind: string; text?: string; drawId?: string }
+type ChainEntry = ChainEntryView;
 interface Draft { text: string; ops: DrawOp[]; points: number }
 
 export class TelephoneHandler {
@@ -179,15 +180,16 @@ export class TelephoneHandler {
     return null;
   }
 
-  query(viewerId: string, q: GameQuery) {
+  query(viewerId: string, q: GameQuery): QueryResults['canvas'] | QueryResults['drawing'] {
     if (q.type === 'canvas') {
       const d = this.status === 'playing' && this.drafts.get(viewerId);
       return { turn: this.turnNo, ops: d ? d.ops : [] };
     }
     if (q.type === 'drawing') {
       const id = String(q.id || '');
-      if (!this.drawings.has(id) || !this._canSee(viewerId, id)) throw new Error('Không xem được bức vẽ này');
-      return { id, ops: this.drawings.get(id) };
+      const ops = this.drawings.get(id);
+      if (!ops || !this._canSee(viewerId, id)) throw new Error('Không xem được bức vẽ này');
+      return { id, ops };
     }
     throw new Error('Truy vấn không hợp lệ');
   }
@@ -296,7 +298,7 @@ export class TelephoneHandler {
   }
 
   /** Việc của người xem ở bước hiện tại (null nếu không có lượt). */
-  _task(viewerId: string) {
+  _task(viewerId: string): TelephoneTaskView | null {
     const i = this.idx(viewerId);
     if (this.status !== 'playing' || i < 0 || this.players[i].gone || (this.relay && i !== this.step)) return null;
     const prev = this.previous(i);
@@ -320,7 +322,7 @@ export class TelephoneHandler {
     }));
   }
 
-  view(viewerId: string) {
+  view(viewerId: string): TelephoneView {
     const playing = this.status === 'playing';
     const n = this.players.length;
     const task = this._task(viewerId);
