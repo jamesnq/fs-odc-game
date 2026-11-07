@@ -32,6 +32,7 @@ export class Room {
     this.voice = new Map(); // userId -> { muted, sid } — ai đang trong kênh thoại của phòng
     this.handler = new GAMES[game].Handler(this, options);
     this._pending = false;
+    this._lobbyPending = false;
   }
 
   isOnline(id) { return this.lobby.isOnline(id); }
@@ -47,14 +48,17 @@ export class Room {
   }
 
   /** Gộp các thay đổi trong cùng tick rồi phát trạng thái cho mọi thành viên và sảnh. */
-  changed() {
+  changed(broadcastLobby = true) {
+    this._lobbyPending ||= broadcastLobby;
     if (this._pending) return;
     this._pending = true;
     queueMicrotask(() => {
       this._pending = false;
+      const updateLobby = this._lobbyPending;
+      this._lobbyPending = false;
       if (!this.lobby.rooms.has(this.id)) return;
       for (const uid of this.members) this.lobby.toUser(uid).emit('room:state', this.viewFor(uid));
-      this.lobby.broadcast(this.server);
+      if (updateLobby) this.lobby.broadcast(this.server);
     });
   }
 

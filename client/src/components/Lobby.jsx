@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Palette, MessagesSquare, PawPrint, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, Lightbulb, SpellCheck } from 'lucide-react';
+import { Layers, Club, Spade, Castle, Crown, Grid3x3, WholeWord, Palette, MessagesSquare, PawPrint, Plus, Eye, Trash2, Search, Users, LogIn, ChevronDown, Lightbulb, SpellCheck, Blocks } from 'lucide-react';
 import { useApp } from '../store.jsx';
 import CreateRoomDialog from './CreateRoomDialog.jsx';
 
@@ -14,6 +14,7 @@ export const GAME_META = {
   scribble: { name: 'Vẽ đoán', Icon: Palette, desc: '2–12 người, một người vẽ, cả bàn đoán chữ' },
   telephone: { name: 'Tam sao thất bản', Icon: MessagesSquare, desc: '3–12 người, viết → vẽ → đoán → vẽ… rồi xem câu chuyện thất bản' },
   onet: { name: 'Nối thú', Icon: PawPrint, desc: '1–8 người, nối cặp thú giống nhau, đua dọn sạch bàn' },
+  tetris: { name: 'Tetris', Icon: Blocks, desc: 'Đấu 1v1, ai xóa đủ số hàng mục tiêu trước sẽ thắng' },
   quiz: { name: 'Đố vui', Icon: Lightbulb, desc: 'Kiểu Kahoot, 1–30 người, có bộ câu hỏi sẵn hoặc tự soạn' },
   wordguess: { name: 'Đoán chữ', Icon: SpellCheck, desc: 'Đoán từ 2 chữ trong 6 lượt, đua hoặc cùng đoán' },
 };
@@ -245,6 +246,7 @@ function describeOptions(r) {
   if (r.game === 'poker') return `Blind ${o.smallBlind}/${o.bigBlind} · Buy-in ${o.buyIn}`;
   if (r.game === 'samloc') return `Cược ${o.unit}/đơn vị · ${o.turnSeconds} giây/lượt`;
   if (r.game === 'tala') return `Cược ${o.unit}/đơn vị`;
+  if (r.game === 'tetris') return `Đua xóa ${o.targetLines} hàng`;
   if (r.game === 'onet') return o.mode === 'classic' ? `Cổ điển · ${o.rows}×${o.cols} ô · ${o.minutes} phút/màn` : `${o.rows}×${o.cols} ô · ${o.minutes} phút${o.gravity ? ' · trọng lực' : ''}`;
   return '';
 }

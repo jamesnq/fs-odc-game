@@ -3,8 +3,10 @@ import { useApp } from '../store.jsx';
 import Modal from './Modal.jsx';
 import { GAME_META, GameIcon } from './Lobby.jsx';
 import { QUIZ_CATEGORIES } from '@game/shared/quiz';
+import { LINE_TARGET } from '@game/shared/tetris';
 
 const DEFAULTS = {
+  tetris: { targetLines: LINE_TARGET.default },
   chess: { minutes: 10 },
   xiangqi: { minutes: 8 },
   caro: { size: 15, minutes: 10, blockTwoEnds: true, bot: '' },
@@ -24,6 +26,7 @@ const BOT_OPTIONS = [['', 'Không — chơi với người'], ['easy', 'Máy D�
 
 // [khóa, nhãn, min, max] · [khóa, nhãn, 'bool'] · [khóa, nhãn, 'select', các lựa chọn]
 const FIELDS = {
+  tetris: [['targetLines', 'Số hàng cần xóa để thắng', LINE_TARGET.min, LINE_TARGET.max]],
   chess: [['minutes', 'Thời gian mỗi bên (phút)', 1, 60]],
 
   quiz: [
@@ -150,8 +153,8 @@ export default function CreateRoomDialog({ game: initialGame, onClose }) {
           </label>
         ) : (
           <div key={key}>
-            <label>{label}</label>
-            <input type="number" min={min} max={max} value={opts[game][key]}
+            <label htmlFor={`opt-${key}`}>{label}</label>
+            <input id={`opt-${key}`} type="number" min={min} max={max} required={game === 'tetris'} value={opts[game][key]}
               onChange={(e) => setOpts({ ...opts, [game]: { ...opts[game], [key]: e.target.value } })} />
           </div>
         ))}
