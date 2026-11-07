@@ -190,10 +190,11 @@ export function handleConnection(socket, { lobby, voice, connections }) {
 
   on('game:action', (a) => {
     const room = lobby.currentRoom(user);
+    let broadcastLobby = true;
     try {
-      room.handler.action(user.id, a);
+      broadcastLobby = room.handler.action(user.id, a) !== false;
     } finally {
-      room.changed();
+      room.changed(broadcastLobby);
     }
   });
 

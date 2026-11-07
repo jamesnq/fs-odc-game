@@ -10,6 +10,7 @@ import { WordGuessHandler } from './wordguess.js';
 import { ScribbleHandler } from './scribble.js';
 import { TelephoneHandler } from './telephone.js';
 import { OnetHandler } from './onet.js';
+import { TetrisHandler } from './tetris.js';
 
 /**
  * Các trò chơi. Mỗi Handler điều khiển một bàn trong một phòng và cần có:
@@ -17,6 +18,7 @@ import { OnetHandler } from './onet.js';
  *   rename(id, name), action(id, payload), view(viewerId), dispose()
  * và tùy chọn query(viewerId, q) cho dữ liệu lớn lấy theo yêu cầu, stream(id, payload) cho dữ liệu
  * gửi liên tục (nét vẽ) chuyển thẳng cho người khác, censorChat(id, text) để chặn tin nhắn lộ đáp án.
+ * action có thể trả về false nếu chỉ cần phát trạng thái trong phòng.
  */
 export const GAMES = {
   chess: { name: 'Cờ vua', Handler: ChessHandler },
@@ -31,6 +33,7 @@ export const GAMES = {
   scribble: { name: 'Vẽ đoán', Handler: ScribbleHandler },
   telephone: { name: 'Tam sao thất bản', Handler: TelephoneHandler },
   onet: { name: 'Nối thú', Handler: OnetHandler },
+  tetris: { name: 'Tetris', Handler: TetrisHandler },
 };
 
 export const isGame = (game) => typeof game === 'string' && Object.hasOwn(GAMES, game);
